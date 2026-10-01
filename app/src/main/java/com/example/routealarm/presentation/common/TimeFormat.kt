@@ -25,8 +25,11 @@ object TimeFormat {
 @Composable
 fun minutesText(minutes: Int): String {
     val m = minutes.coerceAtLeast(0)
-    return if (m < 60) stringResource(R.string.common_minutes_format, m)
-    else stringResource(R.string.common_hours_minutes_format, m / 60, m % 60)
+    return when {
+        m < 60 -> stringResource(R.string.common_minutes_format, m)
+        m % 60 == 0 -> stringResource(R.string.common_hours_format, m / 60)
+        else -> stringResource(R.string.common_hours_minutes_format, m / 60, m % 60)
+    }
 }
 
 @Composable

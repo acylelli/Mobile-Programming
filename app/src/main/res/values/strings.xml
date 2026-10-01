@@ -46,6 +46,7 @@
     <string name="common_loading">불러오는 중…</string>
     <string name="common_minutes_format">%1$d분</string>
     <string name="common_hours_minutes_format">%1$d시간 %2$d분</string>
+    <string name="common_hours_format">%1$d시간</string>
     <string name="common_today">오늘</string>
     <string name="common_tomorrow">내일</string>
     <string name="common_more">더보기</string>

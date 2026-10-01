@@ -255,7 +255,9 @@ fun SettingsScreen(
 private fun Section(title: String, content: @Composable () -> Unit) {
     Column {
         Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xs))
-        AppCard { Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) { content() } }
+        AppCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) { content() }
+        }
     }
 }
 

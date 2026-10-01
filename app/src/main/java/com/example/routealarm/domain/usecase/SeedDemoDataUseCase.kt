@@ -6,6 +6,9 @@ import com.example.routealarm.domain.repository.DemoDataProvider
 import com.example.routealarm.domain.repository.PlaceRepository
 import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.DayOfWeek
 import java.time.LocalTime
 import javax.inject.Inject
@@ -24,13 +27,17 @@ class SeedDemoDataUseCase @Inject constructor(
     private val previewSchedule: PreviewScheduleUseCase,
     private val saveSchedule: SaveScheduleUseCase,
 ) {
-    suspend operator fun invoke() {
-        if (preferencesRepository.current().demoSeeded) return
+    suspend operator fun invoke() = seedLock.withLock {
+        // 홈 ViewModel 이 짧은 시간에 두 번 만들어져도(화면 재구성 등) 한 번만 실행되도록 잠근 뒤 다시 확인한다.
+        if (preferencesRepository.current().demoSeeded) return@withLock
 
+        val saved = placeRepository.observeSavedPlaces().first()
         val origin = demoDataProvider.demoOrigin()
         val destination = demoDataProvider.demoDestination()
-        val originId = (placeRepository.savePlace(origin) as? AppResult.Success)?.data ?: 0
-        val destinationId = (placeRepository.savePlace(destination) as? AppResult.Success)?.data ?: 0
+        val originId = saved.firstOrNull { it.isSameLocationAs(origin) }?.id
+            ?: (placeRepository.savePlace(origin) as? AppResult.Success)?.data ?: 0
+        val destinationId = saved.firstOrNull { it.isSameLocationAs(destination) }?.id
+            ?: (placeRepository.savePlace(destination) as? AppResult.Success)?.data ?: 0
 
         val draft = ScheduleDraft(
             title = demoDataProvider.demoTitle(),
@@ -51,6 +58,7 @@ class SeedDemoDataUseCase @Inject constructor(
     }
 
     private companion object {
+        val seedLock = Mutex()
         val DEMO_ARRIVAL: LocalTime = LocalTime.of(9, 0)
         val WEEKDAYS = setOf(
             DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY,

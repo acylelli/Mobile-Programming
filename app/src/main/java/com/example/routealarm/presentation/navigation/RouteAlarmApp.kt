@@ -16,6 +16,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -73,6 +74,9 @@ fun RouteAlarmApp(
     initialScheduleId: Long?,
     navController: NavHostController = rememberNavController(),
 ) {
+    // 온보딩 완료 시 startDestination 이 바뀌면 NavHost 가 그래프를 다시 만들어 Home 이 두 번 생성된다.
+    // 앱 시작 시점의 값만 사용하고, 온보딩 완료 후 이동은 명시적 navigate 로 처리한다.
+    val startDestination: Route = androidx.compose.runtime.remember { if (onboardingCompleted) Route.Home else Route.Onboarding }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val showBottomBar = topLevelDestinations.any { dest -> currentDestination?.hasRoute(dest.route::class) == true }
@@ -95,6 +99,13 @@ fun RouteAlarmApp(
                             },
                             icon = { Icon(if (selected) dest.selectedIcon else dest.icon, contentDescription = null) },
                             label = { Text(stringResource(dest.labelRes)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                         )
                     }
                 }
@@ -103,7 +114,7 @@ fun RouteAlarmApp(
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = if (onboardingCompleted) Route.Home else Route.Onboarding,
+            startDestination = startDestination,
             modifier = Modifier.padding(padding),
             enterTransition = { fadeIn(tween(TRANSITION_MILLIS)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(TRANSITION_MILLIS)) { it / 6 } },
             exitTransition = { fadeOut(tween(TRANSITION_MILLIS)) },

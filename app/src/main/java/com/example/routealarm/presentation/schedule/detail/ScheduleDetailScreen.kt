@@ -200,7 +200,7 @@ fun ScheduleDetailScreen(
 @Composable
 private fun CalculationCard(schedule: Schedule) {
     val plan = schedule.plan ?: return
-    AppCard {
+    AppCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Text(stringResource(R.string.detail_timeline_title), style = MaterialTheme.typography.titleMedium)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -225,7 +225,7 @@ private fun CalculationCard(schedule: Schedule) {
 
 @Composable
 private fun SettingsCard(schedule: Schedule) {
-    AppCard {
+    AppCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Text(stringResource(R.string.detail_section_settings), style = MaterialTheme.typography.titleMedium)
             LabeledValue(stringResource(R.string.detail_origin_label), schedule.origin.name)

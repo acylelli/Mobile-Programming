@@ -456,7 +456,7 @@ private fun ResultStep(state: CreateScheduleUiState, onRetry: () -> Unit, onSave
             Spacer(Modifier.height(Spacing.md))
 
             // 09:00 목표 ↑ 08:52 예상 도착 ↑ 07:45 출발 ↑ 07:15 기상
-            AppCard {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     TimelineRow(stringResource(R.string.create_result_target), TimeFormat.time(plan.targetArrival), emphasize = false)
                     TimelineRow(stringResource(R.string.create_result_arrival), TimeFormat.time(plan.estimatedArrival), emphasize = false)
@@ -473,7 +473,7 @@ private fun ResultStep(state: CreateScheduleUiState, onRetry: () -> Unit, onSave
                 }
             }
             Spacer(Modifier.height(Spacing.md))
-            AppCard {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(Spacing.md)) {
                     Text(stringResource(R.string.home_route_title), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(Spacing.sm))
