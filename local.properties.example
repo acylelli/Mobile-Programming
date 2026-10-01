@@ -1,0 +1,7 @@
+# 이 파일을 local.properties 로 복사한 뒤 값을 채웁니다. local.properties 는 git 에 커밋되지 않습니다.
+sdk.dir=/Users/<you>/Library/Android/sdk
+
+# fake | proxy  (기본값 fake: API 키 없이 모든 기능 시연 가능)
+routealarm.transitProvider=fake
+# 교통/장소 검색 Backend Proxy 주소. 실제 ODsay/TMAP/Kakao 키는 Proxy 서버 환경변수에만 둔다.
+routealarm.proxyBaseUrl=https://your-proxy.example.com/
