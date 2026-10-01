@@ -24,11 +24,12 @@ class MainActivity : ComponentActivity() {
     private var requestedScheduleId by mutableStateOf<Long?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splash = installSplashScreen()
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // 설정(온보딩 여부/테마)이 로드될 때까지만 Splash 유지
-        splash.setKeepOnScreenCondition { viewModel.uiState.value.isLoading }
+        // setKeepOnScreenCondition 은 쓰지 않는다. 앱 업데이트 직후 시스템이 Activity 를 되살리는 경로에서
+        // Splash 창이 제거되지 않고 남는 현상을 에뮬레이터에서 확인했다. 설정 로딩은 수 ms 라서
+        // Compose 쪽에서 isLoading 동안 아무것도 그리지 않는 것으로 충분하다.
         requestedScheduleId = intent.scheduleIdOrNull()
 
         setContent {

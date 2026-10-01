@@ -20,8 +20,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,8 +39,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.routealarm.R
-import com.example.routealarm.core.designsystem.component.PrimaryButton
-import com.example.routealarm.core.designsystem.component.SecondaryButton
 import com.example.routealarm.core.designsystem.theme.RouteAlarmTheme
 import com.example.routealarm.core.designsystem.theme.Spacing
 import com.example.routealarm.presentation.common.TimeFormat
@@ -124,16 +127,27 @@ fun AlarmRingingScreen(state: AlarmRingingUiState, onSnooze: () -> Unit, onDismi
             )
         }
         Spacer(Modifier.height(Spacing.xxl))
-        PrimaryButton(
-            text = stringResource(R.string.ring_dismiss),
+        // 배경이 primary 색이므로 공통 PrimaryButton(primary 배경) 대신 반전된 색을 쓴다.
+        Button(
             onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth(),
-        )
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = MaterialTheme.shapes.medium,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.onPrimary,
+                contentColor = MaterialTheme.colorScheme.primary,
+            ),
+        ) {
+            Text(stringResource(R.string.ring_dismiss), style = MaterialTheme.typography.titleMedium)
+        }
         Spacer(Modifier.height(Spacing.sm))
-        SecondaryButton(
-            text = stringResource(R.string.ring_snooze_format, state.snoozeMinutes),
+        OutlinedButton(
             onClick = onSnooze,
-            modifier = Modifier.fillMaxWidth(),
-        )
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = MaterialTheme.shapes.medium,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onPrimary),
+        ) {
+            Text(stringResource(R.string.ring_snooze_format, state.snoozeMinutes), style = MaterialTheme.typography.titleMedium)
+        }
     }
 }
