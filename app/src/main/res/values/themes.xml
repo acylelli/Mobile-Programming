@@ -1,0 +1,15 @@
+<resources>
+    <!-- Compose 가 그리기 전 창 배경과 Splash 에만 쓰이는 최소 테마. 실제 UI 테마는 RouteAlarmTheme(Compose). -->
+    <style name="Theme.RouteAlarm" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/background_light</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.RouteAlarm.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.RouteAlarm</item>
+    </style>
+</resources>

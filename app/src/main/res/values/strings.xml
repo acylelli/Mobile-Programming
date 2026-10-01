@@ -1,3 +1,305 @@
 <resources>
+    <!-- 서비스명은 여기 한 곳에서 바꾼다. -->
     <string name="app_name">RouteAlarm</string>
+
+    <!-- 알림 채널 -->
+    <string name="channel_alarm">기상 알람</string>
+    <string name="channel_alarm_description">계산된 기상 시각에 울리는 알람</string>
+    <string name="channel_departure">출발 알림</string>
+    <string name="channel_departure_description">출발 준비와 출발 시각 안내</string>
+    <string name="channel_traffic">교통 상황 변경</string>
+    <string name="channel_traffic_description">교통 상황 변화로 알람 시간이 바뀔 때 알림</string>
+
+    <!-- 알림 본문 -->
+    <string name="notification_ringing_title">%1$s 기상 알람</string>
+    <string name="notification_ringing_text">%1$s 까지 늦지 않게 준비해요</string>
+    <string name="notification_departure_reminder_title">10분 뒤 출발 준비를 마쳐주세요</string>
+    <string name="notification_departure_reminder_text">%1$s 출발 예정이에요.</string>
+    <string name="notification_departure_now_title">지금 출발하세요</string>
+    <string name="notification_departure_now_text">지금 출발하면 %1$s에 %2$s 도착 예정이에요.</string>
+    <string name="notification_adjusted_title">%1$s · 알람 시간이 변경됐어요</string>
+    <string name="notification_adjusted_earlier">교통 상황이 평소보다 혼잡해요. 알람을 %2$s → %3$s로 %1$d분 앞당겼어요.</string>
+    <string name="notification_adjusted_later">교통 상황이 좋아졌어요. 알람을 %2$s → %3$s로 %1$d분 늦췄어요.</string>
+    <string name="notification_suggest_title">%1$s · 알람 변경을 추천해요</string>
+    <string name="notification_suggest_earlier">교통 상황이 바뀌어 알람을 %1$d분 앞당기는 것을 추천합니다. 앱에서 변경할 수 있어요.</string>
+    <string name="notification_suggest_later">교통 상황이 좋아져 알람을 %1$d분 늦출 수 있어요. 앱에서 변경할 수 있어요.</string>
+    <string name="notification_suggest_confirm">예상 이동시간이 크게 바뀌었어요(%1$d분). 알람을 자동으로 바꾸지 않았으니 앱에서 확인해 주세요.</string>
+    <string name="action_snooze">다시 울림</string>
+    <string name="action_dismiss">알람 끄기</string>
+
+    <!-- 데모 데이터 -->
+    <string name="demo_origin_name">집</string>
+    <string name="demo_origin_address">경기도 남양주시 다산동</string>
+    <string name="demo_destination_name">한성대학교</string>
+    <string name="demo_destination_address">서울 성북구 삼선교로16길 116</string>
+    <string name="demo_schedule_title">학교 가는 날</string>
+    <string name="demo_badge">예시</string>
+
+    <!-- 공통 -->
+    <string name="common_retry">다시 시도</string>
+    <string name="common_cancel">취소</string>
+    <string name="common_confirm">확인</string>
+    <string name="common_delete">삭제</string>
+    <string name="common_next">다음</string>
+    <string name="common_back">뒤로</string>
+    <string name="common_done">완료</string>
+    <string name="common_loading">불러오는 중…</string>
+    <string name="common_minutes_format">%1$d분</string>
+    <string name="common_hours_minutes_format">%1$d시간 %2$d분</string>
+    <string name="common_today">오늘</string>
+    <string name="common_tomorrow">내일</string>
+    <string name="common_more">더보기</string>
+
+    <!-- 하단 탭 -->
+    <string name="nav_home">홈</string>
+    <string name="nav_alarms">알람</string>
+    <string name="nav_settings">설정</string>
+
+    <!-- 온보딩 -->
+    <string name="onboarding_title_1">도착 시간만 알려주세요.</string>
+    <string name="onboarding_body_1">목표 도착시간을 설정하면 출발 시간을 계산합니다.</string>
+    <string name="onboarding_title_2">교통 상황까지 계산해요.</string>
+    <string name="onboarding_body_2">대중교통 상황이 바뀌면 필요한 경우 알람 시간도 다시 계산합니다.</string>
+    <string name="onboarding_title_3">늦지 않도록 깨워드릴게요.</string>
+    <string name="onboarding_body_3">준비시간까지 고려해 기상 알람을 자동으로 설정합니다.</string>
+    <string name="onboarding_start">시작하기</string>
+    <string name="onboarding_skip">건너뛰기</string>
+
+    <!-- 권한 -->
+    <string name="permission_title">알람이 제때 울리려면 권한이 필요해요</string>
+    <string name="permission_notifications_title">알림</string>
+    <string name="permission_notifications_body">기상 알람과 출발 알림, 교통 상황 변경을 알려드려요.</string>
+    <string name="permission_exact_alarm_title">정확한 알람</string>
+    <string name="permission_exact_alarm_body">계산된 시각에 정확히 울리기 위해 필요해요. 없으면 몇 분 늦게 울릴 수 있어요.</string>
+    <string name="permission_location_title">위치 (선택)</string>
+    <string name="permission_location_body">"현재 위치"에서 출발할 때만 1회 사용해요. 거부해도 주소 검색으로 사용할 수 있어요.</string>
+    <string name="permission_grant">허용하기</string>
+    <string name="permission_granted">허용됨</string>
+    <string name="permission_denied">허용 안 됨</string>
+    <string name="permission_open_settings">설정에서 변경</string>
+    <string name="permission_continue">계속하기</string>
+
+    <!-- 홈 -->
+    <string name="home_greeting">안녕하세요 👋</string>
+    <string name="home_subtitle">내일도 늦지 않게 준비해드릴게요.</string>
+    <string name="home_wake_up_label">기상 알람</string>
+    <string name="home_departure_arrival_format">%1$s 출발  →  %2$s 도착</string>
+    <string name="home_travel_format">예상 이동 %1$s</string>
+    <string name="home_slack_format">여유시간 %1$d분</string>
+    <string name="home_empty_title">아직 등록된 일정이 없어요</string>
+    <string name="home_empty_body">도착지와 도착 시간만 알려주시면 알람을 계산해드려요.</string>
+    <string name="home_new_alarm">새 알람</string>
+    <string name="home_route_title">이동 경로</string>
+    <string name="home_stale_warning">%1$s에 계산된 정보예요. 실시간 교통 정보를 다시 확인해 주세요.</string>
+    <string name="home_offline_banner">실시간 교통 정보를 가져오지 못했어요.\n마지막 계산 결과를 기준으로 알람을 유지합니다.</string>
+    <string name="home_refresh">교통 정보 새로고침</string>
+    <string name="home_refreshing">교통 정보 확인 중…</string>
+    <string name="home_demo_hint">예시 일정이에요. 켜면 실제 알람으로 동작해요.</string>
+    <string name="home_upcoming_title">다가오는 알람</string>
+    <string name="home_target_format">%1$s까지 도착</string>
+    <string name="home_day_destination_format">%1$s · %2$s</string>
+    <string name="home_pending_title">알람 변경을 추천해요</string>
+    <string name="home_pending_earlier">교통 상황이 바뀌어 알람을 %1$d분 앞당기는 것을 추천합니다. (%2$s → %3$s)</string>
+    <string name="home_pending_later">교통 상황이 좋아져 알람을 %1$d분 늦출 수 있어요. (%2$s → %3$s)</string>
+    <string name="home_pending_confirm">예상 이동시간이 크게 바뀌었어요. 알람을 %2$s → %3$s로 %1$d분 변경할까요?</string>
+    <string name="home_pending_apply">변경하기</string>
+    <string name="home_pending_dismiss">유지하기</string>
+    <string name="home_pending_outdated">추천이 오래되어 교통 정보를 다시 확인했어요.</string>
+
+    <!-- 교통 상태 -->
+    <string name="traffic_normal">교통 상황 정상</string>
+    <string name="traffic_minor_delay">약 %1$d분 지연</string>
+    <string name="traffic_severe_delay">약 %1$d분 지연</string>
+    <string name="traffic_change_increase">이전 계산보다 %1$d분 증가</string>
+    <string name="traffic_change_decrease">이전 계산보다 %1$d분 감소</string>
+    <string name="traffic_realtime">실시간</string>
+    <string name="traffic_cached">마지막 계산 기준</string>
+
+    <!-- 경로 구간 -->
+    <string name="segment_walk">도보 %1$s</string>
+    <string name="segment_bus">%1$s %2$s</string>
+    <string name="segment_subway">%1$s %2$s</string>
+    <string name="segment_train">%1$s %2$s</string>
+    <string name="segment_etc">%1$s</string>
+    <string name="route_summary_format">총 %1$s · 도보 %2$s · 환승 %3$d회</string>
+
+    <!-- 일정 생성 -->
+    <string name="create_title">새 알람</string>
+    <string name="create_edit_title">알람 수정</string>
+    <string name="create_step_format">%1$d / %2$d</string>
+    <string name="create_origin_question">어디에서 출발하나요?</string>
+    <string name="create_destination_question">어디까지 가나요?</string>
+    <string name="create_time_question">몇 시까지 도착할까요?</string>
+    <string name="create_preparation_question">준비하는 데 얼마나 걸리나요?</string>
+    <string name="create_buffer_question">얼마나 여유 있게 도착할까요?</string>
+    <string name="create_repeat_question">언제 반복할까요?</string>
+    <string name="create_use_current_location">현재 위치에서 출발</string>
+    <string name="create_current_location_name">현재 위치</string>
+    <string name="create_search_place">장소 검색</string>
+    <string name="create_saved_places">저장된 장소</string>
+    <string name="create_no_saved_places">저장된 장소가 없어요. 검색해서 추가해 보세요.</string>
+    <string name="create_select_place">선택</string>
+    <string name="create_title_label">일정 이름 (선택)</string>
+    <string name="create_title_hint">예: 월요일 1교시</string>
+    <string name="create_buffer_tight">빠듯하게</string>
+    <string name="create_buffer_normal">보통</string>
+    <string name="create_buffer_relaxed">여유롭게</string>
+    <string name="create_buffer_custom">직접 설정</string>
+    <string name="create_repeat_once">한 번</string>
+    <string name="create_repeat_weekdays">평일</string>
+    <string name="create_repeat_daily">매일</string>
+    <string name="create_repeat_custom">직접 선택</string>
+    <string name="create_alarm_mode_label">알림 방식</string>
+    <string name="create_alarm_mode_wake_only">기상 알람만</string>
+    <string name="create_alarm_mode_wake_and_departure">기상 알람 + 출발 알림</string>
+    <string name="create_calculate">알람 계산하기</string>
+    <string name="create_calculating">교통 정보를 분석하고 있어요…</string>
+    <string name="create_preparation_label">준비 시간</string>
+    <string name="create_buffer_label">안전 여유</string>
+    <string name="create_travel_label">예상 이동</string>
+    <string name="create_result_title">이렇게 계산했어요</string>
+    <string name="create_result_target">목표 도착</string>
+    <string name="create_result_arrival">예상 도착</string>
+    <string name="create_result_departure">권장 출발</string>
+    <string name="create_result_wake_up">기상 알람</string>
+    <string name="create_result_save">이 시간으로 알람 설정</string>
+    <string name="create_result_too_late_title">현재 교통 상황에서는 %1$s까지 도착하기 어려워요.</string>
+    <string name="create_result_too_late_body">지금 바로 출발해도 %1$s 도착 예정이에요. (%2$d분 늦음)</string>
+    <string name="create_result_too_late_repeat_hint">다음 회차부터는 정상적으로 알람이 울려요.</string>
+    <string name="create_result_wake_passed">기상 시각은 이미 지났어요. 지금부터 준비하면 %1$s에 출발할 수 있어요.</string>
+    <string name="create_result_saved">알람을 설정했어요</string>
+    <string name="create_result_inexact_warning">정확한 알람 권한이 없어 몇 분 늦게 울릴 수 있어요.</string>
+    <string name="create_time_picker_title">목표 도착 시간</string>
+    <string name="create_date_label">날짜</string>
+
+    <!-- 장소 검색 -->
+    <string name="place_search_hint">장소나 주소를 검색하세요</string>
+    <string name="place_search_empty">검색 결과가 없어요</string>
+    <string name="place_search_save">즐겨찾기에 저장</string>
+    <string name="place_search_saved">저장됨</string>
+    <string name="place_type_home">집</string>
+    <string name="place_type_school">학교</string>
+    <string name="place_type_work">회사</string>
+    <string name="place_type_custom">기타</string>
+    <string name="place_save_title">장소 저장</string>
+    <string name="place_save_name_label">이름</string>
+    <string name="place_save_type_label">종류</string>
+
+    <!-- 알람 목록 -->
+    <string name="alarms_title">알람</string>
+    <string name="alarms_empty_title">등록된 알람이 없어요</string>
+    <string name="alarms_empty_body">홈에서 + 버튼으로 새 알람을 만들어 보세요.</string>
+    <string name="alarms_target_format">%1$s까지 도착</string>
+    <string name="alarms_disabled">꺼짐</string>
+    <string name="alarms_toggle_description">알람 켜기/끄기</string>
+    <string name="alarms_delete_confirm_title">알람을 삭제할까요?</string>
+    <string name="alarms_delete_confirm_body">삭제하면 되돌릴 수 없어요.</string>
+
+    <!-- 일정 상세 -->
+    <string name="detail_title">알람 상세</string>
+    <string name="detail_edit">수정</string>
+    <string name="detail_delete">삭제</string>
+    <string name="detail_timeline_title">계산 과정</string>
+    <string name="detail_history_title">최근 기록</string>
+    <string name="detail_history_empty">아직 기록이 없어요</string>
+    <string name="detail_last_updated">마지막 갱신 %1$s</string>
+    <string name="detail_next_target">다음 목표 %1$s</string>
+    <string name="detail_section_settings">설정값</string>
+    <string name="detail_repeat_label">반복</string>
+    <string name="detail_origin_label">출발지</string>
+    <string name="detail_destination_label">도착지</string>
+    <string name="detail_disabled_hint">알람이 꺼져 있어요. 켜면 교통 정보를 다시 확인해요.</string>
+    <string name="history_created">알람 생성</string>
+    <string name="history_recalculated">교통 정보 재계산</string>
+    <string name="history_auto_adjusted">알람 자동 조정</string>
+    <string name="history_adjustment_suggested">알람 변경 추천</string>
+    <string name="history_adjustment_applied">추천 변경 적용</string>
+    <string name="history_fired">알람 울림</string>
+    <string name="history_snoozed">다시 울림</string>
+    <string name="history_dismissed">알람 종료</string>
+    <string name="history_refresh_failed">교통 정보 조회 실패</string>
+    <string name="history_wake_change_format">%1$s → %2$s</string>
+
+    <!-- 알람 화면 -->
+    <string name="ring_title">일어날 시간이에요</string>
+    <string name="ring_subtitle_format">%1$s 출발 · %2$s 도착 예정</string>
+    <string name="ring_snooze_format">%1$d분 후 다시 울림</string>
+    <string name="ring_dismiss">알람 끄기</string>
+
+    <!-- 설정 -->
+    <string name="settings_title">설정</string>
+    <string name="settings_section_alarm">알람 계산</string>
+    <string name="settings_default_preparation">기본 준비시간</string>
+    <string name="settings_default_buffer">기본 여유시간</string>
+    <string name="settings_auto_adjust">알람 자동 조정</string>
+    <string name="settings_auto_adjust_body">교통 상황이 바뀌면 알람을 자동으로 변경해요. 끄면 추천만 받아요.</string>
+    <string name="settings_traffic_notifications">교통 상황 알림</string>
+    <string name="settings_section_sound">알람 소리</string>
+    <string name="settings_vibration">진동</string>
+    <string name="settings_alarm_sound">알람음</string>
+    <string name="settings_sound_default">기본 알람음</string>
+    <string name="settings_sound_gentle">부드럽게</string>
+    <string name="settings_sound_silent">무음</string>
+    <string name="settings_snooze">다시 울림 간격</string>
+    <string name="settings_section_display">화면</string>
+    <string name="settings_theme">테마</string>
+    <string name="settings_theme_system">시스템</string>
+    <string name="settings_theme_light">라이트</string>
+    <string name="settings_theme_dark">다크</string>
+    <string name="settings_section_permissions">권한 상태</string>
+    <string name="settings_section_demo">데모 (API 키 없이 시연)</string>
+    <string name="settings_demo_delay">가상 교통 지연</string>
+    <string name="settings_demo_delay_body">Fake 교통 데이터에 지연을 더해 알람 자동 조정을 시연해요.</string>
+    <string name="settings_demo_network_failure">네트워크 오류 시뮬레이션</string>
+    <string name="settings_demo_network_failure_body">교통 정보 조회가 실패했을 때의 오프라인 동작을 확인해요.</string>
+    <string name="settings_demo_run_refresh">지금 교통 정보 다시 확인</string>
+    <string name="settings_demo_provider_format">교통 데이터 제공자: %1$s</string>
+    <string name="settings_section_metrics">측정 지표</string>
+    <string name="settings_metrics_api_calls">API 호출 %1$d회 (실패 %2$d회)</string>
+    <string name="settings_metrics_latency">평균 응답 %1$dms</string>
+    <string name="settings_metrics_cache">캐시 폴백 %1$d회</string>
+    <string name="settings_metrics_recalc">재계산 %1$d회 · 자동 조정 %2$d회</string>
+    <string name="settings_metrics_work">백그라운드 갱신 실행 %1$d회</string>
+    <string name="settings_version_format">버전 %1$s</string>
+
+    <!-- 오류 -->
+    <string name="error_network">인터넷 연결을 확인해 주세요.</string>
+    <string name="error_server">교통 정보 서버에 문제가 있어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="error_no_route">출발지와 도착지 사이의 대중교통 경로를 찾지 못했어요.</string>
+    <string name="error_place_search">장소를 검색하지 못했어요.</string>
+    <string name="error_location_permission">위치 권한이 없어요. 출발지를 직접 검색해 주세요.</string>
+    <string name="error_location_unavailable">현재 위치를 확인하지 못했어요. 출발지를 직접 검색해 주세요.</string>
+    <string name="error_database">저장 중 문제가 생겼어요.</string>
+    <string name="error_alarm">알람을 등록하지 못했어요.</string>
+    <string name="error_not_found">알람을 찾을 수 없어요.</string>
+    <string name="error_missing_origin">출발지를 선택해 주세요.</string>
+    <string name="error_missing_destination">도착지를 선택해 주세요.</string>
+    <string name="error_same_place">출발지와 도착지가 같아요.</string>
+    <string name="error_negative_duration">시간은 0분 이상이어야 해요.</string>
+    <string name="error_target_in_past">목표 시간이 이미 지났어요.</string>
+    <string name="error_no_repeat_day">반복 요일을 하나 이상 선택해 주세요.</string>
+    <string name="error_unknown">알 수 없는 문제가 생겼어요.</string>
+    <string name="error_title">문제가 생겼어요</string>
+
+    <!-- 요일 -->
+    <string name="day_mon">월</string>
+    <string name="day_tue">화</string>
+    <string name="day_wed">수</string>
+    <string name="day_thu">목</string>
+    <string name="day_fri">금</string>
+    <string name="day_sat">토</string>
+    <string name="day_sun">일</string>
+    <string name="repeat_weekdays">평일</string>
+    <string name="repeat_daily">매일</string>
+    <string name="repeat_weekend">주말</string>
+    <string name="repeat_once_format">%1$s 한 번</string>
+
+    <!-- 접근성 -->
+    <string name="cd_add_alarm">새 알람 만들기</string>
+    <string name="cd_back">뒤로 가기</string>
+    <string name="cd_traffic_status">교통 상태</string>
+    <string name="cd_route_segment_walk">도보 구간</string>
+    <string name="cd_route_segment_transit">대중교통 구간</string>
+    <string name="cd_clear_search">검색어 지우기</string>
+    <string name="cd_selected">선택됨</string>
 </resources>
