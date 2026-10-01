@@ -132,7 +132,7 @@ class FakeAlarmNotifier : AlarmNotifier {
     val adjusted = mutableListOf<Pair<Instant, Instant>>()
     val suggested = mutableListOf<Pair<Long, Boolean>>()
 
-    override fun notifyAlarmAdjusted(schedule: Schedule, previousWakeUp: Instant, newWakeUp: Instant) {
+    override fun notifyAlarmAdjusted(schedule: Schedule, previousWakeUp: Instant, newWakeUp: Instant, isRealtime: Boolean) {
         adjusted += previousWakeUp to newWakeUp
     }
 

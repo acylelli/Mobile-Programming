@@ -126,6 +126,14 @@ class RefreshTransitTimeUseCase @Inject constructor(
             return RefreshOutcome.Recalculated(saved)
         }
 
+        // 이 회차의 기상 알람이 이미 울렸다면(사용자는 깨어 있음) 기상 시각을 바꾸는 것은 의미가 없다.
+        // 예상 도착/이동 정보만 최신으로 갱신하고 출발 알림은 그대로 둔다.
+        if (!oldPlan.wakeUp.isAfter(now)) {
+            val saved = save(schedule.copy(plan = keepAlarmWithFreshEstimate(oldPlan, newPlan), updatedAt = now))
+            record(saved, AlarmEventType.RECALCULATED, now, oldPlan.wakeUp, saved.plan)
+            return RefreshOutcome.Unchanged(saved, deltaMinutes = 0)
+        }
+
         val prefs = preferencesRepository.current()
         return when (
             val decision = evaluateAdjustment(
@@ -150,7 +158,7 @@ class RefreshTransitTimeUseCase @Inject constructor(
                 record(saved, AlarmEventType.AUTO_ADJUSTED, now, oldPlan.wakeUp, adjustedPlan)
                 metricsRepository.record(MetricType.ALARM_AUTO_ADJUSTED)
                 if (prefs.trafficNotificationsEnabled) {
-                    notifier.notifyAlarmAdjusted(saved, oldPlan.wakeUp, adjustedPlan.wakeUp)
+                    notifier.notifyAlarmAdjusted(saved, oldPlan.wakeUp, adjustedPlan.wakeUp, adjustedPlan.isRealtime)
                 }
                 RefreshOutcome.AutoAdjusted(saved, decision.deltaMinutes)
             }

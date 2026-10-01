@@ -194,4 +194,21 @@ class RefreshTransitTimeUseCaseTest {
         assertTrue(wake.isAfter(time.instant))
         assertTrue(wake.isBefore(seoul(day, 7, 6)))
     }
+
+    @Test
+    fun `기상 알람이 이미 울린 뒤의 재확인은 알람 시각을 바꾸지 않고 예상 정보만 갱신한다`() = runTest {
+        val id = givenScheduledAt0720()
+        time.instant = seoul(day, 7, 30) // 기상 07:20 은 지났고 출발 07:50 전
+        transit.travelMinutes = 85
+        transit.delayMinutes = 25
+
+        val outcome = refresh(id)
+
+        assertTrue(outcome is RefreshOutcome.Unchanged)
+        val plan = schedule(id).plan!!
+        assertEquals(seoul(day, 7, 20), plan.wakeUp)
+        assertEquals(seoul(day, 7, 50), plan.departure)
+        assertEquals(85, plan.travelMinutes)
+        assertTrue(notifier.adjusted.isEmpty())
+    }
 }

@@ -19,6 +19,7 @@
     <string name="notification_departure_now_text">지금 출발하면 %1$s에 %2$s 도착 예정이에요.</string>
     <string name="notification_adjusted_title">%1$s · 알람 시간이 변경됐어요</string>
     <string name="notification_adjusted_earlier">교통 상황이 평소보다 혼잡해요. 알람을 %2$s → %3$s로 %1$d분 앞당겼어요.</string>
+    <string name="notification_adjusted_cached">실시간 교통 정보를 가져오지 못해 마지막 경로 기준으로 여유를 더했어요. 알람을 %1$s → %2$s로 변경했어요.</string>
     <string name="notification_adjusted_later">교통 상황이 좋아졌어요. 알람을 %2$s → %3$s로 %1$d분 늦췄어요.</string>
     <string name="notification_suggest_title">%1$s · 알람 변경을 추천해요</string>
     <string name="notification_suggest_earlier">교통 상황이 바뀌어 알람을 %1$d분 앞당기는 것을 추천합니다. 앱에서 변경할 수 있어요.</string>

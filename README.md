@@ -247,7 +247,7 @@ ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형
 ./gradlew testDebugUnitTest
 ```
 
-도메인 계층은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 50개 테스트:
+도메인 계층은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 51개 테스트:
 
 | 테스트 | 검증 내용 |
 |---|---|
@@ -256,7 +256,7 @@ ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형
 | `EvaluateAlarmAdjustmentUseCaseTest` | 5분 미만 유지, 5분 이상 자동, 늦춤 10분 기준, 30분 초과 확인, 자동 조정 OFF, 알람 직전 예외 |
 | `ResolveNextOccurrenceUseCaseTest` | 반복 요일의 다음 회차, 1회 일정 날짜 결정 |
 | `RefreshCheckpointPolicyTest` | 24h/3h/1h/20분 체크포인트 선택 |
-| `RefreshTransitTimeUseCaseTest` | 교통 지연 → 자동 조정·알림, 작은 변화 유지, 추천/확인 요청, 추천 승인, 네트워크 실패 폴백, 알람 직전 즉시 울림 |
+| `RefreshTransitTimeUseCaseTest` | 교통 지연 → 자동 조정·알림, 작은 변화 유지, 추천/확인 요청, 추천 승인, 네트워크 실패 폴백, 알람 직전 즉시 울림, 이미 울린 알람은 변경하지 않음 |
 | `SyncScheduleUseCaseTest` | 재부팅 복구, 회차 넘김, 1회 일정 종료, 시간대 변경, 정확한 알람 권한 없음, 스누즈 보존 |
 
 리포트: `app/build/reports/tests/testDebugUnitTest/index.html`
@@ -273,6 +273,8 @@ ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형
 | **TimeProvider.zone() 을 매번 읽음** | `Clock.systemDefaultZone()` 은 생성 시점 Zone 을 붙잡아 여행 중 시간대 변경을 놓침 (`core/util/TimeProvider.kt`) |
 | **비대칭 히스테리시스** | 앞당김은 5분, 늦춤은 10분부터 반영. 늦잠 위험 쪽을 더 보수적으로 (`AdjustmentPolicy`) |
 | **30분 초과는 자동 변경 금지, 단 알람 직전은 예외** | API 오류 가능성 vs 사용자가 자고 있어 확인 불가 → 지각 방지 우선 (`EvaluateAlarmAdjustmentUseCase`) |
+| **이미 울린 기상 알람은 재계산해도 바꾸지 않음** | 사용자는 이미 깨어 있으므로 예상 도착만 갱신. 울리기 전이라면 "지금 당장" 알람으로 당긴다 (`RefreshTransitTimeUseCase`) |
+| **캐시 경로로 계산한 조정은 다른 문구로 알림** | "혼잡해요"가 아니라 "실시간 정보를 못 가져와 여유를 더했어요"로 원인을 정확히 전달 (`AlarmNotifications`) |
 | **이동시간은 현재 ETA 보다 짧아지지 않게 블렌딩** | 우연히 짧게 나온 ETA 하나로 알람이 늦어지는 것을 방지 (`EstimateTravelTimeUseCase`) |
 | **일정의 장소는 FK 가 아닌 스냅샷** | 즐겨찾기 삭제/수정이 이미 설정된 알람을 조용히 바꾸지 않도록 (`ScheduleEntity`) |
 | **setAlarmClock 으로 기상 알람 등록** | Doze 에서도 정확, 상태바 알람 아이콘, 13+ 에서 USE_EXACT_ALARM 으로 권한 프롬프트 불필요 (`AndroidAlarmScheduler`) |

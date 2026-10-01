@@ -114,12 +114,13 @@ class AlarmNotifications @Inject constructor(
         )
     }
 
-    override fun notifyAlarmAdjusted(schedule: Schedule, previousWakeUp: Instant, newWakeUp: Instant) {
+    override fun notifyAlarmAdjusted(schedule: Schedule, previousWakeUp: Instant, newWakeUp: Instant, isRealtime: Boolean) {
         val delta = java.time.Duration.between(newWakeUp, previousWakeUp).toMinutes()
-        val text = if (delta > 0) {
-            context.getString(R.string.notification_adjusted_earlier, delta, formatTime(previousWakeUp), formatTime(newWakeUp))
-        } else {
-            context.getString(R.string.notification_adjusted_later, -delta, formatTime(previousWakeUp), formatTime(newWakeUp))
+        val text = when {
+            // 캐시 경로로 계산한 경우 "혼잡" 때문이 아니라 불확실성 여유 때문임을 정확히 알린다.
+            !isRealtime -> context.getString(R.string.notification_adjusted_cached, formatTime(previousWakeUp), formatTime(newWakeUp))
+            delta > 0 -> context.getString(R.string.notification_adjusted_earlier, delta, formatTime(previousWakeUp), formatTime(newWakeUp))
+            else -> context.getString(R.string.notification_adjusted_later, -delta, formatTime(previousWakeUp), formatTime(newWakeUp))
         }
         notify(
             NOTIFICATION_TRAFFIC_BASE + schedule.id.toInt(),

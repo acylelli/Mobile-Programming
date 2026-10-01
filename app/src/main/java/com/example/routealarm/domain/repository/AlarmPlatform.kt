@@ -29,6 +29,7 @@ interface TransitRefreshScheduler {
 
 /** 사용자에게 보내는 교통/알람 변경 알림 */
 interface AlarmNotifier {
-    fun notifyAlarmAdjusted(schedule: Schedule, previousWakeUp: Instant, newWakeUp: Instant)
+    /** @param isRealtime false 면 실시간 조회 실패 후 캐시된 경로로 다시 계산한 결과 */
+    fun notifyAlarmAdjusted(schedule: Schedule, previousWakeUp: Instant, newWakeUp: Instant, isRealtime: Boolean)
     fun notifyAdjustmentSuggested(schedule: Schedule, deltaMinutes: Long, needsConfirmation: Boolean)
 }
