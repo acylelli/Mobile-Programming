@@ -62,11 +62,19 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 
 ## 3. 스크린샷
 
-| 홈 | 일정 생성 | 계산 결과 | 알람 목록 | 설정 |
-|---|---|---|---|---|
-| ![홈](docs/screenshots/home.png) | ![생성](docs/screenshots/create.png) | ![결과](docs/screenshots/result.png) | ![알람](docs/screenshots/alarms.png) | ![설정](docs/screenshots/settings.png) |
+에뮬레이터(Pixel, Android 16)에서 Fake 교통 데이터로 캡처한 화면이다.
 
-> `docs/screenshots/` 에 이미지를 넣으면 표시된다.
+| 온보딩 | 홈 | 일정 생성 | 계산 결과 |
+|---|---|---|---|
+| ![온보딩](docs/screenshots/onboarding.png) | ![홈](docs/screenshots/home.png) | ![생성](docs/screenshots/create.png) | ![결과](docs/screenshots/result.png) |
+
+| 알람 목록 | 상세 | 설정 | 알람 울림 |
+|---|---|---|---|
+| ![알람](docs/screenshots/alarms.png) | ![상세](docs/screenshots/detail.png) | ![설정](docs/screenshots/settings.png) | ![알람 울림](docs/screenshots/ringing.png) |
+
+| 교통 변화 → 변경 추천 (자동 조정 OFF) | 네트워크 실패 → 마지막 계산 기준 |
+|---|---|
+| ![추천](docs/screenshots/suggestion.png) | ![오프라인](docs/screenshots/offline.png) |
 
 ## 4. 기술 스택
 
