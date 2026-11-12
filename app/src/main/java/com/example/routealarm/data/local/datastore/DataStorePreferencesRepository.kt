@@ -6,11 +6,12 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.routealarm.data.mapper.enumValueOrDefault
 import com.example.routealarm.domain.model.AlarmSound
+import com.example.routealarm.domain.model.ColorTheme
 import com.example.routealarm.domain.model.DemoSettings
-import com.example.routealarm.domain.model.ThemeMode
 import com.example.routealarm.domain.model.UserPreferences
 import com.example.routealarm.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.Flow
@@ -38,7 +39,8 @@ class DataStorePreferencesRepository @Inject constructor(
         val VIBRATION = booleanPreferencesKey("vibration")
         val ALARM_SOUND = stringPreferencesKey("alarm_sound")
         val SNOOZE = intPreferencesKey("snooze_minutes")
-        val THEME = stringPreferencesKey("theme_mode")
+        val COLOR_THEME = stringPreferencesKey("color_theme")
+        val PAYWALL_PROMPT_DAY = longPreferencesKey("paywall_prompt_epoch_day")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_completed")
         val DEMO_SEEDED = booleanPreferencesKey("demo_seeded")
         val DEMO_EXTRA_DELAY = intPreferencesKey("demo_extra_delay_minutes")
@@ -59,7 +61,8 @@ class DataStorePreferencesRepository @Inject constructor(
         vibrationEnabled = this[Keys.VIBRATION] ?: true,
         alarmSound = enumValueOrDefault(this[Keys.ALARM_SOUND] ?: "", AlarmSound.DEFAULT_ALARM),
         snoozeMinutes = this[Keys.SNOOZE] ?: UserPreferences.DEFAULT_SNOOZE_MINUTES,
-        themeMode = enumValueOrDefault(this[Keys.THEME] ?: "", ThemeMode.SYSTEM),
+        colorTheme = enumValueOrDefault(this[Keys.COLOR_THEME] ?: "", ColorTheme.DEFAULT),
+        lastPaywallPromptEpochDay = this[Keys.PAYWALL_PROMPT_DAY],
         onboardingCompleted = this[Keys.ONBOARDING_DONE] ?: false,
         demoSeeded = this[Keys.DEMO_SEEDED] ?: false,
         demo = DemoSettings(
@@ -79,7 +82,8 @@ class DataStorePreferencesRepository @Inject constructor(
     override suspend fun setVibration(enabled: Boolean) = set(Keys.VIBRATION, enabled)
     override suspend fun setAlarmSound(sound: AlarmSound) = set(Keys.ALARM_SOUND, sound.name)
     override suspend fun setSnoozeMinutes(minutes: Int) = set(Keys.SNOOZE, minutes)
-    override suspend fun setThemeMode(mode: ThemeMode) = set(Keys.THEME, mode.name)
+    override suspend fun setColorTheme(theme: ColorTheme) = set(Keys.COLOR_THEME, theme.name)
+    override suspend fun setLastPaywallPromptDay(epochDay: Long) = set(Keys.PAYWALL_PROMPT_DAY, epochDay)
     override suspend fun setOnboardingCompleted() = set(Keys.ONBOARDING_DONE, true)
     override suspend fun setDemoSeeded() = set(Keys.DEMO_SEEDED, true)
     override suspend fun setDemoExtraDelay(minutes: Int) = set(Keys.DEMO_EXTRA_DELAY, minutes)

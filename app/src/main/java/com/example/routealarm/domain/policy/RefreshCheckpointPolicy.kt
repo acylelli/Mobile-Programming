@@ -9,6 +9,10 @@ import java.time.Instant
  * 설계 이유(배터리): 몇 분마다 서버를 호출하지 않는다. 알람이 멀리 있으면 하루 전 한 번,
  * 가까워질수록 촘촘하게(3시간 전 → 1시간 전 → 20분 전) 확인한다.
  * 한 일정당 하루 최대 4회 호출이며, 마지막 확인 이후에는 AlarmManager 알람만 남는다.
+ *
+ * 플랜에 따른 차이(SFR-015):
+ *  - PRO: 위 체크포인트를 모두 사용해 출발 직전까지 다시 계산한다.
+ *  - 무료: 출발 전 한 번([FREE_CHECKPOINT_BEFORE_WAKE_UP])만 확인한다.
  */
 object RefreshCheckpointPolicy {
     val CHECKPOINTS_BEFORE_WAKE_UP: List<Duration> = listOf(
@@ -18,12 +22,18 @@ object RefreshCheckpointPolicy {
         Duration.ofMinutes(20),
     )
 
+    /** 무료 플랜의 "출발 전 교통 확인 1회" 시점 */
+    val FREE_CHECKPOINT_BEFORE_WAKE_UP: Duration = Duration.ofMinutes(30)
+
     /** 지금 바로 실행되어 버리는 너무 가까운 체크포인트는 건너뛴다. */
     private val MIN_LEAD: Duration = Duration.ofMinutes(1)
 
-    fun nextCheckpoint(wakeUp: Instant, now: Instant): Instant? =
-        CHECKPOINTS_BEFORE_WAKE_UP
+    /** @param realtimeRecalculation PRO 의 실시간 재계산 여부. false 면 무료 플랜 기준 */
+    fun nextCheckpoint(wakeUp: Instant, now: Instant, realtimeRecalculation: Boolean = true): Instant? {
+        val checkpoints = if (realtimeRecalculation) CHECKPOINTS_BEFORE_WAKE_UP else listOf(FREE_CHECKPOINT_BEFORE_WAKE_UP)
+        return checkpoints
             .map { wakeUp.minus(it) }
             .filter { it.isAfter(now.plus(MIN_LEAD)) }
             .minOrNull()
+    }
 }

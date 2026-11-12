@@ -2,41 +2,49 @@ package com.example.routealarm.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.routealarm.BuildConfig
 import com.example.routealarm.core.common.AppError
 import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.core.util.TimeProvider
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.repository.ScheduleRepository
+import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.usecase.ApplyPendingAdjustmentUseCase
 import com.example.routealarm.domain.usecase.DismissPendingAdjustmentUseCase
 import com.example.routealarm.domain.usecase.RefreshOutcome
 import com.example.routealarm.domain.usecase.RefreshTransitTimeUseCase
 import com.example.routealarm.domain.usecase.SeedDemoDataUseCase
-import com.example.routealarm.domain.usecase.SetScheduleEnabledUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 
 sealed interface HomeUiState {
     data object Loading : HomeUiState
     data object Empty : HomeUiState
     data class Success(
-        /** 가장 가까운 기상 알람. 활성 일정이 없으면 비활성 일정 중 첫 번째 */
-        val primary: Schedule,
-        val upcoming: List<Schedule>,
+        /** 가장 가까운 기상 알람의 일정. 켜진 일정이 없으면 꺼진 일정 중 첫 번째 */
+        val schedule: Schedule,
         val isRefreshing: Boolean,
+        /** 실시간이 아닌 계산 결과가 6시간 넘게 지났는지(오래된 정보) */
         val isStale: Boolean,
-        /** 마지막 갱신 실패 메시지(오프라인 배너) */
+        /** 마지막 갱신 실패(오프라인 안내) */
         val refreshError: AppError?,
         val pendingOutdatedMessage: Boolean,
+        /** 무료 플랜이면 PRO 안내 띠를 보여준다. */
+        val isPro: Boolean,
+        /** 교통 데이터가 실제 API 가 아닌 시연용 데이터인지 */
+        val isDemoData: Boolean,
     ) : HomeUiState
 }
 
@@ -45,13 +53,13 @@ sealed interface HomeEvent {
 }
 
 /**
- * 홈 화면. 일정 목록을 Room Flow 로 구독하므로 백그라운드 Worker 가 알람을 바꾸면 화면도 즉시 갱신된다.
+ * 홈 (내일 경로). 일정 목록을 Room Flow 로 구독하므로 백그라운드 Worker 가 알람을 바꾸면 화면도 즉시 갱신된다.
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     scheduleRepository: ScheduleRepository,
+    subscriptionRepository: SubscriptionRepository,
     private val refreshTransitTime: RefreshTransitTimeUseCase,
-    private val setScheduleEnabled: SetScheduleEnabledUseCase,
     private val applyPendingAdjustment: ApplyPendingAdjustmentUseCase,
     private val dismissPendingAdjustment: DismissPendingAdjustmentUseCase,
     private val seedDemoData: SeedDemoDataUseCase,
@@ -66,26 +74,29 @@ class HomeViewModel @Inject constructor(
     )
 
     private val local = MutableStateFlow(LocalState())
-    private val _events = MutableStateFlow<HomeEvent?>(null)
-    val events: StateFlow<HomeEvent?> = _events.asStateFlow()
+    private val _events = Channel<HomeEvent>(Channel.BUFFERED)
+    val events: Flow<HomeEvent> = _events.receiveAsFlow()
 
-    val uiState: StateFlow<HomeUiState> = combine(scheduleRepository.observeSchedules(), local) { schedules, state ->
+    val uiState: StateFlow<HomeUiState> = combine(
+        scheduleRepository.observeSchedules(),
+        subscriptionRepository.entitlement,
+        local,
+    ) { schedules, entitlement, state ->
         if (schedules.isEmpty()) {
             if (state.seeded) HomeUiState.Empty else HomeUiState.Loading
         } else {
             val now = timeProvider.now()
-            val sorted = schedules.sortedWith(
-                compareByDescending<Schedule> { it.enabled }
-                    .thenBy { it.plan?.wakeUp ?: java.time.Instant.MAX },
-            )
-            val primary = sorted.first()
+            val schedule = schedules.sortedWith(
+                compareByDescending<Schedule> { it.enabled }.thenBy { it.plan?.wakeUp ?: Instant.MAX },
+            ).first()
             HomeUiState.Success(
-                primary = primary,
-                upcoming = sorted.drop(1),
-                isRefreshing = primary.id in state.refreshingIds,
-                isStale = primary.plan?.let { !it.isRealtime && it.isStale(now, STALE_THRESHOLD) } ?: false,
+                schedule = schedule,
+                isRefreshing = schedule.id in state.refreshingIds,
+                isStale = schedule.plan?.let { !it.isRealtime && it.isStale(now, STALE_THRESHOLD) } ?: false,
                 refreshError = state.refreshError,
                 pendingOutdatedMessage = state.pendingOutdated,
+                isPro = entitlement.isPro(now),
+                isDemoData = BuildConfig.TRANSIT_PROVIDER != PROVIDER_PROXY,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), HomeUiState.Loading)
@@ -97,6 +108,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** 교통 정보를 지금 다시 확인한다(교통 상태 칩, 당겨서 새로고침). */
     fun refresh(scheduleId: Long) {
         if (scheduleId in local.value.refreshingIds) return
         viewModelScope.launch {
@@ -111,19 +123,11 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun toggle(scheduleId: Long, enabled: Boolean) {
-        viewModelScope.launch {
-            val result = setScheduleEnabled(scheduleId, enabled)
-            if (result is AppResult.Failure) _events.value = HomeEvent.ShowMessage(result.error)
-            else if (enabled) refresh(scheduleId)
-        }
-    }
-
     fun applyPending(scheduleId: Long) {
         viewModelScope.launch {
             when (val result = applyPendingAdjustment(scheduleId)) {
                 is AppResult.Success -> if (!result.data) local.update { it.copy(pendingOutdated = true) }
-                is AppResult.Failure -> _events.value = HomeEvent.ShowMessage(result.error)
+                is AppResult.Failure -> _events.send(HomeEvent.ShowMessage(result.error))
             }
         }
     }
@@ -132,12 +136,9 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { dismissPendingAdjustment(scheduleId) }
     }
 
-    fun consumeEvent() {
-        _events.value = null
-    }
-
     private companion object {
         const val STOP_TIMEOUT_MILLIS = 5_000L
+        const val PROVIDER_PROXY = "proxy"
         val STALE_THRESHOLD: Duration = Duration.ofHours(6)
     }
 }

@@ -1,6 +1,7 @@
 package com.example.routealarm.alarm.notification
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -14,6 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.routealarm.MainActivity
 import com.example.routealarm.R
+import com.example.routealarm.alarm.scheduler.AlarmIntents
 import com.example.routealarm.alarm.service.AlarmRingingActivity
 import com.example.routealarm.alarm.service.AlarmService
 import com.example.routealarm.core.util.TimeProvider
@@ -80,6 +82,7 @@ class AlarmNotifications @Inject constructor(
         val wakeUp = schedule.plan?.wakeUp?.let(::formatTime) ?: ""
         return NotificationCompat.Builder(context, CHANNEL_ALARM)
             .setSmallIcon(R.drawable.ic_notification)
+            .setColor(accentColor())
             .setContentTitle(context.getString(R.string.notification_ringing_title, wakeUp))
             .setContentText(context.getString(R.string.notification_ringing_text, schedule.destination.name))
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -114,13 +117,15 @@ class AlarmNotifications @Inject constructor(
         )
     }
 
+    /** 알람 변경 알림(UI-D-004): "교통 상황이 변경되어 내일 알람이 15분 앞당겨졌어요. 07:15 → 07:00" */
     override fun notifyAlarmAdjusted(schedule: Schedule, previousWakeUp: Instant, newWakeUp: Instant, isRealtime: Boolean) {
-        val delta = java.time.Duration.between(newWakeUp, previousWakeUp).toMinutes()
+        val delta = java.time.Duration.between(newWakeUp, previousWakeUp).toMinutes().toInt()
+        val day = relativeDay(newWakeUp)
         val text = when {
             // 캐시 경로로 계산한 경우 "혼잡" 때문이 아니라 불확실성 여유 때문임을 정확히 알린다.
             !isRealtime -> context.getString(R.string.notification_adjusted_cached, formatTime(previousWakeUp), formatTime(newWakeUp))
-            delta > 0 -> context.getString(R.string.notification_adjusted_earlier, delta, formatTime(previousWakeUp), formatTime(newWakeUp))
-            else -> context.getString(R.string.notification_adjusted_later, -delta, formatTime(previousWakeUp), formatTime(newWakeUp))
+            delta > 0 -> context.getString(R.string.notification_adjusted_earlier, day, delta, formatTime(previousWakeUp), formatTime(newWakeUp))
+            else -> context.getString(R.string.notification_adjusted_later, day, -delta, formatTime(previousWakeUp), formatTime(newWakeUp))
         }
         notify(
             NOTIFICATION_TRAFFIC_BASE + schedule.id.toInt(),
@@ -131,12 +136,18 @@ class AlarmNotifications @Inject constructor(
         )
     }
 
+    /**
+     * 자동 조정을 쓰지 않을 때(무료 플랜 포함)의 추천 알림: "알람을 15분 앞당기는 것을 추천합니다" + [변경하기].
+     * 버튼을 누르면 앱을 열지 않고 변경안이 바로 적용된다.
+     */
     override fun notifyAdjustmentSuggested(schedule: Schedule, deltaMinutes: Long, needsConfirmation: Boolean) {
-        val magnitude = kotlin.math.abs(deltaMinutes)
+        val magnitude = kotlin.math.abs(deltaMinutes).toInt()
+        val from = schedule.plan?.wakeUp?.let(::formatTime).orEmpty()
+        val to = schedule.pendingAdjustment?.proposedPlan?.wakeUp?.let(::formatTime).orEmpty()
         val text = when {
-            needsConfirmation -> context.getString(R.string.notification_suggest_confirm, magnitude)
-            deltaMinutes < 0 -> context.getString(R.string.notification_suggest_earlier, magnitude)
-            else -> context.getString(R.string.notification_suggest_later, magnitude)
+            needsConfirmation -> context.getString(R.string.notification_suggest_confirm, magnitude, from, to)
+            deltaMinutes < 0 -> context.getString(R.string.notification_suggest_earlier, magnitude, from, to)
+            else -> context.getString(R.string.notification_suggest_later, magnitude, from, to)
         }
         notify(
             NOTIFICATION_TRAFFIC_BASE + schedule.id.toInt(),
@@ -144,12 +155,28 @@ class AlarmNotifications @Inject constructor(
             title = context.getString(R.string.notification_suggest_title, schedule.title),
             text = text,
             scheduleId = schedule.id,
+            action = NotificationCompat.Action(
+                0,
+                context.getString(R.string.home_pending_apply),
+                AlarmIntents.pendingApplyAdjustment(context, schedule.id),
+            ),
         )
     }
 
     fun cancelDeparture(scheduleId: Long) = manager.cancel(NOTIFICATION_DEPARTURE_BASE + scheduleId.toInt())
 
-    private fun notify(id: Int, channel: String, title: String, text: String, scheduleId: Long) {
+    fun cancelTraffic(scheduleId: Long) = manager.cancel(NOTIFICATION_TRAFFIC_BASE + scheduleId.toInt())
+
+    // POST_NOTIFICATIONS 는 바로 아래 hasPermission() 에서 확인한다(Lint 는 헬퍼 함수를 따라가지 못한다).
+    @SuppressLint("MissingPermission")
+    private fun notify(
+        id: Int,
+        channel: String,
+        title: String,
+        text: String,
+        scheduleId: Long,
+        action: NotificationCompat.Action? = null,
+    ) {
         if (!hasPermission()) return
         val open = PendingIntent.getActivity(
             context, id, MainActivity.createIntent(context, scheduleId),
@@ -157,16 +184,32 @@ class AlarmNotifications @Inject constructor(
         )
         val notification = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
+            .setColor(accentColor())
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(open)
             .setAutoCancel(true)
+            .apply { if (action != null) addAction(action) }
             .build()
         runCatching { manager.notify(id, notification) }
     }
 
+    private fun accentColor(): Int = ContextCompat.getColor(context, R.color.primary)
+
     private fun formatTime(instant: Instant): String = TIME_FORMAT.format(instant.atZone(timeProvider.zone()))
+
+    /** 알람이 울릴 날을 "오늘", "내일", "10월 23일" 로 표현한다. */
+    private fun relativeDay(instant: Instant): String {
+        val zone = timeProvider.zone()
+        val date = instant.atZone(zone).toLocalDate()
+        val today = timeProvider.now().atZone(zone).toLocalDate()
+        return when (date) {
+            today -> context.getString(R.string.common_today)
+            today.plusDays(1) -> context.getString(R.string.common_tomorrow)
+            else -> DATE_FORMAT.format(date)
+        }
+    }
 
     companion object {
         const val CHANNEL_ALARM = "alarm"
@@ -176,5 +219,6 @@ class AlarmNotifications @Inject constructor(
         private const val NOTIFICATION_DEPARTURE_BASE = 10_000
         private const val NOTIFICATION_TRAFFIC_BASE = 20_000
         private val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+        private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일")
     }
 }

@@ -20,6 +20,18 @@ sealed interface AppError {
     data object AlarmSchedulingFailed : AppError
     data object NotFound : AppError
 
+    /** 단체 이용권 코드가 형식에 맞지 않거나 등록되지 않은 코드 */
+    data object GroupPassInvalid : AppError
+
+    /** 이용 기간이 끝난 단체 이용권 */
+    data object GroupPassExpired : AppError
+
+    /** 기관이 구매한 인원을 모두 사용한 단체 이용권 */
+    data object GroupPassFull : AppError
+
+    /** 결제를 시작하지 못했거나 구독 상태를 검증하지 못함 */
+    data object PurchaseFailed : AppError
+
     data class InvalidInput(val reason: InvalidInputReason) : AppError
 
     data class Unknown(val message: String? = null) : AppError

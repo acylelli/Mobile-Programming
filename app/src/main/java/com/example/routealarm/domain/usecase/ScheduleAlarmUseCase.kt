@@ -6,6 +6,7 @@ import com.example.routealarm.domain.model.AlarmType
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.policy.RefreshCheckpointPolicy
 import com.example.routealarm.domain.repository.AlarmScheduler
+import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.repository.TransitRefreshScheduler
 import java.time.Duration
 import java.time.Instant
@@ -29,14 +30,17 @@ data class AlarmRegistration(
  *  - WAKE_UP            : 실제 알람 화면 + 알람음 (AlarmManager.setAlarmClock)
  *  - DEPARTURE_REMINDER : 출발 10분 전 "출발 준비를 마쳐주세요" 알림
  *  - DEPARTURE          : 출발 시각 "지금 출발하면 08:52 도착" 알림
+ *
+ * 다음 교통 재확인 시점은 플랜에 따라 달라진다. PRO 는 출발 직전까지 여러 번, 무료는 한 번만 확인한다.
  */
 class ScheduleAlarmUseCase @Inject constructor(
     private val alarmScheduler: AlarmScheduler,
     private val refreshScheduler: TransitRefreshScheduler,
+    private val subscriptionRepository: SubscriptionRepository,
     private val timeProvider: TimeProvider,
 ) {
 
-    operator fun invoke(schedule: Schedule): AlarmRegistration {
+    suspend operator fun invoke(schedule: Schedule): AlarmRegistration {
         // 사용자가 누른 스누즈는 재계산과 무관하게 유지한다.
         alarmScheduler.cancel(schedule.id, PLANNED_TYPES)
 
@@ -63,7 +67,11 @@ class ScheduleAlarmUseCase @Inject constructor(
             register(AlarmType.DEPARTURE, plan.departure)
         }
 
-        val nextRefresh = RefreshCheckpointPolicy.nextCheckpoint(plan.wakeUp, now)
+        val nextRefresh = RefreshCheckpointPolicy.nextCheckpoint(
+            wakeUp = plan.wakeUp,
+            now = now,
+            realtimeRecalculation = subscriptionRepository.current().isPro(now),
+        )
         if (nextRefresh != null) {
             refreshScheduler.scheduleRefresh(schedule.id, nextRefresh)
         } else {

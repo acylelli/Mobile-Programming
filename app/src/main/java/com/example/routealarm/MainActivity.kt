@@ -4,15 +4,18 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.routealarm.core.designsystem.theme.RouteAlarmTheme
+import com.example.routealarm.core.designsystem.theme.isAppInDarkTheme
 import com.example.routealarm.presentation.MainViewModel
 import com.example.routealarm.presentation.navigation.RouteAlarmApp
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,7 +37,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            RouteAlarmTheme(themeMode = state.themeMode) {
+            // 나이트 테마는 기기 설정과 관계없이 어두운 화면이므로 상태바 아이콘 색을 직접 맞춘다.
+            val dark = isAppInDarkTheme(state.colorTheme)
+            DisposableEffect(dark) {
+                val transparent = android.graphics.Color.TRANSPARENT
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(transparent, transparent) { dark },
+                    navigationBarStyle = SystemBarStyle.auto(transparent, transparent) { dark },
+                )
+                onDispose {}
+            }
+            RouteAlarmTheme(colorTheme = state.colorTheme) {
                 if (!state.isLoading) {
                     RouteAlarmApp(
                         onboardingCompleted = state.onboardingCompleted,

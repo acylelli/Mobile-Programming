@@ -20,6 +20,7 @@ import com.example.routealarm.domain.repository.LocationRepository
 import com.example.routealarm.domain.repository.MetricsRepository
 import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
+import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.repository.TransitRepository
 import java.time.Duration
 import java.time.Instant
@@ -49,10 +50,14 @@ sealed interface RefreshOutcome {
  *
  * 사용자가 모르게 알람이 바뀌지 않도록 자동 조정 시 항상 알림을 보내고(설정에서 끌 수 있음),
  * 큰 변화는 자동으로 바꾸지 않고 사용자 확인을 받는다.
+ *
+ * 알람을 직접 옮기는 "실시간 자동 조정"은 PRO 기능이다(SFR-015). 무료 플랜은 변화가 있어도
+ * 알람을 그대로 두고 알림과 [변경하기] 추천만 남긴다.
  */
 class RefreshTransitTimeUseCase @Inject constructor(
     private val scheduleRepository: ScheduleRepository,
     private val preferencesRepository: PreferencesRepository,
+    private val subscriptionRepository: SubscriptionRepository,
     private val transitRepository: TransitRepository,
     private val locationRepository: LocationRepository,
     private val historyRepository: AlarmHistoryRepository,
@@ -135,15 +140,21 @@ class RefreshTransitTimeUseCase @Inject constructor(
         }
 
         val prefs = preferencesRepository.current()
-        return when (
-            val decision = evaluateAdjustment(
-                currentWakeUp = oldPlan.wakeUp,
-                proposedWakeUp = newPlan.wakeUp,
-                autoAdjustEnabled = prefs.autoAdjustment,
-                policy = adjustmentPolicy,
-                now = now,
-            )
-        ) {
+        val isPro = subscriptionRepository.current().isPro(now)
+        val evaluated = evaluateAdjustment(
+            currentWakeUp = oldPlan.wakeUp,
+            proposedWakeUp = newPlan.wakeUp,
+            autoAdjustEnabled = isPro && prefs.autoAdjustment,
+            policy = adjustmentPolicy,
+            now = now,
+        )
+        // 무료 플랜은 "알람 직전의 큰 지연" 예외에서도 알람을 옮기지 않고 확인만 요청한다.
+        val decision = if (!isPro && evaluated is AdjustmentDecision.AutoAdjust) {
+            AdjustmentDecision.RequireConfirmation(evaluated.deltaMinutes)
+        } else {
+            evaluated
+        }
+        return when (decision) {
             is AdjustmentDecision.Keep -> {
                 val saved = save(
                     schedule.copy(plan = keepAlarmWithFreshEstimate(oldPlan, newPlan), pendingAdjustment = null, updatedAt = now),

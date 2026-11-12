@@ -1,5 +1,6 @@
 <resources>
-    <color name="primary">#4667F2</color>
-    <color name="background_light">#F7F8FC</color>
-    <color name="background_dark">#0F1117</color>
+    <!-- Splash, 런처 아이콘, 알림 강조색에 쓰는 기본 테마(오렌지) 색. 화면의 색은 Compose 의 AppColors 가 관리한다. -->
+    <color name="primary">#FF5A1F</color>
+    <color name="background_light">#FFFFFF</color>
+    <color name="background_dark">#121212</color>
 </resources>

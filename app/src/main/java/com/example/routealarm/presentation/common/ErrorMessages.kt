@@ -17,6 +17,10 @@ fun AppError.messageRes(): Int = when (this) {
     AppError.Database -> R.string.error_database
     AppError.AlarmSchedulingFailed -> R.string.error_alarm
     AppError.NotFound -> R.string.error_not_found
+    AppError.GroupPassInvalid -> R.string.error_group_pass_invalid
+    AppError.GroupPassExpired -> R.string.error_group_pass_expired
+    AppError.GroupPassFull -> R.string.error_group_pass_full
+    AppError.PurchaseFailed -> R.string.error_purchase_failed
     is AppError.InvalidInput -> when (reason) {
         InvalidInputReason.MISSING_ORIGIN -> R.string.error_missing_origin
         InvalidInputReason.MISSING_DESTINATION -> R.string.error_missing_destination

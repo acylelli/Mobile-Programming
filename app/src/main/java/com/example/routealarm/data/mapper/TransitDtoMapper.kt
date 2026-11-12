@@ -59,6 +59,7 @@ object TransitDtoMapper {
         latitude = dto.latitude,
         longitude = dto.longitude,
         type = PlaceType.CUSTOM,
+        transitLines = dto.lines,
     )
 
     private fun minutes(value: Int): Duration = Duration.ofMinutes(value.coerceAtLeast(0).toLong())

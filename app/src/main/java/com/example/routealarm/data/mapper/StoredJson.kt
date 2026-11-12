@@ -62,6 +62,16 @@ data class StoredPendingAdjustment(
     val plan: StoredPlan,
 )
 
+/** 최근 검색한 장소. 좌표는 다시 선택했을 때 경로를 계산하기 위해 필요하다. */
+@Serializable
+data class StoredRecentPlace(
+    val name: String,
+    val address: String,
+    val latitude: Double,
+    val longitude: Double,
+    val lines: List<String> = emptyList(),
+)
+
 fun TransitRoute.toStored() = StoredRoute(
     totalSeconds = totalDuration.seconds,
     walkingSeconds = walkingDuration.seconds,
