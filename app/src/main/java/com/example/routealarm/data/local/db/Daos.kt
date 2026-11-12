@@ -66,6 +66,19 @@ interface AlarmHistoryDao {
     @Query("SELECT * FROM alarm_history WHERE scheduleId = :scheduleId ORDER BY occurredAt DESC LIMIT :limit")
     fun observe(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEntity>>
 
+    /** 일정마다 가장 최근의 알람 조정 한 건씩 */
+    @Query(
+        """
+        SELECT * FROM alarm_history
+        WHERE id IN (
+            SELECT MAX(id) FROM alarm_history
+            WHERE type IN ('AUTO_ADJUSTED', 'ADJUSTMENT_APPLIED')
+            GROUP BY scheduleId
+        )
+        """,
+    )
+    fun observeLatestAdjustments(): Flow<List<AlarmHistoryEntity>>
+
     /** 실시간 데이터로 계산된 이동시간만 안정화 입력값으로 사용한다. */
     @Query(
         """

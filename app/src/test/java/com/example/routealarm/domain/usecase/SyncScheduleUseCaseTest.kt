@@ -6,6 +6,7 @@ import com.example.routealarm.domain.model.AlarmType
 import com.example.routealarm.fake.FakeAlarmScheduler
 import com.example.routealarm.fake.FakeRefreshScheduler
 import com.example.routealarm.fake.FakeScheduleRepository
+import com.example.routealarm.fake.FakeSubscriptionRepository
 import com.example.routealarm.fake.FakeTimeProvider
 import com.example.routealarm.fake.TestData
 import com.example.routealarm.fake.TestData.seoul
@@ -27,7 +28,9 @@ class SyncScheduleUseCaseTest {
     private val schedules = FakeScheduleRepository()
     private val alarmScheduler = FakeAlarmScheduler()
     private val refreshScheduler = FakeRefreshScheduler()
-    private val scheduleAlarm = ScheduleAlarmUseCase(alarmScheduler, refreshScheduler, time)
+    private val scheduleAlarm = ScheduleAlarmUseCase(
+        alarmScheduler, refreshScheduler, FakeSubscriptionRepository(FakeSubscriptionRepository.PRO), time,
+    )
     private val sync = SyncScheduleUseCase(
         schedules, ResolveNextOccurrenceUseCase(), TestData.buildAlarmPlanUseCase(), scheduleAlarm, time,
     )

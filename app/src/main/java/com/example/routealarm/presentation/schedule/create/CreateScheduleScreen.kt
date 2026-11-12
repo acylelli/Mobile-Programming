@@ -1,146 +1,186 @@
 package com.example.routealarm.presentation.schedule.create
 
+import android.Manifest
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.MyLocation
-import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.routealarm.R
 import com.example.routealarm.core.designsystem.component.AppCard
-import com.example.routealarm.core.designsystem.component.ErrorState
-import com.example.routealarm.core.designsystem.component.LabeledValue
-import com.example.routealarm.core.designsystem.component.LoadingState
+import com.example.routealarm.core.designsystem.component.BackHeader
+import com.example.routealarm.core.designsystem.component.ChoicePill
+import com.example.routealarm.core.designsystem.component.DayChip
+import com.example.routealarm.core.designsystem.component.MinuteSlider
+import com.example.routealarm.core.designsystem.component.Paragraph
 import com.example.routealarm.core.designsystem.component.PrimaryButton
-import com.example.routealarm.core.designsystem.component.SecondaryButton
+import com.example.routealarm.core.designsystem.component.RadioDot
+import com.example.routealarm.core.designsystem.component.SectionLabel
+import com.example.routealarm.core.designsystem.component.SurfaceCard
 import com.example.routealarm.core.designsystem.component.TimePickerCard
-import com.example.routealarm.core.designsystem.component.TransitTimeline
+import com.example.routealarm.core.designsystem.theme.Radius
 import com.example.routealarm.core.designsystem.theme.RouteAlarmTheme
 import com.example.routealarm.core.designsystem.theme.Spacing
 import com.example.routealarm.domain.model.AlarmMode
 import com.example.routealarm.domain.model.Place
+import com.example.routealarm.domain.model.PlaceType
 import com.example.routealarm.domain.usecase.PlanOutcome
 import com.example.routealarm.presentation.common.TimeFormat
 import com.example.routealarm.presentation.common.dayShortName
 import com.example.routealarm.presentation.common.messageRes
 import com.example.routealarm.presentation.common.minutesText
-import com.example.routealarm.presentation.place.PlaceRow
+import com.example.routealarm.presentation.navigation.LocalAppSnackbar
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneOffset
 
 @Composable
 fun CreateScheduleRoute(
-    pickedOrigin: Place?,
-    pickedDestination: Place?,
-    onConsumePicked: () -> Unit,
-    onSearchOrigin: () -> Unit,
-    onSearchDestination: () -> Unit,
-    onSaved: (Long) -> Unit,
+    onSaved: (inexactWarning: Boolean) -> Unit,
     onClose: () -> Unit,
+    onShowPaywall: () -> Unit,
     viewModel: CreateScheduleViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val savedPlaces by viewModel.savedPlaces.collectAsStateWithLifecycle()
-    val snackbar = remember { SnackbarHostState() }
+    val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
+    val isPro by viewModel.isPro.collectAsStateWithLifecycle()
+    val snackbar = LocalAppSnackbar.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    // 장소 검색 화면에서 돌아온 결과를 반영한다.
-    LaunchedEffect(pickedOrigin, pickedDestination) {
-        pickedOrigin?.let(viewModel::setOrigin)
-        pickedDestination?.let(viewModel::setDestination)
-        if (pickedOrigin != null || pickedDestination != null) onConsumePicked()
-    }
     LaunchedEffect(state.validationError) {
         val error = state.validationError ?: return@LaunchedEffect
-        snackbar.showSnackbar(context.getString(error.messageRes()))
         viewModel.consumeValidationError()
+        snackbar.showSnackbar(context.getString(error.messageRes()))
     }
     LaunchedEffect(state.result) {
-        (state.result as? ResultState.Saved)?.let { onSaved(it.scheduleId) }
+        (state.result as? ResultState.Saved)?.let { onSaved(it.inexactWarning) }
     }
     val back = { if (!viewModel.back()) onClose() }
     BackHandler(onBack = back)
 
+    // 현재 위치는 버튼을 누를 때만 요청한다. 거절하면 검색으로 출발지를 지정하도록 안내한다(SFR-002).
+    val currentLocationName = stringResource(R.string.create_current_location_name)
+    val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        if (grants.values.any { it }) {
+            viewModel.useCurrentLocation(currentLocationName)
+        } else {
+            scope.launch { snackbar.showSnackbar(context.getString(R.string.error_location_permission)) }
+        }
+    }
+
     CreateScheduleScreen(
         state = state,
+        query = viewModel.query,
+        title = viewModel.title,
         savedPlaces = savedPlaces,
-        snackbarHostState = snackbar,
+        recentSearches = recentSearches,
+        isPro = isPro,
         onBack = back,
         onNext = viewModel::next,
-        onSelectOrigin = viewModel::setOrigin,
-        onSelectDestination = viewModel::setDestination,
-        onUseCurrentLocation = { viewModel.useCurrentLocation(context.getString(R.string.create_current_location_name)) },
-        onSearchOrigin = onSearchOrigin,
-        onSearchDestination = onSearchDestination,
-        onTitle = viewModel::setTitle,
+        onQueryChange = viewModel::onQueryChange,
+        onSearch = viewModel::searchNow,
+        onSelectPlace = viewModel::selectPlace,
+        onUseCurrentLocation = {
+            if (viewModel.hasLocationPermission()) {
+                viewModel.useCurrentLocation(currentLocationName)
+            } else {
+                locationLauncher.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
+            }
+        },
+        onStartRegistering = viewModel::startRegistering,
+        onCancelRegistering = viewModel::cancelRegistering,
+        onDeleteFavorite = viewModel::deleteFavorite,
+        onTitle = viewModel::onTitleChange,
         onTime = viewModel::setTargetTime,
+        onDate = viewModel::setOneTimeDate,
         onRepeatPreset = viewModel::setRepeatPreset,
-        onToggleDay = viewModel::toggleCustomDay,
+        onToggleDay = viewModel::toggleRepeatDay,
         onPreparation = viewModel::setPreparation,
         onBufferPreset = viewModel::setBufferPreset,
         onCustomBuffer = viewModel::setCustomBuffer,
         onAlarmMode = viewModel::setAlarmMode,
         onRetry = viewModel::calculate,
         onSave = viewModel::save,
+        onShowPaywall = onShowPaywall,
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateScheduleScreen(
     state: CreateScheduleUiState,
+    query: String,
+    title: String,
     savedPlaces: List<Place>,
-    snackbarHostState: SnackbarHostState,
+    recentSearches: List<Place>,
+    isPro: Boolean,
     onBack: () -> Unit,
     onNext: () -> Unit,
-    onSelectOrigin: (Place) -> Unit,
-    onSelectDestination: (Place) -> Unit,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onSelectPlace: (Place, Boolean) -> Unit,
     onUseCurrentLocation: () -> Unit,
-    onSearchOrigin: () -> Unit,
-    onSearchDestination: () -> Unit,
+    onStartRegistering: (PlaceType) -> Unit,
+    onCancelRegistering: () -> Unit,
+    onDeleteFavorite: (Long) -> Unit,
     onTitle: (String) -> Unit,
-    onTime: (java.time.LocalTime) -> Unit,
+    onTime: (LocalTime) -> Unit,
+    onDate: (LocalDate?) -> Unit,
     onRepeatPreset: (RepeatPreset) -> Unit,
     onToggleDay: (DayOfWeek) -> Unit,
     onPreparation: (Int) -> Unit,
@@ -149,201 +189,278 @@ fun CreateScheduleScreen(
     onAlarmMode: (AlarmMode) -> Unit,
     onRetry: () -> Unit,
     onSave: () -> Unit,
+    onShowPaywall: () -> Unit,
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(if (state.isEditing) R.string.create_edit_title else R.string.create_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                    }
+    val colors = RouteAlarmTheme.colors
+    Column(Modifier.fillMaxSize().background(colors.background).imePadding()) {
+        if (state.step == CreateStep.RESULT) {
+            BackHeader(onBack = onBack, title = stringResource(R.string.create_result_title))
+        } else {
+            BackHeader(
+                onBack = onBack,
+                trailing = {
+                    Text(
+                        stringResource(R.string.create_step_format, state.stepIndex + 1, state.stepCount),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = colors.textSecondary,
+                    )
                 },
-                actions = {
-                    if (state.step != CreateStep.RESULT) {
-                        Text(
-                            stringResource(R.string.create_step_format, state.stepIndex + 1, state.stepCount),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = Spacing.md),
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            if (state.step != CreateStep.RESULT) {
-                LinearProgressIndicator(
-                    progress = { (state.stepIndex + 1) / state.stepCount.toFloat() },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md),
+            // 단계 표시(①): 5단계 중 현재 단계까지 검정 막대로 채운다.
+            StepProgress(current = state.stepIndex, count = state.stepCount)
+        }
+
+        AnimatedContent(
+            targetState = state.step,
+            transitionSpec = {
+                val forward = targetState.ordinal > initialState.ordinal
+                (slideInHorizontally { if (forward) it / 3 else -it / 3 } + fadeIn()) togetherWith
+                    (slideOutHorizontally { if (forward) -it / 3 else it / 3 } + fadeOut())
+            },
+            label = "createStep",
+            modifier = Modifier.weight(1f),
+        ) { step ->
+            when (step) {
+                CreateStep.ORIGIN, CreateStep.DESTINATION -> PlaceStep(
+                    isOrigin = step == CreateStep.ORIGIN,
+                    state = state,
+                    query = query,
+                    savedPlaces = savedPlaces,
+                    recentSearches = recentSearches,
+                    onQueryChange = onQueryChange,
+                    onSearch = onSearch,
+                    onSelect = onSelectPlace,
+                    onUseCurrentLocation = onUseCurrentLocation,
+                    onStartRegistering = onStartRegistering,
+                    onCancelRegistering = onCancelRegistering,
+                    onDeleteFavorite = onDeleteFavorite,
                 )
+                CreateStep.TIME -> TimeStep(state, title, onTitle, onTime, onDate, onRepeatPreset, onToggleDay)
+                CreateStep.PREPARATION -> PreparationStep(state.preparationMinutes, onPreparation)
+                CreateStep.BUFFER -> BufferStep(state, onBufferPreset, onCustomBuffer, onAlarmMode)
+                CreateStep.RESULT -> PreviewStep(state, isPro, onRetry, onToggleDay, onShowPaywall)
             }
-            AnimatedContent(
-                targetState = state.step,
-                transitionSpec = {
-                    val forward = targetState.ordinal > initialState.ordinal
-                    (slideInHorizontally { if (forward) it / 3 else -it / 3 } + fadeIn()) togetherWith
-                        (slideOutHorizontally { if (forward) -it / 3 else it / 3 } + fadeOut())
-                },
-                label = "createStep",
-                modifier = Modifier.weight(1f),
-            ) { step ->
-                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.md)) {
-                    when (step) {
-                        CreateStep.ORIGIN -> PlaceStep(
-                            question = stringResource(R.string.create_origin_question),
-                            selected = state.origin,
-                            savedPlaces = savedPlaces,
-                            onSelect = onSelectOrigin,
-                            onSearch = onSearchOrigin,
-                            currentLocation = state.useCurrentLocation,
-                            onUseCurrentLocation = onUseCurrentLocation,
-                        )
-                        CreateStep.DESTINATION -> PlaceStep(
-                            question = stringResource(R.string.create_destination_question),
-                            selected = state.destination,
-                            savedPlaces = savedPlaces,
-                            onSelect = onSelectDestination,
-                            onSearch = onSearchDestination,
-                        )
-                        CreateStep.TIME -> TimeStep(state, onTitle, onTime, onRepeatPreset, onToggleDay)
-                        CreateStep.PREPARATION -> PreparationStep(state.preparationMinutes, onPreparation)
-                        CreateStep.BUFFER -> BufferStep(state, onBufferPreset, onCustomBuffer, onAlarmMode)
-                        CreateStep.RESULT -> ResultStep(state, onRetry, onSave, onBack)
-                    }
-                }
-            }
-            if (state.step != CreateStep.RESULT) {
+        }
+
+        val buttonModifier = Modifier.fillMaxWidth().padding(start = Spacing.screen, end = Spacing.screen, top = 8.dp, bottom = 16.dp)
+        if (state.step == CreateStep.RESULT) {
+            val ready = state.result as? ResultState.Ready
+            if (ready != null) {
+                // 한 번만 울리는 일정인데 이미 늦었다면 저장할 수 없다.
+                val canSave = ready.preview.outcome !is PlanOutcome.TooLate || state.repeatDays.isNotEmpty()
                 PrimaryButton(
-                    text = stringResource(if (state.step == CreateStep.BUFFER) R.string.create_calculate else R.string.common_next),
-                    onClick = onNext,
-                    modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+                    text = stringResource(R.string.create_result_save),
+                    onClick = onSave,
+                    enabled = canSave,
+                    loading = state.isSaving || state.isRecalculating,
+                    modifier = buttonModifier,
                 )
             }
+        } else {
+            PrimaryButton(
+                text = stringResource(if (state.step == CreateStep.BUFFER) R.string.create_calculate else R.string.common_next),
+                onClick = onNext,
+                enabled = state.canProceed,
+                modifier = buttonModifier,
+            )
         }
     }
 }
 
 @Composable
-private fun Question(text: String) {
-    Text(text, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = Spacing.md))
+private fun StepProgress(current: Int, count: Int) {
+    val colors = RouteAlarmTheme.colors
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = Spacing.screen),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        repeat(count) { index ->
+            Box(Modifier.weight(1f).height(4.dp).background(if (index <= current) colors.textPrimary else colors.outline, CircleShape))
+        }
+    }
+}
+
+/** 단계마다 맨 위에 오는 큰 질문 */
+@Composable
+internal fun StepTitle(text: String, body: String? = null) {
+    val colors = RouteAlarmTheme.colors
+    Spacer(Modifier.height(24.dp))
+    Text(text, style = MaterialTheme.typography.headlineLarge, color = colors.textPrimary, modifier = Modifier.semantics { heading() })
+    if (body != null) {
+        Spacer(Modifier.height(8.dp))
+        Paragraph(body, style = MaterialTheme.typography.bodyLarge)
+    }
+    Spacer(Modifier.height(20.dp))
 }
 
 @Composable
-private fun PlaceStep(
-    question: String,
-    selected: Place?,
-    savedPlaces: List<Place>,
-    onSelect: (Place) -> Unit,
-    onSearch: () -> Unit,
-    currentLocation: Boolean = false,
-    onUseCurrentLocation: (() -> Unit)? = null,
-) {
-    Question(question)
-    if (selected != null) {
-        Text(stringResource(R.string.cd_selected), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(Spacing.xs))
-        AppCard(containerColor = MaterialTheme.colorScheme.primaryContainer) {
-            Row(Modifier.padding(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (currentLocation) Icons.Outlined.MyLocation else com.example.routealarm.presentation.place.placeIcon(selected.type),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Spacer(Modifier.width(Spacing.md))
-                Column {
-                    Text(selected.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    if (selected.address.isNotBlank()) {
-                        Text(selected.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(Spacing.md))
-    }
-    SecondaryButton(text = stringResource(R.string.create_search_place), onClick = onSearch, modifier = Modifier.fillMaxWidth())
-    if (onUseCurrentLocation != null) {
-        Spacer(Modifier.height(Spacing.sm))
-        SecondaryButton(text = stringResource(R.string.create_use_current_location), onClick = onUseCurrentLocation, modifier = Modifier.fillMaxWidth())
-    }
-    Spacer(Modifier.height(Spacing.lg))
-    Text(stringResource(R.string.create_saved_places), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Spacer(Modifier.height(Spacing.sm))
-    if (savedPlaces.isEmpty()) {
-        Text(stringResource(R.string.create_no_saved_places), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    savedPlaces.forEach { place ->
-        PlaceRow(place = place, onClick = { onSelect(place) })
-        Spacer(Modifier.height(Spacing.sm))
+private fun StepColumn(content: @Composable () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = Spacing.screen),
+    ) {
+        content()
+        Spacer(Modifier.height(Spacing.lg))
     }
 }
+
+/** 요일 일곱 개를 한 줄에 나란히(월~일) */
+@Composable
+internal fun DayChipRow(selected: Set<DayOfWeek>, onToggle: (DayOfWeek) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        DayOfWeek.entries.forEach { day ->
+            DayChip(dayShortName(day), selected = day in selected, onClick = { onToggle(day) }, modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+/* ───────────── 3단계: 도착 시각 (UI-C-003) ───────────── */
 
 @Composable
 private fun TimeStep(
     state: CreateScheduleUiState,
+    title: String,
     onTitle: (String) -> Unit,
-    onTime: (java.time.LocalTime) -> Unit,
+    onTime: (LocalTime) -> Unit,
+    onDate: (LocalDate?) -> Unit,
     onRepeatPreset: (RepeatPreset) -> Unit,
     onToggleDay: (DayOfWeek) -> Unit,
 ) {
-    Question(stringResource(R.string.create_time_question))
-    TimePickerCard(time = state.targetTime, onTimeChange = onTime)
-    Spacer(Modifier.height(Spacing.lg))
-    Text(stringResource(R.string.create_repeat_question), style = MaterialTheme.typography.titleMedium)
-    Spacer(Modifier.height(Spacing.sm))
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        listOf(
-            RepeatPreset.ONCE to R.string.create_repeat_once,
-            RepeatPreset.WEEKDAYS to R.string.create_repeat_weekdays,
-            RepeatPreset.DAILY to R.string.create_repeat_daily,
-            RepeatPreset.CUSTOM to R.string.create_repeat_custom,
-        ).forEach { (preset, res) ->
-            FilterChip(selected = state.repeatPreset == preset, onClick = { onRepeatPreset(preset) }, label = { Text(stringResource(res)) })
+    val colors = RouteAlarmTheme.colors
+    StepColumn {
+        StepTitle(stringResource(R.string.create_time_question))
+        TimePickerCard(time = state.targetTime, onTimeChange = onTime)
+
+        Spacer(Modifier.height(Spacing.lg))
+        SectionLabel(stringResource(R.string.create_repeat_question))
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ChoicePill(stringResource(R.string.create_repeat_once), state.repeatPreset == RepeatPreset.ONCE, { onRepeatPreset(RepeatPreset.ONCE) })
+            ChoicePill(stringResource(R.string.create_repeat_weekdays), state.repeatPreset == RepeatPreset.WEEKDAYS, { onRepeatPreset(RepeatPreset.WEEKDAYS) })
+            ChoicePill(stringResource(R.string.create_repeat_daily), state.repeatPreset == RepeatPreset.DAILY, { onRepeatPreset(RepeatPreset.DAILY) })
         }
-    }
-    if (state.repeatPreset == RepeatPreset.CUSTOM) {
-        Spacer(Modifier.height(Spacing.sm))
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            DayOfWeek.entries.forEach { day ->
-                FilterChip(selected = day in state.customDays, onClick = { onToggleDay(day) }, label = { Text(dayShortName(day)) })
-            }
+        Spacer(Modifier.height(10.dp))
+        DayChipRow(state.repeatDays, onToggleDay, Modifier.fillMaxWidth())
+
+        if (state.repeatDays.isEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            DateRow(state.oneTimeDate, state.targetTime, onDate)
         }
+
+        Spacer(Modifier.height(Spacing.lg))
+        val titleLabel = stringResource(R.string.create_title_label)
+        SectionLabel(titleLabel)
+        Spacer(Modifier.height(10.dp))
+        BasicTextField(
+            value = title,
+            onValueChange = onTitle,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.textPrimary),
+            singleLine = true,
+            cursorBrush = SolidColor(colors.accent),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .background(colors.surface, Radius.field)
+                .semantics { contentDescription = titleLabel },
+            decorationBox = { innerTextField ->
+                Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
+                    if (title.isEmpty()) {
+                        Text(stringResource(R.string.create_title_hint), style = MaterialTheme.typography.bodyLarge, color = colors.textTertiary)
+                    }
+                    innerTextField()
+                }
+            },
+        )
     }
-    Spacer(Modifier.height(Spacing.lg))
-    OutlinedTextField(
-        value = state.title,
-        onValueChange = onTitle,
-        label = { Text(stringResource(R.string.create_title_label)) },
-        placeholder = { Text(stringResource(R.string.create_title_hint)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
 }
+
+/** 한 번만 울리는 일정의 날짜. 따로 고르지 않으면 가장 가까운 날(오늘 또는 내일)이다. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateRow(selected: LocalDate?, targetTime: LocalTime, onDate: (LocalDate?) -> Unit) {
+    val colors = RouteAlarmTheme.colors
+    var showPicker by remember { mutableStateOf(false) }
+    val today = LocalDate.now()
+    val effective = selected ?: if (targetTime.isAfter(LocalTime.now())) today else today.plusDays(1)
+    val relative = when (effective) {
+        today -> stringResource(R.string.common_today)
+        today.plusDays(1) -> stringResource(R.string.common_tomorrow)
+        else -> null
+    }
+    val dateText = TimeFormat.dateWithWeekday(effective)
+
+    SurfaceCard(modifier = Modifier.fillMaxWidth(), onClick = { showPicker = true }, shape = Radius.field) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.CalendarToday, contentDescription = null, tint = colors.textPrimary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(stringResource(R.string.create_date_label), style = MaterialTheme.typography.bodyLarge, color = colors.textPrimary, modifier = Modifier.weight(1f))
+            Text(
+                if (relative != null) stringResource(R.string.create_date_relative_format, relative, dateText) else dateText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.textSecondary,
+            )
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = colors.textTertiary, modifier = Modifier.size(22.dp))
+        }
+    }
+
+    if (showPicker) {
+        val todayStartUtc = today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = effective.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            // 지난 날짜는 고를 수 없다(SFR-003 입력값 검증).
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= todayStartUtc
+                override fun isSelectableYear(year: Int): Boolean = year >= today.year
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickerState.selectedDateMillis?.let { onDate(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
+                    showPicker = false
+                }) { Text(stringResource(R.string.common_confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.common_cancel)) } },
+        ) {
+            DatePicker(state = pickerState, showModeToggle = false)
+        }
+    }
+}
+
+/* ───────────── 4단계: 준비 시간 (UI-C-004) ───────────── */
 
 @Composable
 private fun PreparationStep(minutes: Int, onChange: (Int) -> Unit) {
-    Question(stringResource(R.string.create_preparation_question))
-    AppCard {
-        Column(Modifier.padding(Spacing.lg), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(minutesText(minutes), style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary)
-            Slider(
-                value = minutes.toFloat(),
-                onValueChange = { onChange((it / 5).toInt() * 5) },
-                valueRange = 5f..120f,
-                steps = 22,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                listOf(15, 30, 45, 60).forEach { preset ->
-                    FilterChip(selected = minutes == preset, onClick = { onChange(preset) }, label = { Text(minutesText(preset)) })
+    val colors = RouteAlarmTheme.colors
+    StepColumn {
+        StepTitle(stringResource(R.string.create_preparation_question), stringResource(R.string.create_preparation_body))
+        SurfaceCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(minutesText(minutes), style = MaterialTheme.typography.displayMedium, color = colors.textPrimary)
+                Spacer(Modifier.height(8.dp))
+                MinuteSlider(minutes, 5..120, onChange)
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+                    PREPARATION_PRESETS.forEach { preset ->
+                        ChoicePill(
+                            label = minutesText(preset),
+                            selected = minutes == preset,
+                            onClick = { onChange(preset) },
+                            unselectedContainer = colors.background,
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+private val PREPARATION_PRESETS = listOf(15, 30, 45, 60)
+
+/* ───────────── 5단계: 여유 시간 (UI-C-005) ───────────── */
 
 @Composable
 private fun BufferStep(
@@ -352,157 +469,69 @@ private fun BufferStep(
     onCustomBuffer: (Int) -> Unit,
     onAlarmMode: (AlarmMode) -> Unit,
 ) {
-    Question(stringResource(R.string.create_buffer_question))
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        listOf(
-            BufferPreset.TIGHT to R.string.create_buffer_tight,
-            BufferPreset.NORMAL to R.string.create_buffer_normal,
-            BufferPreset.RELAXED to R.string.create_buffer_relaxed,
-        ).forEach { (preset, res) ->
-            val selected = state.bufferPreset == preset
-            AppCard(
-                onClick = { onBufferPreset(preset) },
-                containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+    val colors = RouteAlarmTheme.colors
+    StepColumn {
+        StepTitle(stringResource(R.string.create_buffer_question), stringResource(R.string.create_buffer_body))
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf(
+                BufferPreset.TIGHT to R.string.create_buffer_tight,
+                BufferPreset.NORMAL to R.string.create_buffer_normal,
+                BufferPreset.RELAXED to R.string.create_buffer_relaxed,
+            ).forEach { (preset, labelRes) ->
+                BufferOption(
+                    label = stringResource(labelRes),
+                    value = minutesText(preset.minutes),
+                    selected = state.bufferPreset == preset,
+                    onClick = { onBufferPreset(preset) },
+                )
+            }
+            val custom = state.bufferPreset == null
+            BufferOption(
+                label = stringResource(R.string.create_buffer_custom),
+                value = minutesText(state.customBufferMinutes),
+                selected = custom,
+                onClick = { onCustomBuffer(state.customBufferMinutes) },
             ) {
-                Row(Modifier.padding(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(res), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    Text(minutesText(preset.minutes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                }
+                if (custom) MinuteSlider(state.customBufferMinutes, 0..60, onCustomBuffer, Modifier.padding(horizontal = 12.dp))
             }
         }
-        val custom = state.bufferPreset == null
-        AppCard(
-            onClick = { onCustomBuffer(state.customBufferMinutes) },
-            containerColor = if (custom) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        ) {
-            Column(Modifier.padding(Spacing.md)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.create_buffer_custom), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    Text(minutesText(state.customBufferMinutes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                }
-                if (custom) {
-                    Slider(
-                        value = state.customBufferMinutes.toFloat(),
-                        onValueChange = { onCustomBuffer((it / 5).toInt() * 5) },
-                        valueRange = 0f..60f,
-                        steps = 11,
-                    )
-                }
-            }
+
+        Spacer(Modifier.height(Spacing.lg))
+        SectionLabel(stringResource(R.string.create_alarm_mode_label))
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ChoicePill(
+                stringResource(R.string.create_alarm_mode_wake_and_departure),
+                state.alarmMode == AlarmMode.WAKE_UP_AND_DEPARTURE,
+                { onAlarmMode(AlarmMode.WAKE_UP_AND_DEPARTURE) },
+            )
+            ChoicePill(
+                stringResource(R.string.create_alarm_mode_wake_only),
+                state.alarmMode == AlarmMode.WAKE_UP_ONLY,
+                { onAlarmMode(AlarmMode.WAKE_UP_ONLY) },
+            )
         }
-    }
-    Spacer(Modifier.height(Spacing.lg))
-    Text(stringResource(R.string.create_alarm_mode_label), style = MaterialTheme.typography.titleMedium)
-    Spacer(Modifier.height(Spacing.sm))
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        FilterChip(
-            selected = state.alarmMode == AlarmMode.WAKE_UP_AND_DEPARTURE,
-            onClick = { onAlarmMode(AlarmMode.WAKE_UP_AND_DEPARTURE) },
-            label = { Text(stringResource(R.string.create_alarm_mode_wake_and_departure)) },
-        )
-        FilterChip(
-            selected = state.alarmMode == AlarmMode.WAKE_UP_ONLY,
-            onClick = { onAlarmMode(AlarmMode.WAKE_UP_ONLY) },
-            label = { Text(stringResource(R.string.create_alarm_mode_wake_only)) },
-        )
+        Spacer(Modifier.height(8.dp))
+        Paragraph(stringResource(R.string.create_alarm_mode_body), style = MaterialTheme.typography.bodySmall)
     }
 }
 
 @Composable
-private fun ResultStep(state: CreateScheduleUiState, onRetry: () -> Unit, onSave: () -> Unit, onBack: () -> Unit) {
-    when (val result = state.result) {
-        ResultState.Idle, ResultState.Calculating -> LoadingState(message = stringResource(R.string.create_calculating))
-        is ResultState.Failed -> ErrorState(
-            title = stringResource(R.string.error_title),
-            message = stringResource(result.error.messageRes()),
-            onRetry = onRetry,
-            retryText = stringResource(R.string.common_retry),
-        )
-        is ResultState.Saved -> LoadingState()
-        is ResultState.Ready -> {
-            val preview = result.preview
-            val plan = preview.outcome.plan
-            Text(stringResource(R.string.create_result_title), style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(Spacing.md))
-
-            when (val outcome = preview.outcome) {
-                is PlanOutcome.TooLate -> AppCard(containerColor = MaterialTheme.colorScheme.errorContainer) {
-                    Column(Modifier.padding(Spacing.md)) {
-                        Text(
-                            stringResource(R.string.create_result_too_late_title, TimeFormat.time(plan.targetArrival)),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                        )
-                        Text(
-                            stringResource(R.string.create_result_too_late_body, TimeFormat.time(outcome.earliestArrival), outcome.lateByMinutes),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                        )
-                        if (state.repeatPreset != RepeatPreset.ONCE) {
-                            Text(stringResource(R.string.create_result_too_late_repeat_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
-                        }
-                    }
-                }
-                is PlanOutcome.OnTime -> if (outcome.wakeUpAlreadyPassed) {
-                    AppCard(containerColor = MaterialTheme.colorScheme.surfaceVariant) {
-                        Text(
-                            stringResource(R.string.create_result_wake_passed, TimeFormat.time(plan.departure)),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(Spacing.md),
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(Spacing.md))
-
-            // 09:00 목표 ↑ 08:52 예상 도착 ↑ 07:45 출발 ↑ 07:15 기상
-            AppCard(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                    TimelineRow(stringResource(R.string.create_result_target), TimeFormat.time(plan.targetArrival), emphasize = false)
-                    TimelineRow(stringResource(R.string.create_result_arrival), TimeFormat.time(plan.estimatedArrival), emphasize = false)
-                    TimelineRow(stringResource(R.string.create_result_departure), TimeFormat.time(plan.departure), emphasize = false)
-                    TimelineRow(stringResource(R.string.create_result_wake_up), TimeFormat.time(plan.wakeUp), emphasize = true)
-                }
-            }
-            Spacer(Modifier.height(Spacing.md))
-            AppCard {
-                Row(Modifier.padding(Spacing.md).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    LabeledValue(stringResource(R.string.create_preparation_label), minutesText(state.preparationMinutes))
-                    LabeledValue(stringResource(R.string.create_travel_label), minutesText(plan.travelMinutes), horizontalAlignment = Alignment.CenterHorizontally)
-                    LabeledValue(stringResource(R.string.create_buffer_label), minutesText(plan.safetyBufferMinutes), horizontalAlignment = Alignment.End)
-                }
-            }
-            Spacer(Modifier.height(Spacing.md))
-            AppCard(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(Spacing.md)) {
-                    Text(stringResource(R.string.home_route_title), style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(Spacing.sm))
-                    TransitTimeline(preview.route)
-                }
-            }
-            if (!preview.outcome.plan.isRealtime) {
-                Spacer(Modifier.height(Spacing.sm))
-                Text(stringResource(R.string.traffic_cached), style = MaterialTheme.typography.bodySmall, color = RouteAlarmTheme.appColors.warning)
-            }
-            Spacer(Modifier.height(Spacing.lg))
-            val canSave = preview.outcome !is PlanOutcome.TooLate || state.repeatPreset != RepeatPreset.ONCE
-            PrimaryButton(text = stringResource(R.string.create_result_save), onClick = onSave, enabled = canSave, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(Spacing.sm))
-            SecondaryButton(text = stringResource(R.string.common_back), onClick = onBack, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(Spacing.xl))
+private fun BufferOption(
+    label: String,
+    value: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    extra: (@Composable () -> Unit)? = null,
+) {
+    val colors = RouteAlarmTheme.colors
+    AppCard(modifier = Modifier.fillMaxWidth(), onClick = onClick, selected = selected, shape = Radius.group) {
+        Row(Modifier.padding(horizontal = 18.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+            RadioDot(selected)
+            Spacer(Modifier.width(14.dp))
+            Text(label, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary, modifier = Modifier.weight(1f))
+            Text(value, style = MaterialTheme.typography.titleMedium, color = if (selected) colors.accentText else colors.textSecondary)
         }
-    }
-}
-
-@Composable
-private fun TimelineRow(label: String, time: String, emphasize: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            time,
-            style = if (emphasize) MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.headlineSmall,
-            color = if (emphasize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.width(140.dp),
-        )
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        extra?.invoke()
     }
 }

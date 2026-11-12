@@ -29,6 +29,18 @@ class RefreshCheckpointPolicyTest {
     }
 
     @Test
+    fun `무료 플랜은 기상 30분 전 한 번만 확인한다`() {
+        val far = wakeUp.minus(Duration.ofDays(3))
+        assertEquals(
+            wakeUp.minus(Duration.ofMinutes(30)),
+            RefreshCheckpointPolicy.nextCheckpoint(wakeUp, far, realtimeRecalculation = false),
+        )
+        assertNull(
+            RefreshCheckpointPolicy.nextCheckpoint(wakeUp, wakeUp.minus(Duration.ofMinutes(25)), realtimeRecalculation = false),
+        )
+    }
+
+    @Test
     fun `마지막 체크포인트 이후에는 더 이상 갱신하지 않는다`() {
         assertNull(RefreshCheckpointPolicy.nextCheckpoint(wakeUp, wakeUp.minus(Duration.ofMinutes(15))))
     }

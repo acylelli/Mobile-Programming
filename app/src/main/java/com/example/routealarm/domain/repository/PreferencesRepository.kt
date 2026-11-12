@@ -1,7 +1,7 @@
 package com.example.routealarm.domain.repository
 
 import com.example.routealarm.domain.model.AlarmSound
-import com.example.routealarm.domain.model.ThemeMode
+import com.example.routealarm.domain.model.ColorTheme
 import com.example.routealarm.domain.model.UserPreferences
 import kotlinx.coroutines.flow.Flow
 
@@ -15,7 +15,8 @@ interface PreferencesRepository {
     suspend fun setVibration(enabled: Boolean)
     suspend fun setAlarmSound(sound: AlarmSound)
     suspend fun setSnoozeMinutes(minutes: Int)
-    suspend fun setThemeMode(mode: ThemeMode)
+    suspend fun setColorTheme(theme: ColorTheme)
+    suspend fun setLastPaywallPromptDay(epochDay: Long)
     suspend fun setOnboardingCompleted()
     suspend fun setDemoSeeded()
     suspend fun setDemoExtraDelay(minutes: Int)

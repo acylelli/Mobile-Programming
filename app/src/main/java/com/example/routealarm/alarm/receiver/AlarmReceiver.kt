@@ -8,6 +8,7 @@ import com.example.routealarm.alarm.scheduler.AlarmIntents
 import com.example.routealarm.alarm.service.AlarmService
 import com.example.routealarm.core.common.ApplicationScope
 import com.example.routealarm.domain.model.AlarmType
+import com.example.routealarm.domain.usecase.ApplyPendingAdjustmentUseCase
 import com.example.routealarm.domain.usecase.HandleAlarmEventUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -23,10 +24,15 @@ import javax.inject.Inject
 class AlarmReceiver : BroadcastReceiver() {
 
     @Inject lateinit var handleAlarmEvent: HandleAlarmEventUseCase
+    @Inject lateinit var applyPendingAdjustment: ApplyPendingAdjustmentUseCase
     @Inject lateinit var notifications: AlarmNotifications
     @Inject @ApplicationScope lateinit var scope: CoroutineScope
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == AlarmIntents.ACTION_APPLY_ADJUSTMENT) {
+            applyAdjustment(intent.getLongExtra(AlarmIntents.EXTRA_SCHEDULE_ID, -1))
+            return
+        }
         if (intent.action != AlarmIntents.ACTION_ALARM) return
         val scheduleId = intent.getLongExtra(AlarmIntents.EXTRA_SCHEDULE_ID, -1)
         val type = intent.getStringExtra(AlarmIntents.EXTRA_ALARM_TYPE)
@@ -56,6 +62,20 @@ class AlarmReceiver : BroadcastReceiver() {
                         pending.finish()
                     }
                 }
+            }
+        }
+    }
+
+    /** 알람 변경 추천 알림에서 [변경하기]를 누른 경우: 변경안을 적용하고 알림을 지운다. */
+    private fun applyAdjustment(scheduleId: Long) {
+        if (scheduleId < 0) return
+        val pending = goAsync()
+        scope.launch {
+            try {
+                applyPendingAdjustment(scheduleId)
+                notifications.cancelTraffic(scheduleId)
+            } finally {
+                pending.finish()
             }
         }
     }

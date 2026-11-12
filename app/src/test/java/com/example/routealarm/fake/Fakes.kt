@@ -3,17 +3,22 @@ package com.example.routealarm.fake
 import com.example.routealarm.core.common.AppError
 import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.core.util.TimeProvider
+import com.example.routealarm.domain.model.AlarmEventType
 import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.AlarmSound
 import com.example.routealarm.domain.model.AlarmType
+import com.example.routealarm.domain.model.ColorTheme
+import com.example.routealarm.domain.model.Entitlement
+import com.example.routealarm.domain.model.GroupPass
 import com.example.routealarm.domain.model.GeoPoint
 import com.example.routealarm.domain.model.MetricType
 import com.example.routealarm.domain.model.MetricsSummary
 import com.example.routealarm.domain.model.Place
+import com.example.routealarm.domain.model.PlanType
 import com.example.routealarm.domain.model.RouteQueryResult
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.model.SegmentType
-import com.example.routealarm.domain.model.ThemeMode
+import com.example.routealarm.domain.model.SubscriptionProduct
 import com.example.routealarm.domain.model.TransitRoute
 import com.example.routealarm.domain.model.TransitSegment
 import com.example.routealarm.domain.model.UserPreferences
@@ -24,6 +29,7 @@ import com.example.routealarm.domain.repository.LocationRepository
 import com.example.routealarm.domain.repository.MetricsRepository
 import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
+import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.repository.TransitRefreshScheduler
 import com.example.routealarm.domain.repository.TransitRepository
 import kotlinx.coroutines.flow.Flow
@@ -32,6 +38,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 class FakeTimeProvider(
@@ -152,6 +159,13 @@ class FakeAlarmHistoryRepository : AlarmHistoryRepository {
     override fun observeHistory(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEvent>> =
         MutableStateFlow(events.filter { it.scheduleId == scheduleId })
 
+    override fun observeLatestAdjustments(): Flow<Map<Long, AlarmHistoryEvent>> = MutableStateFlow(
+        events
+            .filter { it.type == AlarmEventType.AUTO_ADJUSTED || it.type == AlarmEventType.ADJUSTMENT_APPLIED }
+            .groupBy { it.scheduleId }
+            .mapValues { it.value.last() },
+    )
+
     override suspend fun recentTravelDurations(scheduleId: Long, limit: Int): List<Duration> = recentTravel
 }
 
@@ -182,10 +196,69 @@ class FakePreferencesRepository(initial: UserPreferences = UserPreferences()) : 
     override suspend fun setVibration(enabled: Boolean) = state.update { it.copy(vibrationEnabled = enabled) }
     override suspend fun setAlarmSound(sound: AlarmSound) = state.update { it.copy(alarmSound = sound) }
     override suspend fun setSnoozeMinutes(minutes: Int) = state.update { it.copy(snoozeMinutes = minutes) }
-    override suspend fun setThemeMode(mode: ThemeMode) = state.update { it.copy(themeMode = mode) }
+    override suspend fun setColorTheme(theme: ColorTheme) = state.update { it.copy(colorTheme = theme) }
+    override suspend fun setLastPaywallPromptDay(epochDay: Long) = state.update { it.copy(lastPaywallPromptEpochDay = epochDay) }
     override suspend fun setOnboardingCompleted() = state.update { it.copy(onboardingCompleted = true) }
     override suspend fun setDemoSeeded() = state.update { it.copy(demoSeeded = true) }
     override suspend fun setDemoExtraDelay(minutes: Int) = state.update { it.copy(demo = it.demo.copy(extraDelayMinutes = minutes)) }
     override suspend fun setDemoNetworkFailure(enabled: Boolean) =
         state.update { it.copy(demo = it.demo.copy(simulateNetworkFailure = enabled)) }
+}
+
+/** 결제·서버 없이 플랜을 바꿔 볼 수 있는 구독 저장소 */
+class FakeSubscriptionRepository(
+    initial: Entitlement = Entitlement.Free,
+    private val time: TimeProvider? = null,
+) : SubscriptionRepository {
+    private val state = MutableStateFlow(initial)
+    var failWith: AppError? = null
+    val passes = mutableMapOf<String, GroupPass>()
+
+    override val entitlement: Flow<Entitlement> = state
+    override val isSimulated: Boolean = true
+    override suspend fun current(): Entitlement = state.value
+
+    override suspend fun startTrial(product: SubscriptionProduct): AppResult<Entitlement> {
+        failWith?.let { return AppResult.Failure(it) }
+        val now = time?.now() ?: Instant.EPOCH
+        val trialEnd = now.plus(Duration.ofDays(SubscriptionProduct.TRIAL_DAYS))
+        val entitlement = Entitlement(
+            plan = if (product == SubscriptionProduct.YEARLY) PlanType.PRO_YEARLY else PlanType.PRO_MONTHLY,
+            startedAt = now,
+            trialEndsAt = trialEnd,
+            expiresAt = trialEnd,
+            autoRenew = true,
+        )
+        state.value = entitlement
+        return AppResult.Success(entitlement)
+    }
+
+    override suspend fun verifyGroupPass(code: String): AppResult<GroupPass> {
+        failWith?.let { return AppResult.Failure(it) }
+        return passes[code]?.let { AppResult.Success(it) } ?: AppResult.Failure(AppError.GroupPassInvalid)
+    }
+
+    override suspend fun redeemGroupPass(code: String): AppResult<Entitlement> {
+        failWith?.let { return AppResult.Failure(it) }
+        val pass = passes[code] ?: return AppResult.Failure(AppError.GroupPassInvalid)
+        val entitlement = Entitlement(
+            plan = PlanType.GROUP_PASS,
+            expiresAt = pass.validUntil.plusDays(1).atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant(),
+            organization = pass.organization,
+        )
+        state.value = entitlement
+        return AppResult.Success(entitlement)
+    }
+
+    override suspend fun clear() {
+        state.value = Entitlement.Free
+    }
+
+    companion object {
+        /** 자동 갱신 중인 PRO. 기존 "자동 조정" 시나리오 테스트의 기본값 */
+        val PRO = Entitlement(plan = PlanType.PRO_YEARLY, autoRenew = true)
+
+        fun hansungPass(until: LocalDate = LocalDate.of(2027, 2, 28)) =
+            GroupPass("HSU-2026-WAKE7", "한성대학교", LocalDate.of(2026, 3, 1), until, remainingSeats = 128)
+    }
 }

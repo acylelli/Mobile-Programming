@@ -14,6 +14,7 @@ import com.example.routealarm.fake.FakeMetricsRepository
 import com.example.routealarm.fake.FakePreferencesRepository
 import com.example.routealarm.fake.FakeRefreshScheduler
 import com.example.routealarm.fake.FakeScheduleRepository
+import com.example.routealarm.fake.FakeSubscriptionRepository
 import com.example.routealarm.fake.FakeTimeProvider
 import com.example.routealarm.fake.FakeTransitRepository
 import com.example.routealarm.fake.TestData
@@ -44,12 +45,15 @@ class RefreshTransitTimeUseCaseTest {
 
     private val resolve = ResolveNextOccurrenceUseCase()
     private val buildPlan = TestData.buildAlarmPlanUseCase()
-    private val scheduleAlarm = ScheduleAlarmUseCase(alarmScheduler, refreshScheduler, time)
+    // 실시간 자동 조정은 PRO 기능이라 기본 시나리오는 PRO 상태에서 검증한다.
+    private val subscription = FakeSubscriptionRepository(FakeSubscriptionRepository.PRO, time)
+    private val scheduleAlarm = ScheduleAlarmUseCase(alarmScheduler, refreshScheduler, subscription, time)
     private val sync = SyncScheduleUseCase(schedules, resolve, buildPlan, scheduleAlarm, time)
 
     private val refresh = RefreshTransitTimeUseCase(
         scheduleRepository = schedules,
         preferencesRepository = preferences,
+        subscriptionRepository = subscription,
         transitRepository = transit,
         locationRepository = FakeLocationRepository(),
         historyRepository = history,
@@ -134,6 +138,52 @@ class RefreshTransitTimeUseCaseTest {
         assertEquals(AdjustmentKind.SUGGESTED, saved.pendingAdjustment!!.kind)
         assertEquals(seoul(day, 7, 0), saved.pendingAdjustment!!.proposedPlan.wakeUp)
         assertEquals(listOf(-20L to false), notifier.suggested)
+    }
+
+    @Test
+    fun `무료 플랜은 지연이 생겨도 알람을 옮기지 않고 알림만 보낸다`() = runTest {
+        val id = givenScheduledAt0720()
+        subscription.clear()
+        transit.travelMinutes = 75
+        transit.delayMinutes = 15
+
+        val outcome = refresh(id)
+
+        assertTrue(outcome is RefreshOutcome.PendingUserDecision)
+        val saved = schedule(id)
+        assertEquals(seoul(day, 7, 20), saved.plan!!.wakeUp)
+        assertEquals(seoul(day, 7, 20), alarmScheduler.scheduled[id to AlarmType.WAKE_UP])
+        assertEquals(seoul(day, 7, 0), saved.pendingAdjustment!!.proposedPlan.wakeUp)
+        assertTrue(notifier.adjusted.isEmpty())
+        assertEquals(listOf(-20L to false), notifier.suggested)
+    }
+
+    @Test
+    fun `무료 플랜은 알람 직전의 큰 지연도 자동으로 당기지 않고 확인을 요청한다`() = runTest {
+        val id = givenScheduledAt0720()
+        subscription.clear()
+        time.instant = seoul(day, 6, 50) // 기상 30분 전
+        transit.travelMinutes = 100
+        transit.delayMinutes = 40
+
+        val outcome = refresh(id)
+
+        assertTrue(outcome is RefreshOutcome.PendingUserDecision)
+        assertEquals(seoul(day, 7, 20), schedule(id).plan!!.wakeUp)
+        assertEquals(AdjustmentKind.NEEDS_CONFIRMATION, schedule(id).pendingAdjustment!!.kind)
+    }
+
+    @Test
+    fun `무료 플랜은 기상 30분 전에 한 번만 교통을 다시 확인한다`() = runTest {
+        subscription.clear()
+        val id = givenScheduledAt0720()
+
+        assertEquals(seoul(day, 6, 50), refreshScheduler.scheduled[id])
+
+        // 그 한 번의 확인이 끝나면 더 예약하지 않는다.
+        time.instant = seoul(day, 6, 50)
+        refresh(id)
+        assertNull(refreshScheduler.scheduled[id])
     }
 
     @Test

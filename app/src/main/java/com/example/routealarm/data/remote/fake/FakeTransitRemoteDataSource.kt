@@ -48,15 +48,18 @@ class FakeTransitRemoteDataSource @Inject constructor(
         return RouteResponseDto(realtime = true, routes = listOf(route))
     }
 
-    /** 명세 예시와 같은 "다산동 → 한성대학교" 65분 경로 */
+    /**
+     * 명세 예시와 같은 "다산동 → 한성대학교" 65분 경로.
+     * 구간 시간은 UI 설계서 홈 화면(UI-B-001)과 같다: 도보 8 + 8호선 31 + 환승 1 + 2호선 18 + 도보 7.
+     */
     private fun demoRoute(departure: Instant, extraDelay: Int): RouteDto {
         val segments = listOf(
             SegmentDto("WALK", null, "집", "다산역", 8),
-            SegmentDto("SUBWAY", "8호선", "다산역", "잠실역", 30 + extraDelay, "3분 후 도착"),
-            SegmentDto("SUBWAY", "2호선", "잠실역", "한성대입구역", 15),
+            SegmentDto("SUBWAY", "8호선", "다산역", "잠실역", 31 + extraDelay, "3분 후 도착"),
+            SegmentDto("SUBWAY", "2호선", "잠실역", "한성대입구역", 18),
             SegmentDto("WALK", null, "한성대입구역", "한성대학교", 7),
         )
-        return buildRoute(departure, segments, waitMinutes = 2, transferMinutes = 3, transferCount = 1, extraDelay)
+        return buildRoute(departure, segments, waitMinutes = 0, transferMinutes = 1, transferCount = 1, extraDelay)
     }
 
     private fun generatedRoute(origin: Place, destination: Place, departure: Instant, extraDelay: Int): RouteDto {

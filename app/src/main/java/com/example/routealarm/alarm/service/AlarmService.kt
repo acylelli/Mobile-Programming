@@ -55,7 +55,10 @@ class AlarmService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val id = intent?.getLongExtra(EXTRA_SCHEDULE_ID, -1) ?: -1
         when (intent?.action) {
-            ACTION_SNOOZE -> { snooze(id); return START_NOT_STICKY }
+            ACTION_SNOOZE -> {
+                snooze(id, intent.getIntExtra(EXTRA_SNOOZE_MINUTES, 0).takeIf { it > 0 })
+                return START_NOT_STICKY
+            }
             ACTION_DISMISS -> { dismiss(id); return START_NOT_STICKY }
         }
         if (id < 0) { stopSelf(); return START_NOT_STICKY }
@@ -115,9 +118,10 @@ class AlarmService : Service() {
         vibrator?.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, 0))
     }
 
-    private fun snooze(id: Long) {
+    /** @param requestedMinutes 알람 화면에서 고른 간격. 알림 버튼처럼 지정하지 않으면 설정의 기본 간격을 쓴다. */
+    private fun snooze(id: Long, requestedMinutes: Int? = null) {
         scope.launch {
-            val minutes = preferencesRepository.current().snoozeMinutes
+            val minutes = requestedMinutes ?: preferencesRepository.current().snoozeMinutes
             handleAlarmEvent.onSnoozed(id, minutes)
             stopRinging()
         }
@@ -150,6 +154,7 @@ class AlarmService : Service() {
         const val ACTION_SNOOZE = "com.example.routealarm.action.SNOOZE"
         const val ACTION_DISMISS = "com.example.routealarm.action.DISMISS"
         private const val EXTRA_SCHEDULE_ID = "schedule_id"
+        private const val EXTRA_SNOOZE_MINUTES = "snooze_minutes"
         private const val AUTO_SILENCE_MILLIS = 5L * 60 * 1000
         private val VIBRATION_PATTERN = longArrayOf(0, 800, 600)
 
@@ -162,7 +167,9 @@ class AlarmService : Service() {
             ContextCompat.startForegroundService(context, intent)
         }
 
-        fun snooze(context: Context, scheduleId: Long) = context.startService(actionIntent(context, scheduleId, ACTION_SNOOZE))
+        fun snooze(context: Context, scheduleId: Long, minutes: Int? = null) = context.startService(
+            actionIntent(context, scheduleId, ACTION_SNOOZE).apply { minutes?.let { putExtra(EXTRA_SNOOZE_MINUTES, it) } },
+        )
         fun dismiss(context: Context, scheduleId: Long) = context.startService(actionIntent(context, scheduleId, ACTION_DISMISS))
 
         private fun actionIntent(context: Context, scheduleId: Long, action: String) =

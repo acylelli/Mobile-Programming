@@ -1,88 +1,30 @@
 package com.example.routealarm.core.designsystem.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.graphics.Color
-import com.example.routealarm.domain.model.ThemeMode
+import androidx.compose.runtime.remember
+import com.example.routealarm.domain.model.ColorTheme
 
-private val LightColorScheme: ColorScheme = lightColorScheme(
-    primary = Primary,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFE2E8FF),
-    onPrimaryContainer = PrimaryDark,
-    secondary = Accent,
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFDDF4FF),
-    onSecondaryContainer = Color(0xFF0B5A75),
-    tertiary = PrimaryDark,
-    background = BackgroundLight,
-    onBackground = TextPrimaryLight,
-    surface = SurfaceLight,
-    onSurface = TextPrimaryLight,
-    surfaceVariant = SurfaceVariantLight,
-    onSurfaceVariant = TextSecondaryLight,
-    surfaceContainerLowest = SurfaceLight,
-    surfaceContainerLow = SurfaceLight,
-    surfaceContainer = SurfaceLight,
-    surfaceContainerHigh = SurfaceVariantLight,
-    surfaceContainerHighest = SurfaceVariantLight,
-    outline = OutlineLight,
-    outlineVariant = OutlineLight,
-    error = Error,
-    onError = Color.White,
-    errorContainer = Color(0xFFFEE2E2),
-    onErrorContainer = Color(0xFF991B1B),
-)
-
-private val DarkColorScheme: ColorScheme = darkColorScheme(
-    primary = Color(0xFF7D95FF),
-    onPrimary = Color(0xFF0D1B5C),
-    primaryContainer = Color(0xFF2B3C8F),
-    onPrimaryContainer = Color(0xFFDCE2FF),
-    secondary = Accent,
-    onSecondary = Color(0xFF00344A),
-    secondaryContainer = Color(0xFF0E4A63),
-    onSecondaryContainer = Color(0xFFBDE9FF),
-    tertiary = Accent,
-    background = BackgroundDark,
-    onBackground = TextPrimaryDark,
-    surface = SurfaceDark,
-    onSurface = TextPrimaryDark,
-    surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = TextSecondaryDark,
-    surfaceContainerLowest = BackgroundDark,
-    surfaceContainerLow = SurfaceDark,
-    surfaceContainer = SurfaceDark,
-    surfaceContainerHigh = SurfaceVariantDark,
-    surfaceContainerHighest = SurfaceVariantDark,
-    outline = OutlineDark,
-    outlineVariant = OutlineDark,
-    error = Color(0xFFF87171),
-    onError = Color(0xFF450A0A),
-    errorContainer = Color(0xFF7F1D1D),
-    onErrorContainer = Color(0xFFFEE2E2),
-)
+/**
+ * 실제로 어두운 화면인지 결정한다. 나이트 테마는 항상 어둡고, 나머지 테마는 기기의 다크 모드 설정을 따른다.
+ * Activity 의 시스템 바 스타일과 테마 미리보기도 이 값을 쓴다.
+ */
+@Composable
+fun isAppInDarkTheme(colorTheme: ColorTheme): Boolean =
+    colorTheme == ColorTheme.NIGHT || isSystemInDarkTheme()
 
 @Composable
 fun RouteAlarmTheme(
-    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    colorTheme: ColorTheme = ColorTheme.DEFAULT,
     content: @Composable () -> Unit,
 ) {
-    val darkTheme = when (themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
-    // Dynamic color 를 쓰지 않는 이유: 브랜드 파란색이 기기마다 바뀌면 "대중교통 + 알람" 인상이 흐려진다.
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    val appColors = if (darkTheme) DarkAppColors else LightAppColors
+    val dark = isAppInDarkTheme(colorTheme)
+    val colors = remember(colorTheme, dark) { appColorsFor(colorTheme, dark) }
+    val colorScheme = remember(colors) { colors.toColorScheme() }
 
-    CompositionLocalProvider(LocalAppColors provides appColors) {
+    CompositionLocalProvider(LocalAppColors provides colors) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,
@@ -93,6 +35,6 @@ fun RouteAlarmTheme(
 }
 
 object RouteAlarmTheme {
-    val appColors: AppColors
+    val colors: AppColors
         @Composable get() = LocalAppColors.current
 }

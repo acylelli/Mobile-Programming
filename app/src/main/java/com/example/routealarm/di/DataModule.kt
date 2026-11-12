@@ -10,6 +10,7 @@ import com.example.routealarm.data.local.db.RouteAlarmDatabase
 import com.example.routealarm.data.location.FusedLocationRepository
 import com.example.routealarm.data.mapper.ScheduleEntityMapper
 import com.example.routealarm.data.repository.DefaultPlaceRepository
+import com.example.routealarm.data.repository.DefaultSubscriptionRepository
 import com.example.routealarm.data.repository.DefaultTransitRepository
 import com.example.routealarm.data.repository.DemoDataProviderImpl
 import com.example.routealarm.data.repository.RoomAlarmHistoryRepository
@@ -22,6 +23,7 @@ import com.example.routealarm.domain.repository.MetricsRepository
 import com.example.routealarm.domain.repository.PlaceRepository
 import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
+import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.repository.TransitRepository
 import dagger.Binds
 import dagger.Module
@@ -45,6 +47,7 @@ abstract class RepositoryModule {
     @Binds abstract fun bindMetricsRepository(impl: RoomMetricsRepository): MetricsRepository
     @Binds abstract fun bindLocationRepository(impl: FusedLocationRepository): LocationRepository
     @Binds abstract fun bindDemoDataProvider(impl: DemoDataProviderImpl): DemoDataProvider
+    @Binds abstract fun bindSubscriptionRepository(impl: DefaultSubscriptionRepository): SubscriptionRepository
 }
 
 @Module

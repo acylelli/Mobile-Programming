@@ -15,6 +15,8 @@ data class Place(
     val longitude: Double,
     val type: PlaceType = PlaceType.CUSTOM,
     val isDemo: Boolean = false,
+    /** 역/정류장을 지나는 노선 이름. 검색 결과와 최근 검색에만 채워지고 일정에는 저장하지 않는다. */
+    val transitLines: List<String> = emptyList(),
 ) {
     val point: GeoPoint get() = GeoPoint(latitude, longitude)
 

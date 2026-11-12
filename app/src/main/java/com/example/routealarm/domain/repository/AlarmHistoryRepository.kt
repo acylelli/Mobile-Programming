@@ -10,6 +10,9 @@ interface AlarmHistoryRepository {
     suspend fun record(event: AlarmHistoryEvent)
     fun observeHistory(scheduleId: Long, limit: Int = 20): Flow<List<AlarmHistoryEvent>>
 
+    /** 일정별 가장 최근의 알람 조정(자동 조정/추천 승인). 알람 목록의 "08:40 → 08:32로 앞당김" 표시에 사용 */
+    fun observeLatestAdjustments(): Flow<Map<Long, AlarmHistoryEvent>>
+
     /** 최근 계산된 이동시간들. 실시간 ETA 하나만 믿지 않기 위한 안정화 입력값 */
     suspend fun recentTravelDurations(scheduleId: Long, limit: Int): List<Duration>
 }

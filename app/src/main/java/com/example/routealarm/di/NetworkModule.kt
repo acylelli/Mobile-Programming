@@ -2,8 +2,10 @@ package com.example.routealarm.di
 
 import com.example.routealarm.BuildConfig
 import com.example.routealarm.data.remote.PlaceSearchRemoteDataSource
+import com.example.routealarm.data.remote.SubscriptionRemoteDataSource
 import com.example.routealarm.data.remote.TransitRemoteDataSource
 import com.example.routealarm.data.remote.fake.FakePlaceSearchRemoteDataSource
+import com.example.routealarm.data.remote.fake.FakeSubscriptionRemoteDataSource
 import com.example.routealarm.data.remote.fake.FakeTransitRemoteDataSource
 import com.example.routealarm.data.remote.proxy.ProxyPlaceSearchRemoteDataSource
 import com.example.routealarm.data.remote.proxy.ProxyTransitRemoteDataSource
@@ -72,4 +74,12 @@ object NetworkModule {
         fake: FakePlaceSearchRemoteDataSource,
         proxy: ProxyPlaceSearchRemoteDataSource,
     ): PlaceSearchRemoteDataSource = if (BuildConfig.TRANSIT_PROVIDER == PROVIDER_PROXY) proxy else fake
+
+    /**
+     * 결제·이용권 검증. Google Play Billing + 영수증 검증 서버 구현이 준비되면 여기서 교체한다.
+     * 지금은 시연용 구현만 있으며, 화면에는 실제 결제가 아니라는 안내가 표시된다.
+     */
+    @Provides
+    @Singleton
+    fun provideSubscriptionRemoteDataSource(fake: FakeSubscriptionRemoteDataSource): SubscriptionRemoteDataSource = fake
 }

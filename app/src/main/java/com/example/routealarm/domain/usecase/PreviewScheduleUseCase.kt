@@ -25,6 +25,8 @@ data class ScheduleDraft(
     val useCurrentLocation: Boolean = false,
     val targetArrivalTime: LocalTime,
     val repeatDays: Set<DayOfWeek> = emptySet(),
+    /** 1회 일정의 날짜. null 이면 가장 가까운 날(오늘 또는 내일)로 정한다. 반복 일정에서는 무시 */
+    val oneTimeDate: LocalDate? = null,
     val preparationMinutes: Int,
     val bufferMinutes: Int,
     val alarmMode: AlarmMode = AlarmMode.WAKE_UP_AND_DEPARTURE,
@@ -66,7 +68,8 @@ class PreviewScheduleUseCase @Inject constructor(
         val now = timeProvider.now()
         val zone = timeProvider.zone()
         val oneTimeDate = if (draft.repeatDays.isEmpty()) {
-            resolveNextOccurrence.resolveOneTimeDate(draft.targetArrivalTime, now, zone)
+            // 사용자가 고른 날짜가 이미 지났다면 아래 BuildAlarmPlan 이 TARGET_IN_PAST 로 알려준다.
+            draft.oneTimeDate ?: resolveNextOccurrence.resolveOneTimeDate(draft.targetArrivalTime, now, zone)
         } else {
             null
         }
@@ -129,5 +132,36 @@ class PreviewScheduleUseCase @Inject constructor(
     private companion object {
         /** 지연 추가 여유 등 계산 과정에서 늘어날 수 있는 시간 */
         const val LEAD_MARGIN_MINUTES = 15L
+    }
+}
+
+/**
+ * "만약 15분 늦어진다면?"(UI-C-006 ⑤) — 지연이 생겼을 때 기상 시각이 어떻게 바뀌는지 미리 계산한다.
+ *
+ * 실제 재계산과 같은 [BuildAlarmPlanUseCase] 를 그대로 쓴다. 미리보기에서 보여준 시각과
+ * 나중에 실제로 조정되는 시각이 달라지면 안 되기 때문이다(지연이 생기면 지연 보정 여유도 함께 늘어난다).
+ */
+class PreviewDelayScenarioUseCase @Inject constructor(
+    private val buildAlarmPlan: BuildAlarmPlanUseCase,
+) {
+    /** @return 지연을 반영해 다시 계산한 기상 시각. 계산할 수 없으면 null */
+    operator fun invoke(preview: SchedulePreview, delayMinutes: Int = DEFAULT_DELAY_MINUTES): Instant? {
+        val plan = preview.outcome.plan
+        val input = PlanInput(
+            targetArrival = plan.targetArrival,
+            currentTravel = Duration.ofMinutes((plan.travelMinutes + delayMinutes).toLong()),
+            delay = Duration.ofMinutes((plan.delayMinutes + delayMinutes).toLong()),
+            preparation = Duration.ofMinutes(preview.draft.preparationMinutes.toLong()),
+            baseBufferMinutes = preview.draft.bufferMinutes,
+            isRealtime = plan.isRealtime,
+            fetchedAt = plan.lastUpdatedAt,
+        )
+        // "지금"에 따라 결과가 달라지지 않도록(지각 처리 등) 충분히 과거 시점을 기준으로 순수하게 계산한다.
+        val outcome = buildAlarmPlan(input, now = Instant.EPOCH)
+        return (outcome as? AppResult.Success)?.data?.plan?.wakeUp
+    }
+
+    companion object {
+        const val DEFAULT_DELAY_MINUTES = 15
     }
 }
