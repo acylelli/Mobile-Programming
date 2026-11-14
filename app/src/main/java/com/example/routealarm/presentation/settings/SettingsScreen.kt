@@ -313,8 +313,8 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_default_preparation),
             body = stringResource(R.string.settings_default_preparation_body),
             initial = prefs.defaultPreparationMinutes,
-            range = 5..120,
-            presets = listOf(15, 30, 45, 60),
+            range = UserPreferences.PREPARATION_MINUTES_RANGE,
+            presets = UserPreferences.PREPARATION_MINUTES_PRESETS,
             onConfirm = { onPreparation(it); sheet = null },
             onDismiss = { sheet = null },
         )
@@ -486,8 +486,6 @@ private fun MetricLine(text: String) {
 internal fun themeName(theme: ColorTheme, long: Boolean = false): String = stringResource(
     when (theme) {
         ColorTheme.DEFAULT -> if (long) R.string.theme_default_long else R.string.theme_default
-        ColorTheme.INDIGO -> R.string.theme_indigo
-        ColorTheme.MONO -> R.string.theme_mono
         ColorTheme.DAWN -> R.string.theme_dawn
         ColorTheme.NIGHT -> R.string.theme_night
     },

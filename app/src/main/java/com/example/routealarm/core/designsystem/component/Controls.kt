@@ -163,24 +163,20 @@ fun DayChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Mod
     }
 }
 
-/**
- * 선택형 알약 버튼(반복 프리셋, 준비 시간 프리셋, 알림 방식).
- * 회색 카드 위에 놓을 때는 [unselectedContainer] 를 바탕색으로 바꿔 카드와 구분한다.
- */
+/** 선택형 알약 버튼(반복 프리셋, 준비 시간 프리셋, 알림 방식) */
 @Composable
 fun ChoicePill(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    unselectedContainer: Color = RouteAlarmTheme.colors.surface,
 ) {
     val colors = RouteAlarmTheme.colors
     Box(
         modifier = modifier
             .height(40.dp)
             .clip(CircleShape)
-            .background(if (selected) colors.button else unselectedContainer)
+            .background(if (selected) colors.button else colors.surface)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,

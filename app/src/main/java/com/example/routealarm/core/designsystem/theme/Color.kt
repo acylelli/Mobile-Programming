@@ -96,36 +96,6 @@ private val DarkNeutral = AppColors(
 fun appColorsFor(theme: ColorTheme, dark: Boolean): AppColors = when (theme) {
     ColorTheme.DEFAULT -> if (dark) DarkNeutral else LightNeutral
 
-    ColorTheme.INDIGO -> if (dark) {
-        DarkNeutral.copy(
-            accent = Color(0xFF7D95FF),
-            onAccent = Color(0xFF0D1B5C),
-            accentText = Color(0xFFA9B8FF),
-            accentContainer = Color(0xFF1B2350),
-        )
-    } else {
-        LightNeutral.copy(
-            accent = Color(0xFF4667F2),
-            accentText = Color(0xFF3150CC),
-            accentContainer = Color(0xFFEEF1FF),
-        )
-    }
-
-    ColorTheme.MONO -> if (dark) {
-        DarkNeutral.copy(
-            accent = Color(0xFFF5F4F1),
-            onAccent = Color(0xFF111111),
-            accentText = Color(0xFFF5F4F1),
-            accentContainer = Color(0xFF2A2A27),
-        )
-    } else {
-        LightNeutral.copy(
-            accent = Color(0xFF111111),
-            accentText = Color(0xFF111111),
-            accentContainer = Color(0xFFF0EFEC),
-        )
-    }
-
     ColorTheme.DAWN -> if (dark) {
         DarkNeutral.copy(
             background = Color(0xFF14172B),
@@ -189,7 +159,7 @@ fun appColorsFor(theme: ColorTheme, dark: Boolean): AppColors = when (theme) {
 }
 
 /**
- * 역할 토큰 → Material3 ColorScheme. 다이얼로그·시간 선택기 같은 기본 M3 컴포넌트도 같은 색을 쓰게 한다.
+ * 역할 토큰 → Material3 ColorScheme. 다이얼로그·날짜 선택기 같은 기본 M3 컴포넌트도 같은 색을 쓰게 한다.
  * Dynamic color 는 쓰지 않는다: 사용자가 고른 컬러 테마가 기기 배경화면에 따라 바뀌면 안 되기 때문이다.
  */
 fun AppColors.toColorScheme(): ColorScheme {

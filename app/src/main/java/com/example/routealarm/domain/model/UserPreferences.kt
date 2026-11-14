@@ -1,11 +1,11 @@
 package com.example.routealarm.domain.model
 
 /**
- * 컬러 테마(UI-F-002). 5종 모두 플랜과 관계없이 고를 수 있다.
+ * 컬러 테마(UI-F-002). 기본(오렌지)·새벽·나이트 3종이며 플랜과 관계없이 고를 수 있다.
  * 화면 모드(라이트/다크)는 따로 고르지 않는다. 기기 설정을 따르고, 나이트만 항상 어두운 화면이다.
  * 지하철 노선색·상태색 같은 정보 색은 테마와 관계없이 고정된다.
  */
-enum class ColorTheme { DEFAULT, INDIGO, MONO, DAWN, NIGHT }
+enum class ColorTheme { DEFAULT, DAWN, NIGHT }
 
 enum class AlarmSound { DEFAULT_ALARM, GENTLE, SILENT }
 
@@ -27,6 +27,10 @@ data class UserPreferences(
 ) {
     companion object {
         const val DEFAULT_PREPARATION_MINUTES = 30
+
+        /** 준비 시간으로 고를 수 있는 범위(분)와 빠른 선택 값. 일정 만들기 4단계와 설정이 함께 쓴다. */
+        val PREPARATION_MINUTES_RANGE = 5..120
+        val PREPARATION_MINUTES_PRESETS = listOf(15, 30, 45, 60)
         const val DEFAULT_BUFFER_MINUTES = 10
         const val DEFAULT_SNOOZE_MINUTES = 5
         val SNOOZE_OPTIONS = listOf(5, 10, 15)

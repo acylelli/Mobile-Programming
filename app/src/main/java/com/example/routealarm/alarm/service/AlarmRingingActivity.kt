@@ -165,7 +165,7 @@ fun AlarmRingingScreen(
 ) {
     val colors = RouteAlarmTheme.colors
     val plan = schedule?.plan
-    // 강조색이 어두우면(모노 테마) 밝은 막을, 밝으면 어두운 막을 덮어 반투명 버튼을 만든다.
+    // 강조색이 어두우면(새벽 테마의 밝은 화면) 밝은 막을, 밝으면 어두운 막을 덮어 반투명 버튼을 만든다.
     val veil = if (colors.accent.luminance() < 0.2f) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.22f)
 
     Column(
