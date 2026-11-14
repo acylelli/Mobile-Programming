@@ -159,7 +159,7 @@ fun appColorsFor(theme: ColorTheme, dark: Boolean): AppColors = when (theme) {
 }
 
 /**
- * 역할 토큰 → Material3 ColorScheme. 다이얼로그·시간 선택기 같은 기본 M3 컴포넌트도 같은 색을 쓰게 한다.
+ * 역할 토큰 → Material3 ColorScheme. 다이얼로그·날짜 선택기 같은 기본 M3 컴포넌트도 같은 색을 쓰게 한다.
  * Dynamic color 는 쓰지 않는다: 사용자가 고른 컬러 테마가 기기 배경화면에 따라 바뀌면 안 되기 때문이다.
  */
 fun AppColors.toColorScheme(): ColorScheme {

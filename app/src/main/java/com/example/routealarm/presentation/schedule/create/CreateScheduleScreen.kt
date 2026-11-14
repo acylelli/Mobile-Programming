@@ -11,6 +11,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -68,13 +70,15 @@ import com.example.routealarm.core.designsystem.component.PrimaryButton
 import com.example.routealarm.core.designsystem.component.RadioDot
 import com.example.routealarm.core.designsystem.component.SectionLabel
 import com.example.routealarm.core.designsystem.component.SurfaceCard
-import com.example.routealarm.core.designsystem.component.TimePickerCard
+import com.example.routealarm.core.designsystem.component.WheelDurationPicker
+import com.example.routealarm.core.designsystem.component.WheelTimePicker
 import com.example.routealarm.core.designsystem.theme.Radius
 import com.example.routealarm.core.designsystem.theme.RouteAlarmTheme
 import com.example.routealarm.core.designsystem.theme.Spacing
 import com.example.routealarm.domain.model.AlarmMode
 import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.PlaceType
+import com.example.routealarm.domain.model.UserPreferences
 import com.example.routealarm.domain.usecase.PlanOutcome
 import com.example.routealarm.presentation.common.TimeFormat
 import com.example.routealarm.presentation.common.dayShortName
@@ -331,7 +335,7 @@ private fun TimeStep(
     val colors = RouteAlarmTheme.colors
     StepColumn {
         StepTitle(stringResource(R.string.create_time_question))
-        TimePickerCard(time = state.targetTime, onTimeChange = onTime)
+        WheelTimePicker(time = state.targetTime, onTimeChange = onTime)
 
         Spacer(Modifier.height(Spacing.lg))
         SectionLabel(stringResource(R.string.create_repeat_question))
@@ -434,31 +438,22 @@ private fun DateRow(selected: LocalDate?, targetTime: LocalTime, onDate: (LocalD
 
 @Composable
 private fun PreparationStep(minutes: Int, onChange: (Int) -> Unit) {
-    val colors = RouteAlarmTheme.colors
     StepColumn {
         StepTitle(stringResource(R.string.create_preparation_question), stringResource(R.string.create_preparation_body))
-        SurfaceCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(minutesText(minutes), style = MaterialTheme.typography.displayMedium, color = colors.textPrimary)
-                Spacer(Modifier.height(8.dp))
-                MinuteSlider(minutes, 5..120, onChange)
-                Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
-                    PREPARATION_PRESETS.forEach { preset ->
-                        ChoicePill(
-                            label = minutesText(preset),
-                            selected = minutes == preset,
-                            onClick = { onChange(preset) },
-                            unselectedContainer = colors.background,
-                        )
-                    }
-                }
+        WheelDurationPicker(minutes = minutes, onMinutesChange = onChange, range = UserPreferences.PREPARATION_MINUTES_RANGE)
+        Spacer(Modifier.height(Spacing.md))
+        // 자주 쓰는 값은 한 번에 고른다. 누르면 휠이 그 값으로 돌아간다.
+        // 글자를 크게 쓰는 좁은 화면에서는 한 줄에 다 들어가지 않으므로 옆으로 밀어 볼 수 있게 한다.
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        ) {
+            UserPreferences.PREPARATION_MINUTES_PRESETS.forEach { preset ->
+                ChoicePill(label = minutesText(preset), selected = minutes == preset, onClick = { onChange(preset) })
             }
         }
     }
 }
-
-private val PREPARATION_PRESETS = listOf(15, 30, 45, 60)
 
 /* ───────────── 5단계: 여유 시간 (UI-C-005) ───────────── */
 

@@ -427,6 +427,13 @@
     <string name="settings_metrics_work">백그라운드 갱신 실행 %1$d회</string>
     <string name="settings_version_format">버전 %1$s</string>
 
+    <!-- 휠 선택기 (시각, 걸리는 시간) -->
+    <string name="time_am">오전</string>
+    <string name="time_pm">오후</string>
+    <string name="time_hour_format">%1$d시</string>
+    <string name="time_unit_hour">시간</string>
+    <string name="time_unit_minute">분</string>
+
     <!-- 테마 선택 (UI-F-002) -->
     <string name="theme_color_section">컬러 테마</string>
     <string name="theme_default">기본</string>
@@ -480,4 +487,12 @@
     <string name="cd_traffic_status">교통 상태</string>
     <string name="cd_clear_search">검색어 지우기</string>
     <string name="cd_locked">PRO 전용</string>
+    <string name="cd_time_period">오전 또는 오후</string>
+    <string name="cd_time_hour">시 선택</string>
+    <string name="cd_time_minute">분 선택</string>
+    <string name="cd_duration_hour">시간 단위</string>
+    <string name="cd_duration_minute">분 단위</string>
+    <string name="cd_duration_adjusted">고를 수 있는 범위를 벗어나 %1$s으로 맞췄어요</string>
+    <string name="cd_wheel_next">다음 값</string>
+    <string name="cd_wheel_previous">이전 값</string>
 </resources>

@@ -313,8 +313,8 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_default_preparation),
             body = stringResource(R.string.settings_default_preparation_body),
             initial = prefs.defaultPreparationMinutes,
-            range = 5..120,
-            presets = listOf(15, 30, 45, 60),
+            range = UserPreferences.PREPARATION_MINUTES_RANGE,
+            presets = UserPreferences.PREPARATION_MINUTES_PRESETS,
             onConfirm = { onPreparation(it); sheet = null },
             onDismiss = { sheet = null },
         )

@@ -27,6 +27,10 @@ data class UserPreferences(
 ) {
     companion object {
         const val DEFAULT_PREPARATION_MINUTES = 30
+
+        /** 준비 시간으로 고를 수 있는 범위(분)와 빠른 선택 값. 일정 만들기 4단계와 설정이 함께 쓴다. */
+        val PREPARATION_MINUTES_RANGE = 5..120
+        val PREPARATION_MINUTES_PRESETS = listOf(15, 30, 45, 60)
         const val DEFAULT_BUFFER_MINUTES = 10
         const val DEFAULT_SNOOZE_MINUTES = 5
         val SNOOZE_OPTIONS = listOf(5, 10, 15)
