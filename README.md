@@ -61,11 +61,12 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 기상 알람 + 출발 알림 | 기상 알람(전체 화면, 알람음, 진동, 5·10분 스누즈)과 "10분 뒤 출발" / "지금 출발" 알림 분리 |
 | Offline First | 네트워크 실패 시 Room 캐시 → 마지막 계산값으로 알람 유지, 화면에 안내 띠 표시 |
 | 일정 만들기 5단계 | 출발지 → 도착지 → 도착 시각·반복 → 준비 시간 → 여유 시간, 저장 전에 계산 미리보기 |
+| 아이폰식 휠 입력 | 도착 시각(오전/오후 · 시 · 분)과 준비 시간(시간 · 분)을 휠을 돌려 고른다. 시 휠이 11과 12 사이를 지나면 오전/오후가 따라 바뀐다 |
 | 반복 일정 | 한 번(날짜 선택) / 평일 / 매일 / 요일 직접 선택 |
 | 장소 관리 | 화면 안 검색, 즐겨찾기(집/학교/회사), 최근 검색, 현재 위치 출발 |
 | 무료 플랜 / PRO | 무료는 일정 2개와 출발 전 교통 확인 1회, PRO 는 일정 무제한과 실시간 재계산 ([4장](#4-무료-플랜과-pro)) |
 | 단체 이용권 | 학교·기업이 준 코드를 입력하면 기관·기간을 확인하고 PRO 적용 |
-| 컬러 테마 | 기본(오렌지)·인디고·모노·새벽·나이트 5종, 모든 플랜에서 선택 가능 |
+| 컬러 테마 | 기본(오렌지)·새벽·나이트 3종, 모든 플랜에서 선택 가능 |
 | 재부팅·시간대 대응 | BOOT_COMPLETED / TIMEZONE_CHANGED 수신 후 알람 복구 |
 | 데모 모드 | API 키 없이 Fake 교통 데이터로 전체 흐름 시연, 설정에서 가상 지연·네트워크 오류 주입 |
 | 측정 지표 | API 호출/실패/캐시 적중/재계산/자동 조정 횟수를 Room 에 기록, 설정 화면에서 확인 |
@@ -76,7 +77,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 |---|---|---|
 | UI-A-001 | 온보딩 3쪽 + 권한 안내 | `onboarding/OnboardingScreen.kt` |
 | UI-B-001 | 홈 (내일 경로) | `home/HomeScreen.kt` |
-| UI-C-001 ~ 005 | 새 일정 5단계 | `schedule/create/CreateScheduleScreen.kt`, `PlaceStep.kt` |
+| UI-C-001 ~ 005 | 새 일정 5단계 | `schedule/create/CreateScheduleScreen.kt`, `PlaceStep.kt` (시각·준비 시간 휠은 `core/designsystem/component/Wheel*.kt`) |
 | UI-C-006 | 계산 미리보기 | `schedule/create/PreviewStep.kt` |
 | UI-D-001 | 알람 목록 | `alarmlist/AlarmListScreen.kt` |
 | UI-D-002 | 일정 상세 | `schedule/detail/ScheduleDetailScreen.kt` |
@@ -90,13 +91,17 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 
 에뮬레이터(Pixel 10 Pro, Android 17)에서 Fake 교통 데이터로 캡처한 화면이다.
 
-| 온보딩 | 홈 | 일정 만들기 | 계산 미리보기 |
+| 온보딩 | 홈 | 일정 만들기 (장소) | 도착 시각 (휠) |
 |---|---|---|---|
-| ![온보딩](docs/screenshots/onboarding.png) | ![홈](docs/screenshots/home.png) | ![생성](docs/screenshots/create.png) | ![결과](docs/screenshots/result.png) |
+| ![온보딩](docs/screenshots/onboarding.png) | ![홈](docs/screenshots/home.png) | ![생성](docs/screenshots/create.png) | ![도착 시각](docs/screenshots/time.png) |
 
-| 알람 목록 | 일정 상세 | 설정 | 기상 알람 |
+| 준비 시간 (휠) | 계산 미리보기 | 알람 목록 | 일정 상세 |
 |---|---|---|---|
-| ![알람](docs/screenshots/alarms.png) | ![상세](docs/screenshots/detail.png) | ![설정](docs/screenshots/settings.png) | ![알람 울림](docs/screenshots/ringing.png) |
+| ![준비 시간](docs/screenshots/preparation.png) | ![결과](docs/screenshots/result.png) | ![알람](docs/screenshots/alarms.png) | ![상세](docs/screenshots/detail.png) |
+
+| 설정 | 기상 알람 |
+|---|---|
+| ![설정](docs/screenshots/settings.png) | ![알람 울림](docs/screenshots/ringing.png) |
 
 | PRO 페이월 | 단체 이용권 | 구독 관리 | 테마 선택 |
 |---|---|---|---|
@@ -113,7 +118,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 일정 수 | 2개 (예시 일정은 세지 않음) | 무제한 |
 | 교통 재확인 | 기상 30분 전 1회 | 기상 24h / 3h / 1h / 20분 전 |
 | 교통이 바뀌었을 때 | 추천 카드와 알림의 **[변경하기]** 로 직접 반영 | 알람 자동 조정 + 알림 |
-| 컬러 테마 | 5종 모두 | 5종 모두 |
+| 컬러 테마 | 3종 모두 | 3종 모두 |
 
 - 플랜 판단은 화면이 아니라 도메인에서 한다: `CheckScheduleQuotaUseCase`(일정 한도), `RefreshCheckpointPolicy`(재확인 시점), `RefreshTransitTimeUseCase`(자동 조정 여부).
 - 일정 한도에 걸리면 하루에 한 번만 페이월을 자동으로 띄우고, 같은 날 다시 누르면 안내 문구만 보여준다.
@@ -125,8 +130,8 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 
 | 항목 | 설계서 v1.1 | 구현 | 이유 |
 |---|---|---|---|
-| 컬러 테마 | 기본만 무료, 4종은 PRO 잠금 | 5종 모두 무료 | 모든 사용자가 테마를 쓸 수 있도록 잠금을 풀었다 |
-| 화면 모드 | 라이트 / 다크 / 시스템 선택 | 선택 메뉴 없음. 기기의 다크 모드 설정을 따르고 나이트 테마는 항상 어두운 화면 | 테마 5종만 고르도록 단순화했다 |
+| 컬러 테마 | 5종(기본만 무료, 4종은 PRO 잠금) | 기본·새벽·나이트 3종, 모두 무료 | 모든 사용자가 테마를 쓸 수 있도록 잠금을 풀고, 인디고·모노를 빼서 3종으로 줄였다 |
+| 화면 모드 | 라이트 / 다크 / 시스템 선택 | 선택 메뉴 없음. 기기의 다크 모드 설정을 따르고 나이트 테마는 항상 어두운 화면 | 테마만 고르도록 단순화했다 |
 | "만약 15분 늦어진다면?" | 07:15 → 07:00 | 07:15 → 06:55 | 예시 숫자가 아니라 실제 계산 정책의 결과(이동 +15분, 지연 여유 +5분)를 보여준다 |
 | 결제 | Google Play 결제 | 시연용 구현 | Play Console 상품과 영수증 검증 서버가 필요하다 |
 | 광고 배너, 시간표·캘린더 연동, 택시 안내 | 제공 | 미구현 (연동 메뉴는 "준비 중"으로 표시) | 외부 SDK·API 연동 범위 |
@@ -136,7 +141,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 분류 | 사용 기술 |
 |---|---|
 | 언어 | Kotlin 2.2, Coroutines / Flow |
-| UI | Jetpack Compose, Material 3, Navigation Compose(타입 안전 라우트), 역할 기반 색 토큰(컬러 테마 5종 × 라이트/다크) |
+| UI | Jetpack Compose, Material 3, Navigation Compose(타입 안전 라우트), 역할 기반 색 토큰(컬러 테마 3종 × 라이트/다크) |
 | 아키텍처 | Clean Architecture, MVVM, UseCase, Repository Pattern |
 | DI | Hilt (+ hilt-work, hilt-navigation-compose) |
 | 저장 | Room (일정·장소·경로 캐시·알람 이력·지표), Preferences DataStore (사용자 설정·구독 상태·최근 검색) |
@@ -239,8 +244,8 @@ wakeUp    = CalculateWakeUpTime:   departure − preparation
 app/src/main/java/com/example/routealarm
 ├── core
 │   ├── common        AppResult / AppError / Dispatcher Qualifier
-│   ├── designsystem  theme(AppColors 색 토큰, 컬러 테마 5종, Typography, Shapes)
-│   │                 component(RouteLine 노선도, 버튼·카드·칩·시트 등 공통 컴포넌트)
+│   ├── designsystem  theme(AppColors 색 토큰, 컬러 테마 3종, Typography, Shapes)
+│   │                 component(RouteLine 노선도, 아이폰식 휠 선택기, 버튼·카드·칩·시트 등 공통 컴포넌트)
 │   └── util          TimeProvider, Duration 확장, 한글 줄바꿈 보정
 ├── domain            (Android 의존성 없음)
 │   ├── model         Schedule, AlarmPlan, Place, TransitRoute, UserPreferences, Subscription …
@@ -269,6 +274,7 @@ app/src/main/java/com/example/routealarm
 
 app/src/test/java/com/example/routealarm
 ├── fake              Fake Repository / Scheduler / Notifier
+├── core              휠 선택기 계산 규칙과 움직임 단위 테스트
 ├── domain            계산·정책·갱신·구독 시나리오 단위 테스트
 └── presentation      노선도 화면 모델 단위 테스트
 ```
@@ -318,7 +324,7 @@ ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형
 ./gradlew testDebugUnitTest
 ```
 
-도메인 계층과 화면 모델은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 78개 테스트:
+도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 127개 테스트:
 
 | 테스트 | 검증 내용 |
 |---|---|
@@ -332,6 +338,8 @@ ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형
 | `SubscriptionUseCasesTest` | 연간 요금(월 2,000원꼴·31% 할인), 무료 일정 한도(예시 일정 제외), 체험 시작과 재확인 재예약, 구독 종료 후 무료 전환, 단체 이용권 코드 정규화·형식 검사·확인·적용, 개인 구독 중 적용 시 해지 안내, 검증 서버 연결 실패 시 플랜 유지 |
 | `PreviewDelayScenarioUseCaseTest` | "만약 15분 늦어진다면?" 카드: 이동 +15분·지연 여유 +5분, 실제 재계산과 같은 시각, 지연이 없으면 그대로 |
 | `RouteTimelineBuilderTest` | 설계서 예시 경로의 지점·시각·구간, 승차 대기 시간 반영, 걷지 않고 바로 타는 경로, 경로 정보가 없는 계획, 방향 조사(로/으로) |
+| `WheelMathTest` | 고리 휠의 칸 번호, 12시간제 숫자와 오전/오후(11↔12 전환, 자정·정오), 분이 시를 바꾸지 않음, 시간·분 길이 변환, 내가 알린 값과 바깥에서 온 값 구분, 손을 뗀 뒤 멈출 칸과 관성 거리 조정, 원통 모양(칸 위치·크기·진하기)과 누른 칸 찾기 |
+| `WheelStateTest` | 휠의 움직임을 프레임 단위로 검증: 끌기 방향과 끝 저항, 튕긴 뒤 미리 정한 칸에 정확히 멈춤, 도는 휠을 잡아 멈추기, 잡고 있는 휠은 옮기지 않음, 바깥 값이 관성보다 우선, 취소된 움직임이 칸 사이에 남는 경우, 도는 도중의 오전/오후 전환 |
 
 리포트: `app/build/reports/tests/testDebugUnitTest/index.html`
 
@@ -362,6 +370,9 @@ ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형
 | **색은 역할 기반 토큰(AppColors)으로만 사용** | 컬러 테마를 바꿀 때 토큰 묶음만 교체하면 앱 전체에 반영됨. 노선색·상태색 같은 정보 색은 테마와 분리해 고정 |
 | **플랜에 따른 차이는 도메인에서 판단** | 화면마다 PRO 여부를 따로 검사하면 빠뜨리기 쉬움. 일정 한도·재확인 시점·자동 조정을 UseCase/Policy 가 결정 (`SubscriptionUseCases.kt`, `RefreshCheckpointPolicy`) |
 | **결제·이용권 검증도 RemoteDataSource 교체 지점으로 분리** | 실제 Play Billing + 영수증 검증 서버를 붙일 때 구현체만 바꾸면 됨. 시연 중임을 `isSimulated` 로 화면에 표시 (`SubscriptionRemoteDataSource`) |
+| **휠 선택기는 위치값 하나와 끌기 제스처로 직접 구현** | 고리처럼 끝없이 돌고, 원통 모양으로 그리고, 멈출 칸을 미리 정하려면 스크롤 목록보다 위치(가운데 칸 번호) 하나를 직접 움직이는 편이 단순하다. 끌기를 휠이 모두 가져가므로 스크롤 화면 안에서도 화면이 따라 움직이지 않는다 (`Wheel.kt`) |
+| **시 휠은 24칸 고리, 오전/오후는 거기서 계산** | 12시간제 숫자를 두 번 반복해 보여주면 11↔12 를 지날 때 오전/오후가 저절로 바뀌고, 빠르게 돌려도 숫자와 오전/오후가 어긋날 수 없다 (`WheelMath.kt`) |
+| **휠에서 손을 떼는 순간 멈출 칸을 정해 값을 알림** | 관성으로 도는 동안 다음 단계로 넘어가도 고른 값이 반영된다. 멈출 때까지 기다리면 그 사이의 값을 잃을 수 있다 (`WheelState.targetIndex`) |
 | **입력 중인 글자는 Compose 상태로 두고 입력값을 바꿔 끼우지 않음** | StateFlow 를 거치거나 입력 도중 대문자로 바꾸면 빠르게 칠 때 글자가 빠짐. 대문자 변환은 표시와 서버 확인 단계에서만 (`GroupPassViewModel`) |
 
 ## 15. 향후 개선사항
