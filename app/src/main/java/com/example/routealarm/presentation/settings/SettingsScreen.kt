@@ -486,8 +486,6 @@ private fun MetricLine(text: String) {
 internal fun themeName(theme: ColorTheme, long: Boolean = false): String = stringResource(
     when (theme) {
         ColorTheme.DEFAULT -> if (long) R.string.theme_default_long else R.string.theme_default
-        ColorTheme.INDIGO -> R.string.theme_indigo
-        ColorTheme.MONO -> R.string.theme_mono
         ColorTheme.DAWN -> R.string.theme_dawn
         ColorTheme.NIGHT -> R.string.theme_night
     },

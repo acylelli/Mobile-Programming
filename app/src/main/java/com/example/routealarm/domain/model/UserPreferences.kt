@@ -1,11 +1,11 @@
 package com.example.routealarm.domain.model
 
 /**
- * 컬러 테마(UI-F-002). 5종 모두 플랜과 관계없이 고를 수 있다.
+ * 컬러 테마(UI-F-002). 기본(오렌지)·새벽·나이트 3종이며 플랜과 관계없이 고를 수 있다.
  * 화면 모드(라이트/다크)는 따로 고르지 않는다. 기기 설정을 따르고, 나이트만 항상 어두운 화면이다.
  * 지하철 노선색·상태색 같은 정보 색은 테마와 관계없이 고정된다.
  */
-enum class ColorTheme { DEFAULT, INDIGO, MONO, DAWN, NIGHT }
+enum class ColorTheme { DEFAULT, DAWN, NIGHT }
 
 enum class AlarmSound { DEFAULT_ALARM, GENTLE, SILENT }
 

@@ -431,8 +431,6 @@
     <string name="theme_color_section">컬러 테마</string>
     <string name="theme_default">기본</string>
     <string name="theme_default_long">기본 (오렌지)</string>
-    <string name="theme_indigo">인디고</string>
-    <string name="theme_mono">모노</string>
     <string name="theme_dawn">새벽</string>
     <string name="theme_night">나이트</string>
     <string name="theme_line_color_notice">지하철 노선 색은 공식 노선색으로 고정되어 테마와 관계없이 같은 색으로 보여요.</string>

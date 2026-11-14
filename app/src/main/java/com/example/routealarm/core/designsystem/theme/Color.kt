@@ -96,36 +96,6 @@ private val DarkNeutral = AppColors(
 fun appColorsFor(theme: ColorTheme, dark: Boolean): AppColors = when (theme) {
     ColorTheme.DEFAULT -> if (dark) DarkNeutral else LightNeutral
 
-    ColorTheme.INDIGO -> if (dark) {
-        DarkNeutral.copy(
-            accent = Color(0xFF7D95FF),
-            onAccent = Color(0xFF0D1B5C),
-            accentText = Color(0xFFA9B8FF),
-            accentContainer = Color(0xFF1B2350),
-        )
-    } else {
-        LightNeutral.copy(
-            accent = Color(0xFF4667F2),
-            accentText = Color(0xFF3150CC),
-            accentContainer = Color(0xFFEEF1FF),
-        )
-    }
-
-    ColorTheme.MONO -> if (dark) {
-        DarkNeutral.copy(
-            accent = Color(0xFFF5F4F1),
-            onAccent = Color(0xFF111111),
-            accentText = Color(0xFFF5F4F1),
-            accentContainer = Color(0xFF2A2A27),
-        )
-    } else {
-        LightNeutral.copy(
-            accent = Color(0xFF111111),
-            accentText = Color(0xFF111111),
-            accentContainer = Color(0xFFF0EFEC),
-        )
-    }
-
     ColorTheme.DAWN -> if (dark) {
         DarkNeutral.copy(
             background = Color(0xFF14172B),
