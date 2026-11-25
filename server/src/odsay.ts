@@ -48,7 +48,15 @@ export interface RouteQuery {
 /** 출발·도착이 너무 가깝거나 대중교통 경로가 없을 때 ODsay 가 주는 오류 코드. 앱에는 "경로 없음"으로 전달한다. */
 const NO_ROUTE_CODES = new Set(["-98", "-99", "3", "4", "5", "6"]);
 
-export async function fetchOdsayRoutes(apiKey: string, query: RouteQuery, fetchImpl: typeof fetch = fetch): Promise<RouteResponseDto> {
+/**
+ * ODsay 원본 응답을 가져온다. 출발 시각과 무관한 좌표 기준 결과라서 그대로 캐시해 두고
+ * 요청마다 [toRouteResponse] 로 출발·도착 시각만 다시 계산할 수 있다.
+ */
+export async function fetchOdsayRaw(
+  apiKey: string,
+  query: Omit<RouteQuery, "departAt">,
+  fetchImpl: typeof fetch = fetch,
+): Promise<OdsayResponse> {
   const params = new URLSearchParams({
     SX: String(query.originLng),
     SY: String(query.originLat),
@@ -63,7 +71,7 @@ export async function fetchOdsayRoutes(apiKey: string, query: RouteQuery, fetchI
     throw new UpstreamError(504, `ODsay 호출 실패: ${(e as Error).name}`);
   }
   if (!response.ok) throw new UpstreamError(502, `ODsay HTTP ${response.status}`);
-  return toRouteResponse((await response.json()) as OdsayResponse, query.departAt);
+  return (await response.json()) as OdsayResponse;
 }
 
 export function toRouteResponse(body: OdsayResponse, departAt: Date): RouteResponseDto {
