@@ -71,3 +71,40 @@ test("이미 '번'으로 끝나는 버스 번호에는 다시 붙이지 않는�
   assert.equal(lineName({ trafficType: 2, sectionTime: 5, lane: [{ busNo: "1번" }] }), "1번");
   assert.equal(lineName({ trafficType: 2, sectionTime: 5, lane: [{ name: "공항버스" }] }), "공항버스");
 });
+
+test("탑승 구간에는 지나는 정류장 좌표를 [위도, 경도]로 넣고, 도보 구간에는 넣지 않는다", () => {
+  const body: OdsayResponse = {
+    result: {
+      path: [
+        {
+          info: { totalTime: 30 },
+          subPath: [
+            { trafficType: 3, sectionTime: 3 },
+            {
+              trafficType: 1,
+              sectionTime: 25,
+              startName: "화랑대",
+              endName: "한성대입구",
+              lane: [{ name: "수도권 6호선", subwayCode: 6 }],
+              passStopList: {
+                stations: [
+                  { stationName: "화랑대", x: "127.0839781", y: "37.6198821" },
+                  { stationName: "봉화산", x: "127.091636", y: "37.617286" },
+                  { stationName: "좌표 없음" },
+                ],
+              },
+            },
+            { trafficType: 3, sectionTime: 2 },
+          ],
+        },
+      ],
+    },
+  };
+  const segments = toRouteResponse(body, new Date("2026-11-26T08:00:00+09:00")).routes[0]!.segments;
+  assert.deepEqual(segments[1]!.points, [
+    [37.619882, 127.083978],
+    [37.617286, 127.091636],
+  ]);
+  assert.equal(segments[0]!.points, undefined);
+  assert.equal(segments[2]!.points, undefined);
+});

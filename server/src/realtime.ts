@@ -234,6 +234,8 @@ export function firstCatchable(arrivals: Arrival[], secondsUntilAtStop: number, 
  * - 대기 시간 = 정류장에 닿은 뒤 탈 수 있는 차가 올 때까지
  * - 첫 탑승 구간에 "N분 후 도착" 안내 (지금 기준, 사용자가 탈 수 있는 차)
  * - 총 소요시간과 도착 시각을 다시 계산한다
+ * - 평소 대비 지연(delay_minutes) = 실시간 대기 - 시간표 기준 대기(ODsay). 더 빨리 오면 0.
+ *   총 소요시간에 이미 들어 있는 값이라 앱은 지연 표시·여유 시간에만 쓴다.
  */
 export function applyArrival(route: RouteDto, secondsUntilAtStop: number, arrival: Arrival): RouteDto {
   const firstRide = route.segments.findIndex((s) => s.mode !== "WALK");
@@ -249,6 +251,7 @@ export function applyArrival(route: RouteDto, secondsUntilAtStop: number, arriva
     ...route,
     wait_minutes: waitMinutes,
     total_minutes: totalMinutes,
+    delay_minutes: Math.max(0, waitMinutes - route.wait_minutes),
     arrival_time: toKstIso(new Date(departure + totalMinutes * 60_000)),
     segments,
   };

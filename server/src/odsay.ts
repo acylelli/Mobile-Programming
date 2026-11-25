@@ -9,7 +9,7 @@ import type { BusQuery, SubwayQuery } from "./realtime.ts";
  * - 처음·마지막 도보는 WALK 구간으로 내려주고, 탈것 사이의 도보는 환승 시간(transfer_minutes)으로 합친다.
  *   앱 노선도는 탈것 두 개가 연달아 있으면 그 사이를 환승으로 그리기 때문이다.
  * - ODsay 총 소요시간과 구간 합의 차이는 대기 시간(wait_minutes)으로 둔다.
- * - 실시간 지연(delay_minutes)은 ODsay 길찾기 응답에 없어서 0 으로 둔다.
+ * - 평소 대비 지연(delay_minutes)은 ODsay 시간표 기준이라 0 이다. 출발 30분 안이면 실시간 도착으로 다시 계산한다(realtime.ts).
  * - 출발이 가까우면 app.ts 가 첫 탑승 구간의 실시간 도착 정보로 대기 시간과 도착 안내를 다시 채운다(realtime.ts).
  */
 
@@ -35,7 +35,7 @@ export interface OdsaySubPath {
   startArsID?: string;
   /** 지역 버스 정보 시스템의 정류장 ID(경기: 9자리) */
   startLocalStationID?: string;
-  passStopList?: { stations?: Array<{ stationName?: string }> };
+  passStopList?: { stations?: Array<{ stationName?: string; x?: string; y?: string }> };
 }
 
 export interface OdsayPath {
@@ -178,6 +178,7 @@ function toRoute(path: OdsayPath, departAt: Date): RouteDto | null {
       from: stationName(sub, "start"),
       to: stationName(sub, "end"),
       minutes,
+      ...withPoints(sub),
     });
   });
 
@@ -196,6 +197,22 @@ function toRoute(path: OdsayPath, departAt: Date): RouteDto | null {
     arrival_time: toKstIso(new Date(departAt.getTime() + totalMinutes * 60_000)),
     segments,
   };
+}
+
+/** 지나는 정류장·역 좌표. 좌표가 둘 미만이면 선을 그릴 수 없어 넣지 않는다. */
+function withPoints(sub: OdsaySubPath): { points?: Array<[number, number]> } {
+  const points: Array<[number, number]> = [];
+  for (const station of sub.passStopList?.stations ?? []) {
+    const lat = Number(station.y);
+    const lng = Number(station.x);
+    if (station.x === undefined || station.y === undefined || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    points.push([round6(lat), round6(lng)]);
+  }
+  return points.length >= 2 ? { points } : {};
+}
+
+function round6(value: number): number {
+  return Math.round(value * 1e6) / 1e6;
 }
 
 /** "수도권 2호선" → "2호선". 앱은 "N호선" 이름으로 노선 색을 고른다. 버스는 "76" → "76번". */

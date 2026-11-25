@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.example.routealarm.alarm.notification.AlarmNotifications
+import com.example.routealarm.presentation.schedule.detail.KakaoMapSupport
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -20,5 +21,6 @@ class RouteAlarmApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         notifications.createChannels()
+        KakaoMapSupport.init(this)
     }
 }

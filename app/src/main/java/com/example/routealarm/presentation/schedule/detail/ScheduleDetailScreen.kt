@@ -37,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,6 +64,7 @@ import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.AlarmMode
 import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.Schedule
+import com.example.routealarm.presentation.common.RouteMapLines
 import com.example.routealarm.presentation.common.RouteTimelineBuilder
 import com.example.routealarm.presentation.common.TimeFormat
 import com.example.routealarm.presentation.common.messageRes
@@ -279,6 +281,26 @@ private fun DetailContent(
                 RouteTimelineBuilder.build(plan, originName, schedule.destination.name)
             }
             RouteTimelineView(timeline, slackMinutes = plan.slackMinutes)
+
+            // 경로 지도(카카오맵). 좌표가 없는 예전 경로나 지도를 쓸 수 없는 기기에서는 보이지 않는다.
+            val mapLines = remember(plan.route, schedule.origin, schedule.destination) {
+                plan.route?.let { RouteMapLines.build(schedule.origin.point, schedule.destination.point, it.segments) }.orEmpty()
+            }
+            var mapFailed by remember { mutableStateOf(false) }
+            if (KakaoMapSupport.isAvailable && mapLines.isNotEmpty() && !mapFailed) {
+                Spacer(Modifier.height(Spacing.md))
+                RouteMap(
+                    lines = mapLines,
+                    origin = schedule.origin.point,
+                    destination = schedule.destination.point,
+                    walkColor = colors.textTertiary,
+                    onError = { mapFailed = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .clip(Radius.card),
+                )
+            }
         }
 
         // 다시 계산 · 지도 앱 열기
