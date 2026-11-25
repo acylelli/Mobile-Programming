@@ -261,4 +261,32 @@ class RefreshTransitTimeUseCaseTest {
         assertEquals(85, plan.travelMinutes)
         assertTrue(notifier.adjusted.isEmpty())
     }
+
+    @Test
+    fun `출발 10분 전 확인은 알람을 옮기지 않고 실시간 도착 안내를 담는다`() = runTest {
+        val id = givenScheduledAt0720()
+        time.instant = seoul(day, 7, 40) // 출발 알림(출발 10분 전) 시각
+        transit.arrivalInfo = "약 8분 후 도착"
+
+        val briefed = DepartureBriefingUseCase(refresh, schedules)(id)!!
+
+        // 서버가 실시간 정보를 붙이는 "출발 30분 이내" 조건에 맞는 출발 시각으로 조회한다.
+        assertEquals(seoul(day, 7, 50), transit.lastDepartureTime)
+        assertEquals(BoardingInfo("집", "8호선", "약 8분 후 도착"), briefed.plan!!.boardingInfo())
+        assertEquals(seoul(day, 7, 20), briefed.plan!!.wakeUp)
+        assertEquals(seoul(day, 7, 50), briefed.plan!!.departure)
+        assertTrue(notifier.adjusted.isEmpty())
+    }
+
+    @Test
+    fun `실시간 도착 안내가 없는 경로나 조회 실패면 출발 알림에 붙일 정보가 없다`() = runTest {
+        val id = givenScheduledAt0720()
+        time.instant = seoul(day, 7, 40)
+        assertNull(DepartureBriefingUseCase(refresh, schedules)(id)!!.plan!!.boardingInfo())
+
+        transit.failWith = AppError.Network
+        val briefed = DepartureBriefingUseCase(refresh, schedules)(id)!!
+        assertNull(briefed.plan!!.boardingInfo())
+        assertEquals(seoul(day, 7, 20), briefed.plan!!.wakeUp)
+    }
 }
