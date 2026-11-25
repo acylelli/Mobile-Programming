@@ -59,7 +59,7 @@ export async function fetchSubwayArrivals(key: string, query: SubwayQuery, fetch
   // 이 API 는 http 만 제공한다. 키 외에 개인 정보는 보내지 않는다.
   const url = `http://swopenapi.seoul.go.kr/api/subway/${encodeURIComponent(key)}/json/realtimeStationArrival/0/30/${encodeURIComponent(query.station)}`;
   const body = await getJson(url, fetchImpl);
-  return body ? parseSubwayArrivals(body, query) : null;
+  return body ? logIfUnreadable(parseSubwayArrivals(body, query), body, "subway") : null;
 }
 
 export function parseSubwayArrivals(body: unknown, query: SubwayQuery): Arrival[] | null {
@@ -96,11 +96,11 @@ export async function fetchBusArrivals(key: string, query: BusQuery, fetchImpl: 
   if (query.region === "seoul") {
     const params = new URLSearchParams({ serviceKey: key, arsId: query.stationKey, resultType: "json" });
     const body = await getJson(`http://ws.bus.go.kr/api/rest/stationinfo/getStationByUid?${params}`, fetchImpl);
-    return body ? parseSeoulBusArrivals(body, query.routeId) : null;
+    return body ? logIfUnreadable(parseSeoulBusArrivals(body, query.routeId), body, "seoul-bus") : null;
   }
   const params = new URLSearchParams({ serviceKey: key, stationId: query.stationKey, format: "json" });
   const body = await getJson(`https://apis.data.go.kr/6410000/busarrivalservice/v2/getBusArrivalListv2?${params}`, fetchImpl);
-  return body ? parseGyeonggiBusArrivals(body, query.routeId) : null;
+  return body ? logIfUnreadable(parseGyeonggiBusArrivals(body, query.routeId), body, "gyeonggi-bus") : null;
 }
 
 export function parseSeoulBusArrivals(body: unknown, routeId: string): Arrival[] | null {
@@ -132,6 +132,32 @@ export function parseGyeonggiBusArrivals(body: unknown, routeId: string): Arriva
     else if (item[`predictTime${n}`] !== "" && item[`predictTime${n}`] != null && Number.isFinite(min) && min >= 0) arrivals.push({ seconds: min * 60 });
   }
   return sortArrivals(arrivals);
+}
+
+/**
+ * 응답은 왔지만 도착 목록이 없을 때(인증키 오류, 해외 IP 차단, 호출 한도 등) 원인을 로그에 남긴다.
+ * 각 API 의 오류 코드·메시지 필드만 골라 쓰고, 요청 주소(키 포함)는 남기지 않는다.
+ */
+export function describeUnreadable(body: unknown): string {
+  const b = (body ?? {}) as Record<string, any>;
+  const candidates = [
+    b.errorMessage, // 서울 지하철
+    b, // 서울 지하철·data.go.kr 게이트웨이 오류 {code, message} / {error, message}
+    b.msgHeader, // 서울 버스
+    b.response?.msgHeader, // 경기 버스
+  ];
+  for (const c of candidates) {
+    if (!c || typeof c !== "object") continue;
+    const code = c.code ?? c.headerCd ?? c.resultCode ?? c.error ?? c.status;
+    const message = c.message ?? c.headerMsg ?? c.resultMessage;
+    if (code !== undefined || message !== undefined) return `${String(code ?? "")} ${String(message ?? "")}`.trim().slice(0, 200);
+  }
+  return JSON.stringify(body).slice(0, 200);
+}
+
+function logIfUnreadable(result: Arrival[] | null, body: unknown, source: string): Arrival[] | null {
+  if (result === null) console.error(`[realtime] ${source} 응답에 도착 목록 없음: ${describeUnreadable(body)}`);
+  return result;
 }
 
 function sortArrivals(arrivals: Arrival[]): Arrival[] {

@@ -186,3 +186,11 @@ test("출발이 30분보다 멀거나 키가 없으면 실시간 API 를 부르�
     assert.equal(realtimeCalls(calls), 0);
   });
 });
+
+test("도착 목록이 없는 응답은 오류 코드·메시지를 요약한다", async () => {
+  const { describeUnreadable } = await import("../src/realtime.ts");
+  assert.equal(describeUnreadable({ status: 500, code: "INFO-100", message: "인증키가 유효하지 않습니다." }), "INFO-100 인증키가 유효하지 않습니다.");
+  assert.equal(describeUnreadable({ errorMessage: { status: 200, code: "INFO-200", message: "해당하는 데이터가 없습니다." } }), "INFO-200 해당하는 데이터가 없습니다.");
+  assert.equal(describeUnreadable({ error: "Unauthorized", message: "유효하지 않은 서비스키입니다", status: 401 }), "Unauthorized 유효하지 않은 서비스키입니다");
+  assert.equal(describeUnreadable({ response: { msgHeader: { resultCode: 4, resultMessage: "결과가 존재하지 않습니다." } } }), "4 결과가 존재하지 않습니다.");
+});
