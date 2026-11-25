@@ -402,7 +402,8 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 
 - [x] 실제 Backend Proxy 서버 구현 (ODsay 경로·Kakao 장소 검색 정규화, `server/`)
 - [x] Proxy 서버 https 배포 (Render, 수동 배포)
-- [ ] 실시간 도착 API 로 `delay_minutes`·`arrival_message` 채우기
+- [x] 출발 30분 이내 경로에 실시간 지하철·버스 도착 정보 반영 (`arrival_message`, 대기 시간)
+- [ ] 평소 대비 지연(`delay_minutes`) 계산
 - [ ] Google Play Billing 연동과 영수증 검증 서버, 단체 이용권 발급·관리
 - [ ] 무료 플랜 배너 광고, 지각 위험 시 택시·공유 모빌리티 안내
 - [ ] 상세 화면 지도(경로 폴리라인) 표시

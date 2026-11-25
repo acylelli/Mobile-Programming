@@ -58,6 +58,7 @@ routealarm.transitProvider=proxy
 
 - `total_minutes` = 도보 + 탑승 + 환승 + 대기 (지연 포함). 위 예시는 8 + 31 + 1 + 18 + 7 = 65분으로, 앱의 Fake 데이터와 UI 설계서 홈 화면 예시와 같다.
 - `line_name` 은 홈 노선도의 구간 색을 정하는 데도 쓴다(예: "2호선" → 초록, "8호선" → 분홍). 수도권 지하철 노선명은 "N호선" 형태로 준다.
+- `wait_minutes` 는 첫 탑승까지의 대기. 출발이 30분 이내면 서버가 실시간 도착 정보로 다시 계산하고, 첫 탑승 구간에 `arrival_message`("7분 후 도착")를 붙인다.
 - `delay_minutes` 는 평소 대비 실시간 지연. 앱은 이 값으로 교통 상태 Chip 과 추가 여유시간을 계산한다.
 - `realtime` 이 `false` 면 앱은 실시간 정보가 아니라는 안내를 표시하고 불확실성 여유(+5분)를 더한다. 방금 조회한 결과는 `true` 로 준다.
 - `mode` 는 `WALK | BUS | SUBWAY | TRAIN`, 그 외는 `ETC` 로 처리된다.
