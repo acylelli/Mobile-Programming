@@ -1,0 +1,133 @@
+{
+ "result": {
+  "path": [
+   {
+    "info": {
+     "totalTime": 64
+    },
+    "subPath": [
+     {
+      "trafficType": 3,
+      "sectionTime": 7
+     },
+     {
+      "trafficType": 1,
+      "sectionTime": 12,
+      "startName": "동구릉",
+      "endName": "천호",
+      "lane": [
+       {
+        "name": "수도권 8호선"
+       }
+      ]
+     },
+     {
+      "trafficType": 3,
+      "sectionTime": 1
+     },
+     {
+      "trafficType": 1,
+      "sectionTime": 22,
+      "startName": "천호",
+      "endName": "동대문역사문화공원",
+      "lane": [
+       {
+        "name": "수도권 5호선"
+       }
+      ]
+     },
+     {
+      "trafficType": 3,
+      "sectionTime": 3
+     },
+     {
+      "trafficType": 1,
+      "sectionTime": 4,
+      "startName": "동대문역사문화공원",
+      "endName": "혜화",
+      "lane": [
+       {
+        "name": "수도권 4호선"
+       }
+      ]
+     },
+     {
+      "trafficType": 3,
+      "sectionTime": 11
+     }
+    ]
+   },
+   {
+    "info": {
+     "totalTime": 60
+    },
+    "subPath": [
+     {
+      "trafficType": 3,
+      "sectionTime": 1
+     },
+     {
+      "trafficType": 2,
+      "sectionTime": 14,
+      "startName": "농수산물시장",
+      "endName": "구리역.롯데백화점",
+      "lane": [
+       {
+        "busNo": "6"
+       }
+      ]
+     },
+     {
+      "trafficType": 3,
+      "sectionTime": 1
+     },
+     {
+      "trafficType": 1,
+      "sectionTime": 14,
+      "startName": "구리",
+      "endName": "회기",
+      "lane": [
+       {
+        "name": "경의중앙선"
+       }
+      ]
+     },
+     {
+      "trafficType": 3,
+      "sectionTime": 2
+     },
+     {
+      "trafficType": 1,
+      "sectionTime": 9,
+      "startName": "회기",
+      "endName": "동묘앞",
+      "lane": [
+       {
+        "name": "수도권 1호선"
+       }
+      ]
+     },
+     {
+      "trafficType": 3,
+      "sectionTime": 2
+     },
+     {
+      "trafficType": 2,
+      "sectionTime": 12,
+      "startName": "동묘앞역.롯데캐슬천지인",
+      "endName": "창신쌍용2단지.한성대후문",
+      "lane": [
+       {
+        "busNo": "종로03"
+       }
+      ]
+     },
+     {
+      "trafficType": 3,
+      "sectionTime": 3
+     }
+    ]
+   }
+  ]
+ }
+}

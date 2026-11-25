@@ -277,6 +277,10 @@ app/src/test/java/com/example/routealarm
 ├── core              휠 선택기 계산 규칙과 움직임 단위 테스트
 ├── domain            계산·정책·갱신·구독 시나리오 단위 테스트
 └── presentation      노선도 화면 모델 단위 테스트
+
+server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검색을 앱 계약 형식으로 변환
+├── src               app(라우팅·입력 검증), odsay, kakao, contract(응답 형식)
+└── test              변환 규칙·입력 검증 테스트 (실제 ODsay 응답 일부를 fixture 로 사용)
 ```
 
 ## 11. 실행 방법
@@ -315,6 +319,14 @@ routealarm.proxyBaseUrl=https://your-proxy.example.com/
 
 Proxy 가 구현해야 하는 응답 형식은 [docs/proxy-api.md](docs/proxy-api.md) 에 있다.
 ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형식으로 정규화하면 앱 코드는 바뀌지 않는다.
+
+이 저장소의 [`server/`](server/README.md) 가 그 Proxy 구현이다(ODsay 대중교통 길찾기 + Kakao 로컬 검색).
+키는 `server/.env` 나 배포 서비스 환경변수에만 두고, 에뮬레이터에서 로컬 서버에 붙을 때는 다음처럼 설정한다.
+
+```properties
+routealarm.transitProvider=proxy
+routealarm.proxyBaseUrl=http://10.0.2.2:8080/
+```
 
 제공자를 앱 안에서 직접 구현하고 싶다면 `TransitRemoteDataSource` 를 구현하고 `di/NetworkModule.kt` 에서 바인딩만 바꾸면 된다.
 
@@ -377,7 +389,8 @@ ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형
 
 ## 15. 향후 개선사항
 
-- [ ] 실제 Backend Proxy 서버 구현 (ODsay/TMAP 정규화)
+- [x] 실제 Backend Proxy 서버 구현 (ODsay 경로·Kakao 장소 검색 정규화, `server/`)
+- [ ] Proxy 서버 https 배포, 실시간 도착 API 로 `delay_minutes`·`arrival_message` 채우기
 - [ ] Google Play Billing 연동과 영수증 검증 서버, 단체 이용권 발급·관리
 - [ ] 무료 플랜 배너 광고, 지각 위험 시 택시·공유 모빌리티 안내
 - [ ] 상세 화면 지도(경로 폴리라인) 표시
