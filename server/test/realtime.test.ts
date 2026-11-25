@@ -115,9 +115,18 @@ test("정류장에 닿은 뒤 처음 오는 차로 대기 시간·도착 안내�
   const adjusted = applyArrival(route, 240, catchable);
   assert.equal(adjusted.wait_minutes, 5);
   assert.equal(adjusted.total_minutes, 43);
+  // 평소(시간표 기준) 대기 2분보다 3분 더 기다린다
+  assert.equal(adjusted.delay_minutes, 3);
   assert.equal(adjusted.arrival_time, "2026-11-26T08:43:00+09:00");
   assert.equal(adjusted.segments[1]!.arrival_message, "9분 후 도착");
   assert.equal(adjusted.segments[0]!.arrival_message, undefined);
+});
+
+test("평소보다 빨리 오는 차면 지연은 0 이다", () => {
+  const adjusted = applyArrival(route, 240, { seconds: 240 });
+  assert.equal(adjusted.wait_minutes, 0);
+  assert.equal(adjusted.delay_minutes, 0);
+  assert.equal(adjusted.total_minutes, 38);
 });
 
 test("탈 수 있는 차가 없으면 보정하지 않는다", () => {
