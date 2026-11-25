@@ -15,6 +15,19 @@ interface AlarmHistoryRepository {
 
     /** 최근 계산된 이동시간들. 실시간 ETA 하나만 믿지 않기 위한 안정화 입력값 */
     suspend fun recentTravelDurations(scheduleId: Long, limit: Int): List<Duration>
+
+    /** 기상 알람을 끈 최근 기록. 기상 습관(평소 얼마나 늦게 끄는지) 분석에 쓴다. */
+    fun observeDismissals(scheduleId: Long, limit: Int = 30): Flow<List<AlarmHistoryEvent>>
+}
+
+/**
+ * 기상 습관 제안을 적용하거나 넘긴 시각. 그 뒤의 기록만 다시 모아 같은 제안을 반복하지 않는다.
+ * 기기 안에만 저장한다.
+ */
+interface HabitRepository {
+    fun resetAt(scheduleId: Long): Flow<java.time.Instant?>
+
+    suspend fun reset(scheduleId: Long, at: java.time.Instant)
 }
 
 interface MetricsRepository {

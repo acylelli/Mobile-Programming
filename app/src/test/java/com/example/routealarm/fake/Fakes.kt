@@ -168,6 +168,9 @@ class FakeAlarmHistoryRepository : AlarmHistoryRepository {
     )
 
     override suspend fun recentTravelDurations(scheduleId: Long, limit: Int): List<Duration> = recentTravel
+
+    override fun observeDismissals(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEvent>> =
+        MutableStateFlow(events.filter { it.scheduleId == scheduleId && it.type == AlarmEventType.DISMISSED })
 }
 
 class FakeMetricsRepository : MetricsRepository {

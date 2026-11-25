@@ -10,9 +10,13 @@ import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
+import com.example.routealarm.domain.policy.WakeUpHabit
 import com.example.routealarm.domain.usecase.ApplyPendingAdjustmentUseCase
+import com.example.routealarm.domain.usecase.ApplyWakeUpHabitUseCase
 import com.example.routealarm.domain.usecase.DeleteScheduleUseCase
 import com.example.routealarm.domain.usecase.DismissPendingAdjustmentUseCase
+import com.example.routealarm.domain.usecase.DismissWakeUpHabitUseCase
+import com.example.routealarm.domain.usecase.ObserveWakeUpHabitUseCase
 import com.example.routealarm.domain.usecase.RefreshOutcome
 import com.example.routealarm.domain.usecase.RefreshTransitTimeUseCase
 import com.example.routealarm.domain.usecase.SetScheduleEnabledUseCase
@@ -37,6 +41,8 @@ sealed interface ScheduleDetailUiState {
         val isRefreshing: Boolean,
         val refreshError: AppError?,
         val deleted: Boolean,
+        /** 기상 습관 제안(평소 늦게 일어나면 준비 시간 늘리기). 없으면 null */
+        val wakeUpHabit: WakeUpHabit? = null,
     ) : ScheduleDetailUiState
 }
 
@@ -50,6 +56,9 @@ class ScheduleDetailViewModel @Inject constructor(
     private val deleteSchedule: DeleteScheduleUseCase,
     private val applyPendingAdjustment: ApplyPendingAdjustmentUseCase,
     private val dismissPendingAdjustment: DismissPendingAdjustmentUseCase,
+    observeWakeUpHabit: ObserveWakeUpHabitUseCase,
+    private val applyWakeUpHabit: ApplyWakeUpHabitUseCase,
+    private val dismissWakeUpHabit: DismissWakeUpHabitUseCase,
 ) : ViewModel() {
 
     private val scheduleId: Long = savedStateHandle.toRoute<Route.ScheduleDetail>().scheduleId
@@ -63,12 +72,13 @@ class ScheduleDetailViewModel @Inject constructor(
     val uiState: StateFlow<ScheduleDetailUiState> = combine(
         scheduleRepository.observeSchedule(scheduleId),
         historyRepository.observeHistory(scheduleId),
+        observeWakeUpHabit(scheduleId),
         local,
-    ) { schedule, history, state ->
+    ) { schedule, history, habit, state ->
         when {
             state.deleted -> ScheduleDetailUiState.Success(schedule ?: return@combine ScheduleDetailUiState.NotFound, history, false, null, deleted = true)
             schedule == null -> ScheduleDetailUiState.NotFound
-            else -> ScheduleDetailUiState.Success(schedule, history, state.refreshing, state.error, deleted = false)
+            else -> ScheduleDetailUiState.Success(schedule, history, state.refreshing, state.error, deleted = false, wakeUpHabit = habit)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ScheduleDetailUiState.Loading)
 
@@ -106,6 +116,17 @@ class ScheduleDetailViewModel @Inject constructor(
 
     fun dismissPending() {
         viewModelScope.launch { dismissPendingAdjustment(scheduleId) }
+    }
+
+    fun applyHabit(extraMinutes: Int) {
+        viewModelScope.launch {
+            val result = applyWakeUpHabit(scheduleId, extraMinutes)
+            if (result is AppResult.Failure) _message.value = result.error
+        }
+    }
+
+    fun dismissHabit() {
+        viewModelScope.launch { dismissWakeUpHabit(scheduleId) }
     }
 
     fun consumeMessage() {
