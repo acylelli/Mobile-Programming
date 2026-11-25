@@ -193,3 +193,20 @@ test("실제 노선 모양을 못 가져와도 오류 없이 넘어간다", asyn
   await attachLaneGeometry("key", body, () => true, failing);
   assert.equal(body.result!.path![0]!.laneGeometry, undefined);
 });
+
+test("같은 노선의 모양은 캐시에 있으면 ODsay 를 다시 부르지 않는다", async () => {
+  const store = new Map<string, Array<Array<[number, number]>>>();
+  const cache = { get: (k: string) => store.get(k), set: (k: string, v: Array<Array<[number, number]>>) => void store.set(k, v) };
+  let calls = 0;
+  const fakeFetch = (async () => {
+    calls += 1;
+    return new Response(JSON.stringify({ result: { lane: [{ section: [{ graphPos: [{ x: 1, y: 2 }, { x: 3, y: 4 }] }] }, { section: [] }] } }));
+  }) as typeof fetch;
+
+  await attachLaneGeometry("key", { result: ridePath(30, "fast") }, () => true, fakeFetch, cache);
+  const again: OdsayResponse = { result: ridePath(30, "fast") };
+  await attachLaneGeometry("key", again, () => true, fakeFetch, cache);
+
+  assert.equal(calls, 1);
+  assert.ok(again.result!.path![0]!.laneGeometry);
+});

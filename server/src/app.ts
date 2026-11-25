@@ -50,6 +50,7 @@ const MAX_QUERY_LENGTH = 100;
 const MINUTE_MS = 60_000;
 /** 같은 출발·도착(약 10m 단위) 경로는 1분 동안 다시 묻지 않는다. 알람 계산에는 충분히 신선하다. */
 const ROUTE_CACHE_TTL_MS = 60_000;
+const GEOMETRY_CACHE_TTL_MS = 24 * 60 * 60_000;
 /** 장소 검색 결과는 자주 바뀌지 않으므로 10분 동안 재사용한다. */
 const SEARCH_CACHE_TTL_MS = 10 * 60_000;
 /**
@@ -70,6 +71,8 @@ export function createApp(config: AppConfig) {
   const odsayQuota = new DailyQuota(limits.odsayDailyLimit, clock);
   const kakaoQuota = new DailyQuota(limits.kakaoDailyLimit, clock);
   const routeCache = new TtlCache<OdsayResponse>(ROUTE_CACHE_TTL_MS, 1_000, clock);
+  // 경로는 1분만 캐시하지만(배차·실시간 반영), 노선 모양은 바뀌지 않아 하루 둔다. 같은 경로를 다시 조회할 때 ODsay 호출이 1번으로 줄어든다.
+  const geometryCache = new TtlCache<Array<Array<[number, number]>>>(GEOMETRY_CACHE_TTL_MS, 2_000, clock);
   const searchCache = new TtlCache<PlaceSearchResponseDto>(SEARCH_CACHE_TTL_MS, 1_000, clock);
   const realtime = createRealtime(config.realtimeKeys ?? {}, limits.realtimeDailyLimit, clock, config.fetchImpl);
 
@@ -107,7 +110,7 @@ export function createApp(config: AppConfig) {
       raw = await fetchOdsayRaw(config.odsayApiKey, coords, config.fetchImpl);
       // 지도용 실제 노선 모양. 같은 하루 상한을 나눠 쓰고, 경로와 함께 캐시되므로 같은 경로는 다시 부르지 않는다.
       if (raw.error === undefined) {
-        await attachLaneGeometry(config.odsayApiKey, raw, () => odsayQuota.take(), config.fetchImpl);
+        await attachLaneGeometry(config.odsayApiKey, raw, () => odsayQuota.take(), config.fetchImpl, geometryCache);
       }
       // 오류 응답이면 여기서 예외가 나므로 캐시에는 정상 응답만 들어간다.
       const body = toRouteResponse(raw, departAt);
