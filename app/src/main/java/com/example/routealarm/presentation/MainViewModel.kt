@@ -6,6 +6,7 @@ import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.domain.model.ColorTheme
 import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.usecase.CompletePaymentUseCase
+import com.example.routealarm.domain.usecase.ResumePendingPaymentUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 data class MainUiState(
@@ -31,7 +34,11 @@ enum class PaymentMessage { CHECKING, SUCCESS, NOT_COMPLETED }
 class MainViewModel @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
     private val completePayment: CompletePaymentUseCase,
+    private val resumePendingPayment: ResumePendingPaymentUseCase,
 ) : ViewModel() {
+
+    /** 딥링크로 돌아온 확인과 앱 복귀 시 확인이 겹쳐도 한 번만 적용·안내되도록 한다. */
+    private val paymentLock = Mutex()
 
     private val _paymentMessages = Channel<PaymentMessage>(Channel.BUFFERED)
     val paymentMessages: Flow<PaymentMessage> = _paymentMessages.receiveAsFlow()
@@ -42,12 +49,26 @@ class MainViewModel @Inject constructor(
      */
     fun onPaymentReturn(orderId: String) {
         viewModelScope.launch {
-            _paymentMessages.send(PaymentMessage.CHECKING)
-            val message = when (completePayment(orderId)) {
-                is AppResult.Success -> PaymentMessage.SUCCESS
-                is AppResult.Failure -> PaymentMessage.NOT_COMPLETED
+            paymentLock.withLock {
+                _paymentMessages.send(PaymentMessage.CHECKING)
+                val message = when (completePayment(orderId)) {
+                    is AppResult.Success -> PaymentMessage.SUCCESS
+                    is AppResult.Failure -> PaymentMessage.NOT_COMPLETED
+                }
+                _paymentMessages.send(message)
             }
-            _paymentMessages.send(message)
+        }
+    }
+
+    /**
+     * 앱이 다시 보일 때마다 결과를 확인하지 못한 주문이 있는지 본다.
+     * 승인된 경우에만 안내하고, 아직 결제 중이거나 확인할 주문이 없으면 조용히 넘어간다.
+     */
+    fun onAppResumed() {
+        viewModelScope.launch {
+            paymentLock.withLock {
+                if (resumePendingPayment() is AppResult.Success) _paymentMessages.send(PaymentMessage.SUCCESS)
+            }
         }
     }
 

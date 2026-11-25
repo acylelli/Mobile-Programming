@@ -89,7 +89,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | UI-F-002 | 테마 선택 | `settings/theme/ThemeScreen.kt` |
 | UI-F-003 | 구독 관리 | `subscription/SubscriptionScreen.kt` |
 
-에뮬레이터(Pixel 10 Pro, Android 17)에서 캡처한 화면이다. (예시 일정·시연용 데이터를 없애기 전 화면이라 일부 화면에 "예시" 배지가 보인다.)
+에뮬레이터(Pixel 10 Pro, Android 17)에서 배포 서버의 실제 데이터로 캡처한 화면이다(다산역 → 한성대학교, 평일 09:00 도착). 자동 조정·변경 추천 두 장은 실제 교통 지연을 마음대로 만들 수 없어, 가짜 지연을 넣을 수 있던 이전 버전에서 캡처한 화면이다.
 
 | 온보딩 | 홈 | 일정 만들기 (장소) | 도착 시각 (휠) |
 |---|---|---|---|
@@ -107,7 +107,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 |---|---|---|---|
 | ![페이월](docs/screenshots/paywall.png) | ![단체 이용권](docs/screenshots/group-pass.png) | ![구독 관리](docs/screenshots/subscription.png) | ![테마](docs/screenshots/theme.png) |
 
-| 교통 지연 → 자동 조정 (PRO) | 교통 지연 → 변경 추천 (무료) | 네트워크 실패 → 마지막 계산 기준 |
+| 교통 지연 → 자동 조정 (PRO, 이전 버전) | 교통 지연 → 변경 추천 (무료, 이전 버전) | 네트워크 실패 → 마지막 계산 기준 + 여유 추천 |
 |---|---|---|
 | ![자동 조정](docs/screenshots/auto-adjust.png) | ![추천](docs/screenshots/suggestion.png) | ![오프라인](docs/screenshots/offline.png) |
 

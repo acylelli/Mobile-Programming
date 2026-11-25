@@ -300,7 +300,7 @@
     <string name="paywall_yearly">연간</string>
     <string name="paywall_yearly_body">월 %1$s원꼴, %2$d%% 할인</string>
     <string name="paywall_monthly">월간</string>
-    <string name="paywall_monthly_body">매월 결제</string>
+    <string name="paywall_monthly_body">30일 이용</string>
     <string name="paywall_free">무료로 계속</string>
     <string name="paywall_free_body">일정 %1$d개, 광고 포함</string>
     <string name="paywall_recommended">추천</string>
@@ -381,7 +381,7 @@
 
     <!-- 설정 (UI-F-001) -->
     <string name="settings_title">설정</string>
-    <string name="settings_pro_banner_title">7일 무료체험</string>
+    <string name="settings_pro_banner_title">PRO 이용권</string>
     <string name="settings_pro_banner_body">실시간 재계산, 일정 무제한, 시간표 연동</string>
     <string name="settings_section_alarm">알람 기본값</string>
     <string name="settings_default_preparation">기본 준비 시간</string>
@@ -443,6 +443,7 @@
     <!-- 오류 -->
     <string name="error_network">인터넷 연결을 확인해 주세요.</string>
     <string name="error_server">교통 정보 서버에 문제가 있어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="error_too_many_requests">지금 요청이 많아 잠시 쉬고 있어요. 조금 뒤에 다시 시도해 주세요.</string>
     <string name="error_no_route">출발지와 도착지 사이의 대중교통 경로를 찾지 못했어요.</string>
     <string name="error_place_search">장소를 검색하지 못했어요.</string>
     <string name="error_location_permission">위치 권한이 없어요. 출발지를 직접 검색해 주세요.</string>

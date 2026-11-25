@@ -26,19 +26,23 @@ test("지하철: 목록이 없으면(키 오류 등) null", () => {
   assert.equal(parseSubwayArrivals({ status: 500, code: "INFO-100" }, { station: "다산", nextStation: "별내" }), null);
 });
 
-test("서울 버스: 노선 ID 가 같은 항목의 traTime1·2(초)", () => {
+test("서울 버스: 노선 전체 도착 정보에서 정류장 고유번호가 같은 정류장의 traTime1·2(초)", () => {
+  // getArrInfoByRouteAll 실제 응답 형태(성북02, 정류장마다 한 항목)
   const body = {
+    msgHeader: { headerCd: "0", headerMsg: "정상적으로 처리되었습니다." },
     msgBody: {
       itemList: [
-        { busRouteId: "100100021", rtNm: "142", traTime1: "543", traTime2: "977", arrmsg1: "9분3초후[3번째 전]" },
-        { busRouteId: "107900003", rtNm: "성북02", traTime1: "0", arrmsg1: "곧 도착", traTime2: "620", arrmsg2: "10분20초후[4번째 전]" },
+        { stId: "107900256", arsId: "08459", stNm: "한성대정문", busRouteId: "107900003", rtNm: "성북02", traTime1: "543", traTime2: "977", arrmsg1: "9분3초후[3번째 전]" },
+        { stId: "107900107", arsId: "08718", stNm: "한성대입구역2번출구", busRouteId: "107900003", rtNm: "성북02", traTime1: "0", arrmsg1: "곧 도착", traTime2: "620", arrmsg2: "10분20초후[4번째 전]" },
+        { stId: "107900108", arsId: "08719", stNm: "운행 끝난 정류장", busRouteId: "107900003", rtNm: "성북02", traTime1: "0", arrmsg1: "운행종료", traTime2: "0", arrmsg2: "운행종료" },
       ],
     },
   };
-  assert.deepEqual(parseSeoulBusArrivals(body, "107900003"), [{ seconds: 30 }, { seconds: 620 }]);
-  assert.deepEqual(parseSeoulBusArrivals(body, "999"), []);
+  assert.deepEqual(parseSeoulBusArrivals(body, "08718"), [{ seconds: 30 }, { seconds: 620 }]);
+  assert.deepEqual(parseSeoulBusArrivals(body, "08719"), []); // 운행 종료
+  assert.deepEqual(parseSeoulBusArrivals(body, "99999"), []);
   // 항목이 하나면 객체로 온다
-  assert.deepEqual(parseSeoulBusArrivals({ msgBody: { itemList: body.msgBody.itemList[0] } }, "100100021"), [{ seconds: 543 }, { seconds: 977 }]);
+  assert.deepEqual(parseSeoulBusArrivals({ msgBody: { itemList: body.msgBody.itemList[0] } }, "08459"), [{ seconds: 543 }, { seconds: 977 }]);
 });
 
 test("경기 버스: 초 단위 값이 있으면 쓰고, 없으면 분 단위 값을 쓴다", () => {

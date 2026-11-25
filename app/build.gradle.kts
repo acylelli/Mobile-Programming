@@ -18,6 +18,14 @@ val localProperties = Properties().apply {
 }
 val proxyBaseUrl: String = localProperties.getProperty("routealarm.proxyBaseUrl", "https://routealarm-proxy.onrender.com/")
 
+// 빌드할 때마다 git 커밋으로 버전을 정한다. 팀원이 받은 APK 가 어느 커밋인지 설정 화면의 버전으로 바로 알 수 있다.
+// versionCode 는 커밋 수라 새 커밋으로 빌드할수록 커지고, versionName 에는 짧은 커밋 해시를 붙인다.
+fun git(vararg args: String): String? = runCatching {
+    providers.exec { commandLine("git", *args) }.standardOutput.asText.get().trim().ifEmpty { null }
+}.getOrNull()
+val gitCommitCount: Int = git("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 1
+val gitShortHash: String = git("rev-parse", "--short=7", "HEAD") ?: "local"
+
 android {
     namespace = "com.example.routealarm"
     compileSdk = 36
@@ -27,8 +35,8 @@ android {
         applicationId = "com.example.routealarm"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = gitCommitCount
+        versionName = "0.2.$gitCommitCount-$gitShortHash"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

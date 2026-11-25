@@ -4,12 +4,15 @@ import com.example.routealarm.data.remote.GroupPassNotFoundException
 import com.example.routealarm.data.remote.PlaceSearchRemoteDataSource
 import com.example.routealarm.data.remote.SubscriptionRemoteDataSource
 import com.example.routealarm.data.remote.TransitRemoteDataSource
+import com.example.routealarm.data.remote.dto.CreateOrderRequestDto
+import com.example.routealarm.data.remote.dto.CreateOrderResponseDto
 import com.example.routealarm.data.remote.dto.GroupPassDto
 import com.example.routealarm.data.remote.dto.PaymentResultDto
 import com.example.routealarm.data.remote.dto.PlaceSearchResponseDto
 import com.example.routealarm.data.remote.dto.RouteResponseDto
 import com.example.routealarm.domain.model.Place
 import retrofit2.HttpException
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -32,6 +35,9 @@ interface RouteAlarmProxyApi {
 
     @GET("v1/places/search")
     suspend fun searchPlaces(@Query("query") query: String): PlaceSearchResponseDto
+
+    @POST("v1/payments/orders")
+    suspend fun createOrder(@Body request: CreateOrderRequestDto): CreateOrderResponseDto
 
     @GET("v1/payments/{orderId}")
     suspend fun getPayment(@Path("orderId") orderId: String): PaymentResultDto

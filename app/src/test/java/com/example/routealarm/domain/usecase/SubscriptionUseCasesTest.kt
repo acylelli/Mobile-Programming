@@ -17,6 +17,7 @@ import com.example.routealarm.fake.TestData.seoul
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Duration
@@ -216,5 +217,25 @@ class SubscriptionUseCasesTest {
 
         assertEquals(PlanType.FREE, subscription.current().plan)
         assertEquals(3, schedules.all.size)
+    }
+
+    @Test
+    fun `결제 후 앱으로 돌아오지 않아도 앱을 다시 열면 기억해 둔 주문으로 PRO 가 적용된다`() = runTest {
+        val resume = ResumePendingPaymentUseCase(subscription, CompletePaymentUseCase(subscription, restore))
+        assertNull(resume()) // 확인할 주문이 없음
+
+        subscription.startCheckout(SubscriptionProduct.YEARLY)
+        val orderId = subscription.pendingOrderId()!!
+
+        // 아직 결제 중: 플랜은 그대로, 주문은 계속 기억
+        assertTrue(resume() is AppResult.Failure)
+        assertEquals(orderId, subscription.pendingOrderId())
+
+        // 브라우저에서 결제를 마친 뒤 앱을 다시 열면 적용되고 주문은 지워진다
+        subscription.paidOrders[orderId] = SubscriptionProduct.YEARLY
+        val applied = resume()
+        assertEquals(PlanType.PRO_YEARLY, (applied as AppResult.Success).data.plan)
+        assertNull(subscription.pendingOrderId())
+        assertNull(resume())
     }
 }

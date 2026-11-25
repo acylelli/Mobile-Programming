@@ -5,7 +5,7 @@ import { type RouteDto, toKstIso } from "./contract.ts";
  * 실시간 도착 정보.
  *
  * - 지하철: 서울 열린데이터광장 실시간 지하철 도착정보(역 이름으로 조회, 수도권 전 노선)
- * - 서울 버스: 공공데이터포털 서울특별시_버스도착정보조회(정류장 고유번호 arsId)
+ * - 서울 버스: 공공데이터포털 서울특별시_버스도착정보조회(노선 ID 로 노선 전체 도착 정보를 받아 정류장 고유번호 arsId 로 고름)
  * - 경기 버스: 공공데이터포털 경기도_버스도착정보 조회(정류소 ID)
  *
  * ODsay 경로 응답에 각 API 가 요구하는 역 이름·정류장 ID·노선 ID 가 들어 있어서 그대로 이어 붙인다.
@@ -104,19 +104,22 @@ function subwaySeconds(item: Record<string, unknown>): number | null {
 
 export async function fetchBusArrivals(key: string, query: BusQuery, fetchImpl: typeof fetch = fetch): Promise<Arrival[] | null> {
   if (query.region === "seoul") {
-    const params = new URLSearchParams({ serviceKey: key, arsId: query.stationKey, resultType: "json" });
-    const body = await getJson(`http://ws.bus.go.kr/api/rest/stationinfo/getStationByUid?${params}`, fetchImpl);
-    return body ? logIfUnreadable(parseSeoulBusArrivals(body, query.routeId), body, "seoul-bus") : null;
+    // 정류소 기준 조회(stationinfo/getStationByUid)는 "정류소정보조회"라는 별도 API 라 이 키로는 쓸 수 없다.
+    // 신청한 "버스도착정보조회" API 의 노선 전체 조회로 받은 뒤 우리 정류장만 고른다.
+    const params = new URLSearchParams({ serviceKey: key, busRouteId: query.routeId, resultType: "json" });
+    const body = await getJson(`http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll?${params}`, fetchImpl);
+    return body ? logIfUnreadable(parseSeoulBusArrivals(body, query.stationKey), body, "seoul-bus") : null;
   }
   const params = new URLSearchParams({ serviceKey: key, stationId: query.stationKey, format: "json" });
   const body = await getJson(`https://apis.data.go.kr/6410000/busarrivalservice/v2/getBusArrivalListv2?${params}`, fetchImpl);
   return body ? logIfUnreadable(parseGyeonggiBusArrivals(body, query.routeId), body, "gyeonggi-bus") : null;
 }
 
-export function parseSeoulBusArrivals(body: unknown, routeId: string): Arrival[] | null {
+/** 노선 전체 도착 정보에서 정류장 고유번호(arsId)가 같은 정류장의 다음 두 대 */
+export function parseSeoulBusArrivals(body: unknown, arsId: string): Arrival[] | null {
   const items = asArray((body as { msgBody?: { itemList?: unknown } }).msgBody?.itemList);
   if (!items) return null;
-  const item = items.find((i) => String(i.busRouteId) === routeId);
+  const item = items.find((i) => String(i.arsId).replace(/-/g, "") === arsId);
   if (!item) return [];
   const arrivals: Arrival[] = [];
   for (const n of [1, 2]) {

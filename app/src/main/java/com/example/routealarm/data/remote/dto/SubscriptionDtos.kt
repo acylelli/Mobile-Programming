@@ -38,3 +38,14 @@ data class PaymentResultDto(
     /** PAID 일 때만 있다. 기간제 이용권이라 auto_renew 는 false */
     val subscription: SubscriptionStatusDto? = null,
 )
+
+/** 결제 전에 서버에 만드는 주문(POST /v1/payments/orders) */
+@Serializable
+data class CreateOrderRequestDto(@SerialName("product_id") val productId: String)
+
+@Serializable
+data class CreateOrderResponseDto(
+    @SerialName("order_id") val orderId: String,
+    /** 브라우저로 열 토스페이먼츠 결제창 페이지 */
+    @SerialName("checkout_url") val checkoutUrl: String,
+)

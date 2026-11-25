@@ -45,6 +45,21 @@ class CompletePaymentUseCase @Inject constructor(
     }
 }
 
+/**
+ * 결제창으로 보낸 뒤 결과를 확인하지 못한 주문이 있으면 다시 확인한다.
+ * 결제를 마치고 "앱으로 돌아가기"를 누르지 않고 브라우저를 닫은 경우에도 앱을 다시 열면 PRO 가 적용된다.
+ * @return 확인할 주문이 없으면 null
+ */
+class ResumePendingPaymentUseCase @Inject constructor(
+    private val subscriptionRepository: SubscriptionRepository,
+    private val completePayment: CompletePaymentUseCase,
+) {
+    suspend operator fun invoke(): AppResult<Entitlement>? {
+        val orderId = subscriptionRepository.pendingOrderId() ?: return null
+        return completePayment(orderId)
+    }
+}
+
 class VerifyGroupPassUseCase @Inject constructor(
     private val subscriptionRepository: SubscriptionRepository,
 ) {

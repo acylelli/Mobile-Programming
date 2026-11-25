@@ -70,10 +70,24 @@ class PaywallViewModel @Inject constructor(
 
     fun select(option: PaywallOption) = _uiState.update { it.copy(option = option, error = null) }
 
-    /** 선택한 이용권의 결제창(토스페이먼츠 테스트 결제)을 연다(④). 결과는 앱 딥링크로 돌아와 MainViewModel 이 적용한다. */
+    /**
+     * 서버에 주문을 만들고 결제창(토스페이먼츠 테스트 결제)을 연다(④).
+     * 결과는 앱 딥링크로 돌아오거나, 앱을 다시 열 때 MainViewModel 이 확인해 적용한다.
+     */
     fun pay() {
-        val product = _uiState.value.option.product ?: return
-        viewModelScope.launch { _events.send(PaywallEvent.OpenCheckout(subscriptionRepository.checkoutUrl(product))) }
+        val state = _uiState.value
+        val product = state.option.product ?: return
+        if (state.isProcessing) return
+        _uiState.update { it.copy(isProcessing = true, error = null) }
+        viewModelScope.launch {
+            when (val result = subscriptionRepository.startCheckout(product)) {
+                is AppResult.Success -> {
+                    _uiState.update { it.copy(isProcessing = false) }
+                    _events.send(PaywallEvent.OpenCheckout(result.data))
+                }
+                is AppResult.Failure -> _uiState.update { it.copy(isProcessing = false, error = result.error) }
+            }
+        }
     }
 }
 

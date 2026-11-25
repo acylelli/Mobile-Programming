@@ -84,10 +84,11 @@ Proxy 서버는 환경변수로 실제 API 키를 보관하고, 제공자별 응
 | `routealarm_pro_monthly` | 2,900원 | 30일 |
 | `routealarm_pro_yearly` | 24,000원 | 365일 |
 
-1. 앱이 브라우저로 `GET /pay/checkout?product={상품 ID}` 를 연다. 서버가 주문을 만들고 토스 결제창을 띄우는 페이지를 준다.
+1. 앱이 `POST /v1/payments/orders` (`{"product_id": "routealarm_pro_monthly"}`)로 주문을 만들고 `{"order_id", "checkout_url"}` 을 받는다. 주문 번호를 기억해 둔 뒤 `checkout_url`(`/pay/checkout?orderId=…`)을 브라우저로 연다. 서버가 토스 결제창을 띄우는 페이지를 준다.
+   - 예전 앱은 `GET /pay/checkout?product={상품 ID}` 로 바로 열며, 이 경우 서버가 그 자리에서 주문을 만든다(계속 지원).
 2. 결제하면 토스가 `GET /pay/success?paymentKey&orderId&amount` 로 돌려보낸다. 서버는 금액이 주문과 같은지 확인한 뒤 승인(`POST https://api.tosspayments.com/v1/payments/confirm`)한다. 취소·실패는 `GET /pay/fail` 로 온다.
 3. 결과 페이지가 앱 딥링크 `routealarm://payment?orderId=…&result=…` 로 돌아간다.
-4. 앱은 링크의 result 를 믿지 않고 `GET /v1/payments/{orderId}` 로 서버가 승인한 결과를 조회한다.
+4. 앱은 링크의 result 를 믿지 않고 `GET /v1/payments/{orderId}` 로 서버가 승인한 결과를 조회한다. 딥링크로 돌아오지 않고 브라우저를 닫았어도, 앱이 다시 열릴 때 기억해 둔 주문 번호로 같은 조회를 해 PRO 를 적용한다(주문은 24시간까지 확인).
 
 ```json
 {
