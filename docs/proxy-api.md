@@ -14,7 +14,8 @@ Proxy 서버는 환경변수로 실제 API 키를 보관하고, 제공자별 응
 
 ```properties
 routealarm.transitProvider=proxy
-routealarm.proxyBaseUrl=https://your-proxy.example.com/
+# 생략하면 배포 서버 https://routealarm-proxy.onrender.com/ 을 쓴다
+# routealarm.proxyBaseUrl=https://routealarm-proxy.onrender.com/
 ```
 
 `fake` 로 두면 `FakeTransitRemoteDataSource` 가 사용되어 API 키 없이 모든 기능을 시연할 수 있다.

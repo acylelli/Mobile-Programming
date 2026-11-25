@@ -13,12 +13,13 @@ plugins {
 // API 주소/제공자 설정은 local.properties 에서 읽는다.
 // 설계 이유: 실제 교통 API Secret 은 APK 에 절대 넣지 않고(디컴파일로 쉽게 추출됨),
 // 앱은 우리 Backend Proxy 주소만 알도록 한다. 키가 없으면 fake 로 동작해 바로 시연 가능하다.
+// proxyBaseUrl 기본값은 Render 에 배포한 서버라서, 실제 데이터를 쓰려면 transitProvider=proxy 만 넣으면 된다.
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
 val transitProvider: String = localProperties.getProperty("routealarm.transitProvider", "fake")
-val proxyBaseUrl: String = localProperties.getProperty("routealarm.proxyBaseUrl", "https://localhost/")
+val proxyBaseUrl: String = localProperties.getProperty("routealarm.proxyBaseUrl", "https://routealarm-proxy.onrender.com/")
 
 android {
     namespace = "com.example.routealarm"

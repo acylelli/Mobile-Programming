@@ -39,13 +39,16 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 
 ## 배포 (Render)
 
+운영 주소: **https://routealarm-proxy.onrender.com** (싱가포르, 무료 인스턴스)
+
 저장소 루트의 [`render.yaml`](../render.yaml) 이 배포 설정이다. 싱가포르 리전 무료 인스턴스로 `server/` 를 띄우고, `main` 에서 CI 가 통과한 커밋만 자동 배포한다.
 
 1. [Render](https://render.com) 에 GitHub 계정으로 가입하고 **New > Blueprint** 에서 이 저장소를 고른다.
+   저장소 주인이 아니라 Blueprint 로 저장소가 보이지 않으면 **New > Web Service > Public Git Repository** 에 저장소 주소를 넣고 Root Directory `server`, Build Command `npm ci`, Start Command `npm start`, Health Check Path `/healthz` 로 직접 만든다(지금 서비스는 이 방식으로 만들었다).
 2. 처음 만들 때 `ODSAY_API_KEY`, `KAKAO_REST_API_KEY` 값을 입력한다(저장소에는 키가 없다).
 3. 서비스 화면 오른쪽 위 **Connect > Outbound** 에 있는 출구 IP 들을 ODsay LAB 의 서버 IP 로 모두 등록한다. 등록 전에는 경로 조회가 502 로 실패한다.
-4. 배포가 끝나면 `https://<서비스 이름>.onrender.com/healthz` 가 `{"ok":true}` 를 주는지 확인하고, 앱 `local.properties` 의 `routealarm.proxyBaseUrl` 을 그 주소(끝에 `/`)로 바꾼다.
-5. 잠들지 않게 하려면 저장소 **Settings > Secrets and variables > Actions > Variables** 에 `PROXY_HEALTHCHECK_URL`(위 `/healthz` 주소)을 넣는다. [`keep-alive`](../.github/workflows/keep-alive.yml) 워크플로가 10분마다 깨운다.
+4. 배포가 끝나면 `https://<서비스 이름>.onrender.com/healthz` 가 `{"ok":true}` 를 주는지 확인한다. 지금 운영 중인 주소는 `https://routealarm-proxy.onrender.com/` 이고 앱의 `proxyBaseUrl` 기본값으로 들어가 있다.
+5. 잠들지 않게 하려면 저장소 **Settings > Secrets and variables > Actions > Variables** 에 `PROXY_HEALTHCHECK_URL`(위 `/healthz` 주소)을 넣는다. [`keep-alive`](../.github/workflows/keep-alive.yml) 워크플로가 10분마다 깨운다. 저장소 설정 권한이 없으면 cron-job.org 같은 외부 서비스로 같은 주소를 10분마다 호출해도 된다.
 
 무료 인스턴스 참고:
 
