@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { UpstreamError } from "../src/contract.ts";
-import { lineName, type OdsayResponse, toRouteResponse } from "../src/odsay.ts";
+import { attachLaneGeometry, lineName, type OdsayResponse, parseLaneGeometry, toRouteResponse } from "../src/odsay.ts";
 
 // 동구릉 근처 → 한성대학교 실제 ODsay 응답에서 필요한 필드만 남긴 것
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/odsay-routes.json", import.meta.url), "utf8")) as OdsayResponse;
@@ -107,4 +107,89 @@ test("탑승 구간에는 지나는 정류장 좌표를 [위도, 경도]로 넣�
   ]);
   assert.equal(segments[0]!.points, undefined);
   assert.equal(segments[2]!.points, undefined);
+});
+
+// ---- 실제 노선 모양(loadLane) ----
+
+const ridePath = (totalTime: number, mapObj?: string): OdsayResponse["result"] => ({
+  path: [
+    {
+      info: { totalTime, ...(mapObj ? { mapObj } : {}) },
+      subPath: [
+        { trafficType: 3, sectionTime: 3 },
+        {
+          trafficType: 2,
+          sectionTime: 20,
+          startName: "A",
+          endName: "B",
+          lane: [{ busNo: "76" }],
+          passStopList: { stations: [{ stationName: "A", x: "127.1", y: "37.6" }, { stationName: "B", x: "127.2", y: "37.7" }] },
+        },
+        { trafficType: 1, sectionTime: 10, startName: "C", endName: "D", lane: [{ name: "수도권 6호선" }] },
+      ],
+    },
+  ],
+});
+
+test("loadLane 응답을 탑승 구간마다 [위도, 경도] 목록으로 바꾼다", () => {
+  const lanes = parseLaneGeometry({
+    result: {
+      lane: [
+        { section: [{ graphPos: [{ x: 127.1, y: 37.6 }, { x: 127.15, y: 37.65 }] }, { graphPos: [{ x: 127.2, y: 37.7 }] }] },
+        { section: [{ graphPos: [{ x: 127.3, y: 37.5 }, { x: 127.4, y: 37.4 }] }] },
+      ],
+    },
+  });
+  assert.deepEqual(lanes, [
+    [[37.6, 127.1], [37.65, 127.15], [37.7, 127.2]],
+    [[37.5, 127.3], [37.4, 127.4]],
+  ]);
+  assert.equal(parseLaneGeometry({ error: { code: "-8" } }), null);
+});
+
+test("실제 노선 모양이 있으면 탑승 구간 좌표로 쓰고, 탑승 구간 수와 다르면 정류장 좌표를 쓴다", () => {
+  const departAt = new Date("2026-11-26T08:00:00+09:00");
+  const body: OdsayResponse = { result: ridePath(40) };
+  body.result!.path![0]!.laneGeometry = [
+    [[37.6, 127.1], [37.65, 127.12], [37.7, 127.2]],
+    [[37.5, 127.3], [37.4, 127.4]],
+  ];
+  const segments = toRouteResponse(body, departAt).routes[0]!.segments;
+  assert.equal(segments[1]!.points!.length, 3);
+  assert.deepEqual(segments[2]!.points, [[37.5, 127.3], [37.4, 127.4]]);
+
+  body.result!.path![0]!.laneGeometry = [[[37.6, 127.1], [37.7, 127.2]]];
+  const fallback = toRouteResponse(body, departAt).routes[0]!.segments;
+  assert.deepEqual(fallback[1]!.points, [[37.6, 127.1], [37.7, 127.2]]);
+  assert.equal(fallback[2]!.points, undefined);
+});
+
+test("실제 노선 모양은 소요시간이 짧은 상위 경로에만, 하루 상한 안에서만 가져온다", async () => {
+  const body: OdsayResponse = {
+    result: { path: [...ridePath(50, "slow")!.path!, ...ridePath(30, "fast")!.path!, ...ridePath(40, "mid")!.path!, ...ridePath(35)!.path!] },
+  };
+  const requested: string[] = [];
+  const fakeFetch = (async (url: string) => {
+    requested.push(new URL(url).searchParams.get("mapObject")!);
+    return new Response(JSON.stringify({ result: { lane: [{ section: [{ graphPos: [{ x: 1, y: 2 }, { x: 3, y: 4 }] }] }, { section: [] }] } }));
+  }) as typeof fetch;
+
+  await attachLaneGeometry("key", body, () => true, fakeFetch);
+  assert.deepEqual(requested.sort(), ["0:0@fast", "0:0@mid"]);
+  assert.ok(body.result!.path!.find((p) => p.info.mapObj === "fast")!.laneGeometry);
+  assert.equal(body.result!.path!.find((p) => p.info.mapObj === "slow")!.laneGeometry, undefined);
+
+  requested.length = 0;
+  const limited: OdsayResponse = { result: ridePath(30, "fast") };
+  await attachLaneGeometry("key", limited, () => false, fakeFetch);
+  assert.equal(requested.length, 0);
+});
+
+test("실제 노선 모양을 못 가져와도 오류 없이 넘어간다", async () => {
+  const body: OdsayResponse = { result: ridePath(30, "fast") };
+  const failing = (async () => {
+    throw new Error("network");
+  }) as typeof fetch;
+  await attachLaneGeometry("key", body, () => true, failing);
+  assert.equal(body.result!.path![0]!.laneGeometry, undefined);
 });

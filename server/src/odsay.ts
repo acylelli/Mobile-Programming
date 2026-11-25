@@ -14,6 +14,9 @@ import type { BusQuery, SubwayQuery } from "./realtime.ts";
  */
 
 const ODSAY_ENDPOINT = "https://api.odsay.com/v1/api/searchPubTransPathT";
+const LOAD_LANE_ENDPOINT = "https://api.odsay.com/v1/api/loadLane";
+/** 실제 노선 모양은 앱이 지도에 그리는 상위 경로에만 붙인다(경로마다 ODsay 호출이 하나 더 든다). */
+export const GEOMETRY_ROUTES = 2;
 const MAX_ROUTES = 5;
 
 /** ODsay trafficType */
@@ -39,8 +42,13 @@ export interface OdsaySubPath {
 }
 
 export interface OdsayPath {
-  info: { totalTime: number };
+  info: { totalTime: number; mapObj?: string };
   subPath: OdsaySubPath[];
+  /**
+   * 탑승 구간마다 실제 노선 모양 좌표 [위도, 경도](ODsay loadLane). 서버가 붙여 캐시에 함께 둔다.
+   * 없거나 탑승 구간 수와 맞지 않으면 정류장 좌표를 쓴다.
+   */
+  laneGeometry?: Array<Array<[number, number]>>;
 }
 
 export interface OdsayResponse {
@@ -83,6 +91,61 @@ export async function fetchOdsayRaw(
   }
   if (!response.ok) throw new UpstreamError(502, `ODsay HTTP ${response.status}`);
   return (await response.json()) as OdsayResponse;
+}
+
+/**
+ * 소요시간이 짧은 상위 경로에 실제 노선 모양을 붙인다. 실패해도 경로 조회는 그대로 진행한다(정류장 좌표로 대체).
+ * [allow] 는 호출마다 하루 상한을 확인한다.
+ */
+export async function attachLaneGeometry(
+  apiKey: string,
+  body: OdsayResponse,
+  allow: () => boolean,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const paths = [...(body.result?.path ?? [])]
+    .filter((p) => p.info?.mapObj)
+    .sort((a, b) => a.info.totalTime - b.info.totalTime)
+    .slice(0, GEOMETRY_ROUTES);
+  await Promise.all(
+    paths.map(async (path) => {
+      if (!allow()) return;
+      const lanes = await fetchLaneGeometry(apiKey, path.info.mapObj!, fetchImpl);
+      if (lanes) path.laneGeometry = lanes;
+    }),
+  );
+}
+
+/** ODsay loadLane: 탑승 구간(lane) 순서대로 좌표를 돌려준다. 실패하면 null */
+export async function fetchLaneGeometry(
+  apiKey: string,
+  mapObj: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Array<Array<[number, number]>> | null> {
+  const params = new URLSearchParams({ mapObject: `0:0@${mapObj}`, apiKey });
+  try {
+    const response = await fetchImpl(`${LOAD_LANE_ENDPOINT}?${params}`, { signal: AbortSignal.timeout(5_000) });
+    if (!response.ok) return null;
+    return parseLaneGeometry(await response.json());
+  } catch {
+    return null;
+  }
+}
+
+interface LoadLaneResponse {
+  result?: { lane?: Array<{ section?: Array<{ graphPos?: Array<{ x?: number; y?: number }> }> }> };
+}
+
+export function parseLaneGeometry(body: unknown): Array<Array<[number, number]>> | null {
+  const lanes = (body as LoadLaneResponse)?.result?.lane;
+  if (!Array.isArray(lanes) || lanes.length === 0) return null;
+  return lanes.map((lane) =>
+    (lane.section ?? []).flatMap((section) =>
+      (section.graphPos ?? [])
+        .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
+        .map((p): [number, number] => [round6(p.y!), round6(p.x!)]),
+    ),
+  );
 }
 
 export function toRouteResponse(body: OdsayResponse, departAt: Date): RouteResponseDto {
@@ -149,6 +212,9 @@ function toRoute(path: OdsayPath, departAt: Date): RouteDto | null {
   const lastRide = subPaths.length - 1 - [...subPaths].reverse().findIndex((s) => s.trafficType !== WALK);
 
   const segments: SegmentDto[] = [];
+  const rides = subPaths.filter((s) => s.trafficType !== WALK).length;
+  const geometry = path.laneGeometry?.length === rides ? path.laneGeometry : undefined;
+  let rideIndex = 0;
   let walkMinutes = 0;
   let transferMinutes = 0;
   let rideCount = 0;
@@ -178,8 +244,9 @@ function toRoute(path: OdsayPath, departAt: Date): RouteDto | null {
       from: stationName(sub, "start"),
       to: stationName(sub, "end"),
       minutes,
-      ...withPoints(sub),
+      ...withPoints(sub, geometry?.[rideIndex]),
     });
+    rideIndex += 1;
   });
 
   // ODsay 총 소요시간은 구간 시간 합보다 길 때가 있다(승차 대기 등). 그 차이를 대기 시간으로 둬서
@@ -199,8 +266,12 @@ function toRoute(path: OdsayPath, departAt: Date): RouteDto | null {
   };
 }
 
-/** 지나는 정류장·역 좌표. 좌표가 둘 미만이면 선을 그릴 수 없어 넣지 않는다. */
-function withPoints(sub: OdsaySubPath): { points?: Array<[number, number]> } {
+/**
+ * 지도 경로선 좌표. 실제 노선 모양(loadLane)이 있으면 그것을, 없으면 지나는 정류장·역 좌표를 쓴다.
+ * 좌표가 둘 미만이면 선을 그릴 수 없어 넣지 않는다.
+ */
+function withPoints(sub: OdsaySubPath, lane?: Array<[number, number]>): { points?: Array<[number, number]> } {
+  if (lane && lane.length >= 2) return { points: lane };
   const points: Array<[number, number]> = [];
   for (const station of sub.passStopList?.stations ?? []) {
     const lat = Number(station.y);
