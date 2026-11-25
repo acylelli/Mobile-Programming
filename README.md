@@ -74,6 +74,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 경로 지도 | 일정 상세 화면에 카카오맵으로 경로 표시(탑승 구간은 노선색, 도보는 회색, 출발·도착 점). 상위 2개 경로는 ODsay 노선 그래픽으로 실제 도로·선로 모양대로 그린다. 네이티브 앱 키는 `local.properties` 에만 두고, 키가 없거나 인증에 실패하면 지도만 숨긴다 |
 | 기상 습관 개인화 | 기상 알람을 끈 시각과 예정 시각의 차이(다시 울림 포함)를 최근 30일 모아, 평소 5분 이상 늦게 일어나면 "준비 시간 N분 늘리기"를 제안. 적용하면 출발 시각은 그대로 두고 기상 알람만 앞당긴다 |
 | 홈 화면 위젯 | 다음 기상 알람 시각, 도착·출발 시각, 교통 상태(Jetpack Glance). 알람을 끄거나 다시 계산하면 바로 바뀐다 |
+| 지각 위험 택시 안내 | 교통이 나빠졌거나 기상 알람을 늦게 꺼서 대중교통으로는 늦을 때 홈·상세 화면에 경고. 택시로 가면 몇 시 도착인지와 예상 요금(카카오모빌리티)을 보여 주고 카카오 T 를 출발·도착이 채워진 채로 연다 |
 | 되돌리기 | 일정 삭제·알람 변경(추천 적용, 습관 제안 적용) 직후 "되돌리기" 스낵바로 바로 이전 상태로 복구 |
 | 업데이트해도 데이터 유지 | Room 버전별 마이그레이션(파괴적 마이그레이션 없음). 모든 버전 사이에 Migration 이 있는지 단위 테스트가 검사 |
 | 캘린더 연동 (PRO) | 기기 캘린더(Google·삼성 등)의 앞으로 2주 일정을 읽어, 한 번뿐인 일정은 도착지·시각을 채운 새 일정으로, 매주 반복 일정은 시간표로 가져오기 |
@@ -120,20 +121,20 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 
 ### 알람 상세 · 위젯
 
-경로 지도는 실제 도로·선로 모양대로 그린 경로선이다. 기상 습관 카드는 에뮬레이터 DB 에 시험용 기상 기록 4건(9~14분 늦게 끔)을 넣어 캡처했다.
+경로 지도는 실제 도로·선로 모양대로 그린 경로선이다. 기상 습관 카드와 택시 안내는 에뮬레이터 DB 에 시험용 기상 기록(알람을 늦게 끈 기록)을 넣어 캡처했고, 택시 시간·요금은 카카오모빌리티 실제 값이다.
 
 <table>
   <tr>
     <td align="center" valign="top"><img src="docs/screenshots/detail-map.png" width="200" alt="경로 지도 (카카오맵)"><br><sub>경로 지도 (카카오맵)</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/habit.png" width="200" alt="기상 습관 제안"><br><sub>기상 습관 제안</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/taxi.png" width="200" alt="지각 위험 → 택시 안내"><br><sub>지각 위험 → 택시 안내</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/undo.png" width="200" alt="삭제 후 되돌리기"><br><sub>삭제 후 되돌리기</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/ringing.png" width="200" alt="기상 알람"><br><sub>기상 알람</sub></td>
   </tr>
   <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/ringing.png" width="200" alt="기상 알람"><br><sub>기상 알람</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/widget.png" width="200" alt="홈 화면 위젯"><br><sub>홈 화면 위젯</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/settings.png" width="200" alt="설정 (연동 메뉴)"><br><sub>설정 (연동 메뉴)</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/theme.png" width="200" alt="테마 선택"><br><sub>테마 선택</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/subscription.png" width="200" alt="구독 관리"><br><sub>구독 관리</sub></td>
   </tr>
 </table>
 
@@ -152,18 +153,19 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
     <td align="center" valign="top"><img src="docs/screenshots/calendar-prefill.png" width="200" alt="캘린더 일정 → 도착지 자동 검색"><br><sub>캘린더 일정 → 도착지 자동 검색</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/paywall.png" width="200" alt="PRO 페이월"><br><sub>PRO 페이월</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/group-pass.png" width="200" alt="단체 이용권"><br><sub>단체 이용권</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/offline.png" width="200" alt="네트워크 실패 → 마지막 계산 기준"><br><sub>네트워크 실패 → 마지막 계산 기준</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/subscription.png" width="200" alt="구독 관리"><br><sub>구독 관리</sub></td>
   </tr>
 </table>
 
 ### 교통 변화 대응
 
-실제 교통 지연은 마음대로 만들 수 없어, 가짜 지연을 넣을 수 있던 이전 버전에서 캡처한 화면이다.
+자동 조정·변경 추천은 실제 교통 지연을 마음대로 만들 수 없어, 가짜 지연을 넣을 수 있던 이전 버전에서 캡처한 화면이다.
 
 <table>
   <tr>
     <td align="center" valign="top"><img src="docs/screenshots/auto-adjust.png" width="200" alt="교통 지연 → 자동 조정 (PRO)"><br><sub>교통 지연 → 자동 조정 (PRO)</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/suggestion.png" width="200" alt="교통 지연 → 변경 추천 (무료)"><br><sub>교통 지연 → 변경 추천 (무료)</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/offline.png" width="200" alt="네트워크 실패 → 마지막 계산 기준"><br><sub>네트워크 실패 → 마지막 계산 기준</sub></td>
   </tr>
 </table>
 
@@ -308,7 +310,7 @@ app/src/main/java/com/example/routealarm
 │   └── util          TimeProvider, Duration 확장, 한글 줄바꿈 보정
 ├── domain            (Android 의존성 없음)
 │   ├── model         Schedule, AlarmPlan, Place, TransitRoute, UserPreferences, Subscription …
-│   ├── policy        AdjustmentPolicy, BufferPolicy, RefreshCheckpointPolicy, TimetablePolicy·TimetableImageParser, WakeUpHabitPolicy
+│   ├── policy        AdjustmentPolicy, BufferPolicy, RefreshCheckpointPolicy, TimetablePolicy·TimetableImageParser, WakeUpHabitPolicy, LateRiskPolicy
 │   ├── repository    인터페이스 (TransitRepository, AlarmScheduler …)
 │   └── usecase       계산·갱신·알람 등록·일정 관리·구독(체험, 단체 이용권, 일정 한도) UseCase
 ├── data
@@ -330,6 +332,7 @@ app/src/main/java/com/example/routealarm
 │   ├── onboarding / home / alarmlist / schedule(create, detail — 경로 지도 RouteMap)
 │   ├── timetable / calendar   학교 시간표, 캘린더 연동
 │   ├── widget        홈 화면 위젯(Glance, NextAlarmWidget·WidgetUpdater)
+│   ├── taxi          지각 위험 → 택시 안내 카드(LateRiskCard)
 │   ├── settings(theme) / subscription(페이월, 단체 이용권, 구독 관리) / permission
 │   └── common        노선도 화면 모델(RouteTimeline), 지도 경로선(RouteMapLines), 되돌리기(UndoManager), 노선색, 시간 포맷, 오류 메시지 매핑
 └── di                Hilt 모듈 (App, Data, Network, Alarm)
@@ -341,10 +344,12 @@ app/src/test/java/com/example/routealarm
 └── presentation      노선도·지도 경로선·위젯 다음 알람 단위 테스트
 
 app/src/androidTest/java/com/example/routealarm
-└── data/local/db     Room 마이그레이션 계측 테스트(에뮬레이터)
+├── data/local/db     Room 마이그레이션·DAO 계측 테스트
+├── alarm/worker      WorkManager Worker 테스트
+└── presentation      Compose 화면 UI 테스트
 
 server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검색을 앱 계약 형식으로 변환
-├── src               app(라우팅·입력 검증), guard(요청 제한·하루 상한·캐시), odsay(경로·노선 그래픽), kakao, realtime(실시간 도착), payments·grouppass, contract(응답 형식)
+├── src               app(라우팅·입력 검증), guard(요청 제한·하루 상한·캐시), odsay(경로·노선 그래픽), kakao, taxi(택시 예상), realtime(실시간 도착), payments·grouppass, contract(응답 형식)
 └── test              변환 규칙·입력 검증 테스트 (실제 ODsay 응답 일부를 fixture 로 사용)
 ```
 
@@ -405,7 +410,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ./gradlew testDebugUnitTest
 ```
 
-도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 153개 테스트:
+도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 158개 테스트:
 
 | 테스트 | 검증 내용 |
 |---|---|
@@ -420,6 +425,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `PreviewDelayScenarioUseCaseTest` | "만약 15분 늦어진다면?" 카드: 이동 +15분·지연 여유 +5분, 실제 재계산과 같은 시각, 지연이 없으면 그대로 |
 | `RouteTimelineBuilderTest` | 설계서 예시 경로의 지점·시각·구간, 승차 대기 시간 반영, 걷지 않고 바로 타는 경로, 경로 정보가 없는 계획, 방향 조사(로/으로) |
 | `RouteMapLinesTest` | 지도 경로선: 출발지·환승역·도착지를 잇는 도보선과 정류장 좌표대로의 탑승 구간, 좌표 없는 예전 경로는 지도 없음 |
+| `LateRiskPolicyTest` | 지각 위험: 제때 일어남·이동 중에는 경고 없음, 늦게 끈 알람 + 준비 시간으로 지각 계산, 출발 전 교통 악화, 3시간 범위, 택시 도착 예상 |
 | `WakeUpHabitPolicyTest` | 기상 습관: 끈 시각 − 예정 시각의 중앙값, 한 번 크게 늦은 날·30일 지난 기록·비정상 값 제외, 3번 미만이면 제안 없음, 적용·넘김 뒤 기록만 다시 모음, 최대 30분 |
 | `WakeUpHabitUseCasesTest` | 습관 제안 적용 시 같은 회차 기상 알람이 07:15 → 07:00 으로 앞당겨져 다시 등록되고 제안이 사라짐 |
 | `RestoreScheduleUseCaseTest` | 되돌리기: 지운 일정이 같은 id·같은 계획으로 돌아오고 기상 알람 재등록, 바꾼 알람은 이전 기상 시각으로 복구 |
@@ -431,7 +437,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 
 리포트: `app/build/reports/tests/testDebugUnitTest/index.html`
 
-DB 마이그레이션은 실제 SQLite 가 필요해 에뮬레이터에서 계측 테스트로 확인한다(CI 에서는 돌리지 않는다).
+DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에서 계측 테스트로 확인한다(CI 는 에뮬레이터가 없어 실행하지 않고, 테스트 코드가 컴파일되는지만 확인한다). 현재 18개:
 
 ```bash
 ./gradlew connectedDebugAndroidTest
@@ -440,6 +446,9 @@ DB 마이그레이션은 실제 SQLite 가 필요해 에뮬레이터에서 계�
 | 계측 테스트 | 검증 내용 |
 |---|---|
 | `RouteAlarmMigrationTest` | 버전 1 DB 를 만들어 마이그레이션한 뒤 Room 스키마 검증, 사용자 장소·일정·알람 기록 유지와 예시 데이터 삭제, 앱과 같은 설정으로 Room 이 열려 일정을 읽음 |
+| `RouteAlarmDaoTest` | 메모리 SQLite: 일정·계획·경로 좌표가 Entity 를 거쳐 그대로 돌아옴, 켜진 일정만 조회, 일정 삭제 시 알람 기록 함께 삭제, 실시간 이동시간만 안정화 입력, 일정별 최근 조정, 기상 알람 끈 기록, 오래된 기록 정리 |
+| `TransitRefreshWorkerTest` | `TestListenableWorkerBuilder` 로 Worker 실행: 재계산 후 기상 알람 등록·지표 기록, 네트워크 실패 시 재시도 후 포기, 일정 id 없으면 실패 |
+| `ScreenUiTest` | Compose UI: 시간표 빈 화면·요일별 수업·알람 만들기·수업 수정, 모두 지우기 확인 창, 캘린더 권한 요청·반복 일정 추가·일정 선택, 알람 변경 추천 카드 |
 
 > 기기에서 계측 테스트를 돌리면 테스트가 끝난 뒤 앱이 지워진다(앱 데이터도 함께). 실제로 쓰는 기기 말고 에뮬레이터에서 돌린다.
 
@@ -449,7 +458,7 @@ Proxy 서버 테스트는 `cd server && npm test` 로 실행한다(외부 API �
 
 GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main` 푸시와 모든 PR 에서 두 작업을 돌린다.
 
-- **Android**: `assembleDebug`, `testDebugUnitTest`, `lintDebug` (JDK 17, 외부 API 를 호출하지 않아 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
+- **Android**: `assembleDebug`, `assembleDebugAndroidTest`(계측 테스트 컴파일), `testDebugUnitTest`, `lintDebug` (JDK 17, 외부 API 를 호출하지 않아 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
 - **Proxy 서버**: `npm ci`, 타입 검사, `npm test` (Node 20)
 
 ## 14. 주요 설계 결정
@@ -491,13 +500,14 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 - [x] 평소 대비 지연(`delay_minutes`) 계산: 실시간 대기 − 시간표 기준 대기
 - [x] PRO 결제(토스페이먼츠 테스트 결제)와 서버의 단체 이용권 확인·사용
 - [ ] 실제 출시용 결제(Google Play Billing 또는 토스페이먼츠 실 키·정기결제), 단체 이용권 발급·관리 화면
-- [ ] 무료 플랜 배너 광고, 지각 위험 시 택시·공유 모빌리티 안내
+- [x] 지각 위험 시 택시 안내(택시 도착 예상·요금, 카카오 T 호출)
+- [ ] 무료 플랜 배너 광고
 - [x] 상세 화면 지도(카카오맵, 노선색 경로선, ODsay 노선 그래픽으로 실제 도로·선로 모양)
 - [x] 학교 시간표(사진 인식·캘린더·직접 입력) / 기기 캘린더 가져오기 → Schedule 자동 생성
 - [x] 알람 이력 기반 개인화: 기상 습관(알람을 늦게 끄는 시간) 학습 → 준비 시간 늘리기 제안
 - [ ] 요일·시간대별 실제 이동시간 학습
 - [ ] 서버 기반 실시간 모니터링 + FCM 푸시로 WorkManager 체크포인트 사이의 급격한 변화 대응
-- [ ] Compose UI 테스트, Room DAO 계측 테스트, WorkManager `TestListenableWorkerBuilder` 테스트
+- [x] Compose UI 테스트, Room DAO 계측 테스트, WorkManager `TestListenableWorkerBuilder` 테스트
 - [x] Room Migration(버전별 Migration, 누락 검사 단위 테스트, 마이그레이션 계측 테스트)
 - [x] 알람 변경 되돌리기, 홈 화면 위젯
 - [ ] Wear OS 전용 앱(타일·컴플리케이션). 지금은 휴대폰 기상 알람 알림이 워치로 전달되어 워치에서 끄기·다시 울림만 가능
