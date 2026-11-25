@@ -355,6 +355,15 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 
 리포트: `app/build/reports/tests/testDebugUnitTest/index.html`
 
+Proxy 서버 테스트는 `cd server && npm test` 로 실행한다(외부 API 를 호출하지 않아 키가 필요 없다).
+
+### CI
+
+GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main` 푸시와 모든 PR 에서 두 작업을 돌린다.
+
+- **Android**: `assembleDebug`, `testDebugUnitTest`, `lintDebug` (JDK 17, fake 제공자라 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
+- **Proxy 서버**: `npm ci`, 타입 검사, `npm test` (Node 20)
+
 ## 14. 주요 설계 결정
 
 각 결정의 이유는 해당 소스의 KDoc 에도 적혀 있다.
