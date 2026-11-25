@@ -401,7 +401,8 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 ## 15. 향후 개선사항
 
 - [x] 실제 Backend Proxy 서버 구현 (ODsay 경로·Kakao 장소 검색 정규화, `server/`)
-- [ ] Proxy 서버 https 배포, 실시간 도착 API 로 `delay_minutes`·`arrival_message` 채우기
+- [x] Proxy 서버 https 배포 (Render, 수동 배포)
+- [ ] 실시간 도착 API 로 `delay_minutes`·`arrival_message` 채우기
 - [ ] Google Play Billing 연동과 영수증 검증 서버, 단체 이용권 발급·관리
 - [ ] 무료 플랜 배너 광고, 지각 위험 시 택시·공유 모빌리티 안내
 - [ ] 상세 화면 지도(경로 폴리라인) 표시

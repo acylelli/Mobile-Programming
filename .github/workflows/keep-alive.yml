@@ -4,6 +4,7 @@ name: Proxy keep-alive
 # 앱의 네트워크 제한시간(15초)보다 길어서 알람 재확인이 캐시로 대체될 수 있으므로 주기적으로 깨워 둔다.
 # 저장소 Settings > Secrets and variables > Actions > Variables 에 PROXY_HEALTHCHECK_URL 을 넣어야 동작한다.
 # (예: https://routealarm-proxy.onrender.com/healthz) 비어 있으면 아무것도 하지 않는다.
+# 지금은 이 변수를 넣지 않고 cron-job.org 가 같은 역할을 한다(server/README.md 배포 참고).
 
 on:
   schedule:
