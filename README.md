@@ -110,9 +110,13 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 
 학교 시간표는 에브리타임 시간표 캡처(2026년 2학기) 한 장으로 테스트했다. 사진을 고르면 기기 안에서 글자를 읽어 요일별 수업으로 바꾸고, 틀린 곳은 눌러서 고친 뒤, 요일마다 첫 수업에 맞춘 알람을 만든다. 캘린더 화면의 일정은 에뮬레이터 캘린더에 넣은 시연용 일정이다.
 
-| 시간표 사진 인식 | 수업 수정 | 첫 수업 알람 만들기 | 캘린더 연동 |
-|---|---|---|---|
-| ![시간표 인식](docs/screenshots/timetable.png) | ![수업 수정](docs/screenshots/timetable-edit.png) | ![시간표 알람](docs/screenshots/timetable-alarms.png) | ![캘린더](docs/screenshots/calendar.png) |
+| 시간표 사진 인식 | 수업 수정 | 첫 수업 알람 만들기 |
+|---|---|---|
+| ![시간표 인식](docs/screenshots/timetable.png) | ![수업 수정](docs/screenshots/timetable-edit.png) | ![시간표 알람](docs/screenshots/timetable-alarms.png) |
+
+| 캘린더 연동 | 캘린더 일정 → 도착지 자동 검색 |
+|---|---|
+| ![캘린더](docs/screenshots/calendar.png) | ![캘린더 일정으로 만들기](docs/screenshots/calendar-prefill.png) |
 
 | 기상 알람 |
 |---|
