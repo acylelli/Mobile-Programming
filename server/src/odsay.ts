@@ -93,15 +93,22 @@ export async function fetchOdsayRaw(
   return (await response.json()) as OdsayResponse;
 }
 
+/** 노선 모양 캐시. 같은 노선(mapObj)의 모양은 바뀌지 않으므로 경로 캐시보다 훨씬 오래 둔다. */
+export interface LaneGeometryCache {
+  get(mapObj: string): Array<Array<[number, number]>> | undefined;
+  set(mapObj: string, lanes: Array<Array<[number, number]>>): void;
+}
+
 /**
  * 소요시간이 짧은 상위 경로에 실제 노선 모양을 붙인다. 실패해도 경로 조회는 그대로 진행한다(정류장 좌표로 대체).
- * [allow] 는 호출마다 하루 상한을 확인한다.
+ * [allow] 는 ODsay 를 실제로 부를 때마다 하루 상한을 확인한다. [cache] 에 있으면 부르지 않는다.
  */
 export async function attachLaneGeometry(
   apiKey: string,
   body: OdsayResponse,
   allow: () => boolean,
   fetchImpl: typeof fetch = fetch,
+  cache?: LaneGeometryCache,
 ): Promise<void> {
   const paths = [...(body.result?.path ?? [])]
     .filter((p) => p.info?.mapObj)
@@ -109,9 +116,18 @@ export async function attachLaneGeometry(
     .slice(0, GEOMETRY_ROUTES);
   await Promise.all(
     paths.map(async (path) => {
+      const mapObj = path.info.mapObj!;
+      const cached = cache?.get(mapObj);
+      if (cached) {
+        path.laneGeometry = cached;
+        return;
+      }
       if (!allow()) return;
-      const lanes = await fetchLaneGeometry(apiKey, path.info.mapObj!, fetchImpl);
-      if (lanes) path.laneGeometry = lanes;
+      const lanes = await fetchLaneGeometry(apiKey, mapObj, fetchImpl);
+      if (lanes) {
+        path.laneGeometry = lanes;
+        cache?.set(mapObj, lanes);
+      }
     }),
   );
 }
