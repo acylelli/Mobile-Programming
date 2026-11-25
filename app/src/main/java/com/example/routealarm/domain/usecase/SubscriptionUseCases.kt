@@ -33,13 +33,13 @@ object GroupPassCode {
     fun isComplete(code: String): Boolean = COMPLETE.matches(code)
 }
 
-/** 7일 무료체험으로 PRO 를 시작한다. 플랜이 바뀌면 교통 재확인 일정도 PRO 기준으로 다시 잡는다. */
-class StartProTrialUseCase @Inject constructor(
+/** 결제창(토스페이먼츠 테스트 결제)에서 돌아온 주문을 확인해 PRO 를 적용한다. 플랜이 바뀌면 재확인 일정도 다시 잡는다. */
+class CompletePaymentUseCase @Inject constructor(
     private val subscriptionRepository: SubscriptionRepository,
     private val restoreAlarms: RestoreAlarmsUseCase,
 ) {
-    suspend operator fun invoke(product: SubscriptionProduct): AppResult<Entitlement> {
-        val result = subscriptionRepository.startTrial(product)
+    suspend operator fun invoke(orderId: String): AppResult<Entitlement> {
+        val result = subscriptionRepository.completePayment(orderId)
         if (result is AppResult.Success) restoreAlarms()
         return result
     }
@@ -112,6 +112,6 @@ class CheckScheduleQuotaUseCase @Inject constructor(
         if (entitlement.isPro(now)) {
             ScheduleQuota.Unlimited
         } else {
-            ScheduleQuota.Limited(used = schedules.count { !it.isDemo }, limit = PlanLimits.FREE_SCHEDULE_LIMIT)
+            ScheduleQuota.Limited(used = schedules.size, limit = PlanLimits.FREE_SCHEDULE_LIMIT)
         }
 }

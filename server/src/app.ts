@@ -3,6 +3,8 @@ import type { PlaceSearchResponseDto } from "./contract.ts";
 import { UpstreamError } from "./contract.ts";
 import { type Clock, clientIp, DailyQuota, RateLimiter, TtlCache } from "./guard.ts";
 import { fetchKakaoPlaces } from "./kakao.ts";
+import { createGroupPassRouter, DEFAULT_GROUP_PASSES, type GroupPassConfig } from "./grouppass.ts";
+import { createPaymentsRouter, type TossKeys } from "./payments.ts";
 import { fetchOdsayRaw, firstRideTarget, type OdsayResponse, type RideTarget, toRouteResponse, toRoutesWithPaths } from "./odsay.ts";
 import { type Arrival, applyArrival, fetchBusArrivals, fetchSubwayArrivals, firstCatchable, type RealtimeKeys } from "./realtime.ts";
 
@@ -34,6 +36,10 @@ export interface AppConfig {
   limits?: Partial<GuardLimits>;
   /** 없으면 실시간 도착 정보 없이 시간표 기준으로만 응답한다. */
   realtimeKeys?: RealtimeKeys;
+  /** 없으면 결제 경로가 503 을 준다. */
+  tossKeys?: TossKeys;
+  /** 단체 이용권 코드. 없으면 테스트 코드를 쓴다. */
+  groupPasses?: GroupPassConfig[];
   /** 테스트에서 외부 호출을 대신한다. */
   fetchImpl?: typeof fetch;
   /** 테스트에서 시간을 대신한다. */
@@ -132,6 +138,9 @@ export function createApp(config: AppConfig) {
     searchCache.set(key, body);
     res.json(body);
   });
+
+  app.use(createPaymentsRouter(config.tossKeys ?? {}, clock, config.fetchImpl));
+  app.use(createGroupPassRouter(config.groupPasses ?? DEFAULT_GROUP_PASSES, clock));
 
   app.use((_req, res) => {
     res.status(404).json({ error: "not found" });

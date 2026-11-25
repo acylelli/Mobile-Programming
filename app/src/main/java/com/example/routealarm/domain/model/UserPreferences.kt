@@ -22,8 +22,6 @@ data class UserPreferences(
     /** 일정 한도 때문에 페이월을 자동으로 띄운 마지막 날(epoch day). 같은 날 반복 노출하지 않기 위함 */
     val lastPaywallPromptEpochDay: Long? = null,
     val onboardingCompleted: Boolean = false,
-    val demoSeeded: Boolean = false,
-    val demo: DemoSettings = DemoSettings(),
 ) {
     companion object {
         const val DEFAULT_PREPARATION_MINUTES = 30
@@ -37,11 +35,3 @@ data class UserPreferences(
     }
 }
 
-/**
- * API 키 없이 "교통 상황 변화 → 알람 자동 조정" 흐름을 시연하기 위한 설정.
- * Fake 교통 데이터 소스만 이 값을 읽는다. 실제 Proxy 사용 시 무시된다.
- */
-data class DemoSettings(
-    val extraDelayMinutes: Int = 0,
-    val simulateNetworkFailure: Boolean = false,
-)

@@ -42,7 +42,6 @@ class RoomScheduleRepository @Inject constructor(
 
     override suspend fun delete(id: Long): AppResult<Unit> = dbCall { dao.delete(id) }
 
-    override suspend fun deleteDemoSchedules(): AppResult<Unit> = dbCall { dao.deleteDemo() }
 
     private suspend fun <T> dbCall(block: suspend () -> T): AppResult<T> = withContext(ioDispatcher) {
         try {

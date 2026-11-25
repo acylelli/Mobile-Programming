@@ -135,10 +135,6 @@ fun TagBadge(
     )
 }
 
-@Composable
-fun DemoBadge(modifier: Modifier = Modifier) {
-    TagBadge(stringResource(R.string.demo_badge), modifier)
-}
 
 @Preview(showBackground = true)
 @Composable
@@ -152,7 +148,6 @@ private fun StatusChipPreview() {
                 ProBadge()
                 ProBadge(dim = true)
                 ProAccentBadge()
-                DemoBadge()
             }
         }
     }

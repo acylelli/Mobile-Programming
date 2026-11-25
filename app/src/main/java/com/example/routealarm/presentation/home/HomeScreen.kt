@@ -47,7 +47,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.routealarm.R
 import com.example.routealarm.core.designsystem.component.AppCard
-import com.example.routealarm.core.designsystem.component.DemoBadge
 import com.example.routealarm.core.designsystem.component.EmptyState
 import com.example.routealarm.core.designsystem.component.InlineAction
 import com.example.routealarm.core.designsystem.component.NoticeStrip
@@ -218,10 +217,6 @@ private fun HomeContent(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false),
         )
-        if (schedule.isDemo) {
-            Spacer(Modifier.width(8.dp))
-            DemoBadge()
-        }
     }
     plan?.travelChangeMinutes?.takeIf { it != 0 }?.let { change ->
         Text(
@@ -268,7 +263,7 @@ private fun HomeContent(
             )
         }
         if (!schedule.enabled) {
-            NoticeStrip(text = stringResource(if (schedule.isDemo) R.string.home_demo_hint else R.string.home_disabled_hint))
+            NoticeStrip(text = stringResource(R.string.home_disabled_hint))
         }
     }
 
@@ -291,7 +286,7 @@ private fun HomeContent(
             Text(
                 stringResource(
                     R.string.home_source_format,
-                    stringResource(dataSourceRes(state.isDemoData, plan)),
+                    stringResource(dataSourceRes(plan)),
                     relativeUpdateText(plan.lastUpdatedAt, laterOf(now, plan.lastUpdatedAt)),
                 ),
                 style = MaterialTheme.typography.bodySmall,
@@ -305,11 +300,8 @@ private fun HomeContent(
 
 private fun laterOf(a: Instant, b: Instant): Instant = if (a.isAfter(b)) a else b
 
-private fun dataSourceRes(isDemoData: Boolean, plan: AlarmPlan): Int = when {
-    !plan.isRealtime -> R.string.traffic_cached
-    isDemoData -> R.string.home_source_demo
-    else -> R.string.home_source_realtime
-}
+private fun dataSourceRes(plan: AlarmPlan): Int =
+    if (plan.isRealtime) R.string.home_source_realtime else R.string.traffic_cached
 
 @Composable
 private fun scheduleSummary(schedule: Schedule, upcomingPlan: AlarmPlan?): String {

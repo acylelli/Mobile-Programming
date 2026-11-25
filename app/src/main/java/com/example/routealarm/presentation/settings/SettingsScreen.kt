@@ -130,14 +130,12 @@ fun SettingsRoute(
         onVibration = viewModel::setVibration,
         onSound = viewModel::setAlarmSound,
         onSnooze = viewModel::setSnoozeMinutes,
-        onDemoDelay = viewModel::setDemoExtraDelay,
-        onDemoNetworkFailure = viewModel::setDemoNetworkFailure,
         onRefreshAll = viewModel::refreshAllNow,
         onRingAlarm = viewModel::ringAlarmNow,
     )
 }
 
-private enum class SettingsSheet { PREPARATION, BUFFER, SOUND, SNOOZE, DEMO_DELAY }
+private enum class SettingsSheet { PREPARATION, BUFFER, SOUND, SNOOZE }
 
 /** 설정 — UI-F-001 */
 @Composable
@@ -154,8 +152,6 @@ fun SettingsScreen(
     onVibration: (Boolean) -> Unit,
     onSound: (AlarmSound) -> Unit,
     onSnooze: (Int) -> Unit,
-    onDemoDelay: (Int) -> Unit,
-    onDemoNetworkFailure: (Boolean) -> Unit,
     onRefreshAll: () -> Unit,
     onRingAlarm: () -> Unit,
 ) {
@@ -268,16 +264,8 @@ fun SettingsScreen(
                 PermissionRow(Icons.Outlined.MyLocation, R.string.permission_location_title, permissions.location, optional = true) { context.openAppSettings() }
             }
 
-            // 데모: API 키 없이 지연·오프라인·알람 화면을 시연
-            SettingsGroup(stringResource(R.string.settings_section_demo)) {
-                SettingsRow(Icons.Outlined.Timelapse, stringResource(R.string.settings_demo_delay), onClick = { sheet = SettingsSheet.DEMO_DELAY }) {
-                    RowValue(stringResource(R.string.common_minutes_format, prefs.demo.extraDelayMinutes))
-                }
-                RowDivider()
-                SettingsRow(Icons.Outlined.CloudOff, stringResource(R.string.settings_demo_network_failure), onClick = { onDemoNetworkFailure(!prefs.demo.simulateNetworkFailure) }) {
-                    AppSwitch(checked = prefs.demo.simulateNetworkFailure, onCheckedChange = onDemoNetworkFailure)
-                }
-                RowDivider()
+            // 테스트 도구: 정기 재확인 시각이나 알람 시각을 기다리지 않고 바로 확인
+            SettingsGroup(stringResource(R.string.settings_section_tools)) {
                 SettingsRow(
                     Icons.Outlined.Sync,
                     stringResource(if (state.isRefreshingAll) R.string.home_refreshing else R.string.settings_demo_run_refresh),
@@ -290,7 +278,6 @@ fun SettingsScreen(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val m = state.metrics
                 SectionLabel(stringResource(R.string.settings_section_metrics), Modifier.padding(bottom = 6.dp))
-                MetricLine(stringResource(R.string.settings_demo_provider_format, state.transitProvider))
                 MetricLine(stringResource(R.string.settings_metrics_api_calls, m.apiCallCount, m.apiFailureCount))
                 m.averageApiLatencyMillis?.let { MetricLine(stringResource(R.string.settings_metrics_latency, it)) }
                 MetricLine(stringResource(R.string.settings_metrics_cache, m.cacheHitCount))
@@ -325,15 +312,6 @@ fun SettingsScreen(
             range = 0..60,
             presets = listOf(5, 10, 20),
             onConfirm = { onBuffer(it); sheet = null },
-            onDismiss = { sheet = null },
-        )
-        SettingsSheet.DEMO_DELAY -> MinutePickerSheet(
-            title = stringResource(R.string.settings_demo_delay),
-            body = stringResource(R.string.settings_demo_delay_body),
-            initial = prefs.demo.extraDelayMinutes,
-            range = 0..60,
-            presets = listOf(0, 10, 15, 40),
-            onConfirm = { onDemoDelay(it); sheet = null },
             onDismiss = { sheet = null },
         )
         SettingsSheet.SOUND -> ChoiceSheet(

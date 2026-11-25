@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PlaceDao {
-    @Query("SELECT * FROM places ORDER BY isDemo ASC, createdAt ASC")
+    @Query("SELECT * FROM places ORDER BY createdAt ASC")
     fun observeAll(): Flow<List<PlaceEntity>>
 
     @Query("SELECT * FROM places WHERE id = :id")
@@ -24,7 +24,7 @@ interface PlaceDao {
 
 @Dao
 interface ScheduleDao {
-    @Query("SELECT * FROM schedules ORDER BY isDemo ASC, targetArrivalMinuteOfDay ASC")
+    @Query("SELECT * FROM schedules ORDER BY targetArrivalMinuteOfDay ASC")
     fun observeAll(): Flow<List<ScheduleEntity>>
 
     @Query("SELECT * FROM schedules WHERE id = :id")
@@ -41,9 +41,6 @@ interface ScheduleDao {
 
     @Query("DELETE FROM schedules WHERE id = :id")
     suspend fun delete(id: Long)
-
-    @Query("DELETE FROM schedules WHERE isDemo = 1")
-    suspend fun deleteDemo()
 }
 
 @Dao

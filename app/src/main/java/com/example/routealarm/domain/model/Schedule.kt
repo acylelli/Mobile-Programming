@@ -31,8 +31,6 @@ data class Schedule(
     val oneTimeDate: LocalDate? = null,
     val alarmMode: AlarmMode = AlarmMode.WAKE_UP_AND_DEPARTURE,
     val enabled: Boolean = true,
-    /** 첫 실행 예시 데이터. 실제 사용자 데이터와 구분해 표시/삭제한다. */
-    val isDemo: Boolean = false,
     val createdAt: Instant,
     val updatedAt: Instant,
     /** 가장 최근 계산된 알람 정보 */

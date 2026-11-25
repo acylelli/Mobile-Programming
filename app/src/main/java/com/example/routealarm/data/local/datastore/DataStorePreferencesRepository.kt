@@ -11,7 +11,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.routealarm.data.mapper.enumValueOrDefault
 import com.example.routealarm.domain.model.AlarmSound
 import com.example.routealarm.domain.model.ColorTheme
-import com.example.routealarm.domain.model.DemoSettings
 import com.example.routealarm.domain.model.UserPreferences
 import com.example.routealarm.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.Flow
@@ -42,9 +41,6 @@ class DataStorePreferencesRepository @Inject constructor(
         val COLOR_THEME = stringPreferencesKey("color_theme")
         val PAYWALL_PROMPT_DAY = longPreferencesKey("paywall_prompt_epoch_day")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_completed")
-        val DEMO_SEEDED = booleanPreferencesKey("demo_seeded")
-        val DEMO_EXTRA_DELAY = intPreferencesKey("demo_extra_delay_minutes")
-        val DEMO_NETWORK_FAILURE = booleanPreferencesKey("demo_network_failure")
     }
 
     override val preferences: Flow<UserPreferences> = dataStore.data
@@ -64,11 +60,6 @@ class DataStorePreferencesRepository @Inject constructor(
         colorTheme = enumValueOrDefault(this[Keys.COLOR_THEME] ?: "", ColorTheme.DEFAULT),
         lastPaywallPromptEpochDay = this[Keys.PAYWALL_PROMPT_DAY],
         onboardingCompleted = this[Keys.ONBOARDING_DONE] ?: false,
-        demoSeeded = this[Keys.DEMO_SEEDED] ?: false,
-        demo = DemoSettings(
-            extraDelayMinutes = this[Keys.DEMO_EXTRA_DELAY] ?: 0,
-            simulateNetworkFailure = this[Keys.DEMO_NETWORK_FAILURE] ?: false,
-        ),
     )
 
     private suspend fun <T> set(key: Preferences.Key<T>, value: T) {
@@ -85,7 +76,4 @@ class DataStorePreferencesRepository @Inject constructor(
     override suspend fun setColorTheme(theme: ColorTheme) = set(Keys.COLOR_THEME, theme.name)
     override suspend fun setLastPaywallPromptDay(epochDay: Long) = set(Keys.PAYWALL_PROMPT_DAY, epochDay)
     override suspend fun setOnboardingCompleted() = set(Keys.ONBOARDING_DONE, true)
-    override suspend fun setDemoSeeded() = set(Keys.DEMO_SEEDED, true)
-    override suspend fun setDemoExtraDelay(minutes: Int) = set(Keys.DEMO_EXTRA_DELAY, minutes)
-    override suspend fun setDemoNetworkFailure(enabled: Boolean) = set(Keys.DEMO_NETWORK_FAILURE, enabled)
 }

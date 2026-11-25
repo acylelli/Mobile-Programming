@@ -2,7 +2,6 @@ package com.example.routealarm.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.routealarm.BuildConfig
 import com.example.routealarm.core.common.AppError
 import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.core.util.TimeProvider
@@ -13,7 +12,6 @@ import com.example.routealarm.domain.usecase.ApplyPendingAdjustmentUseCase
 import com.example.routealarm.domain.usecase.DismissPendingAdjustmentUseCase
 import com.example.routealarm.domain.usecase.RefreshOutcome
 import com.example.routealarm.domain.usecase.RefreshTransitTimeUseCase
-import com.example.routealarm.domain.usecase.SeedDemoDataUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -43,8 +41,6 @@ sealed interface HomeUiState {
         val pendingOutdatedMessage: Boolean,
         /** 무료 플랜이면 PRO 안내 띠를 보여준다. */
         val isPro: Boolean,
-        /** 교통 데이터가 실제 API 가 아닌 시연용 데이터인지 */
-        val isDemoData: Boolean,
     ) : HomeUiState
 }
 
@@ -62,7 +58,6 @@ class HomeViewModel @Inject constructor(
     private val refreshTransitTime: RefreshTransitTimeUseCase,
     private val applyPendingAdjustment: ApplyPendingAdjustmentUseCase,
     private val dismissPendingAdjustment: DismissPendingAdjustmentUseCase,
-    private val seedDemoData: SeedDemoDataUseCase,
     private val timeProvider: TimeProvider,
 ) : ViewModel() {
 
@@ -70,7 +65,6 @@ class HomeViewModel @Inject constructor(
         val refreshingIds: Set<Long> = emptySet(),
         val refreshError: AppError? = null,
         val pendingOutdated: Boolean = false,
-        val seeded: Boolean = false,
     )
 
     private val local = MutableStateFlow(LocalState())
@@ -83,7 +77,7 @@ class HomeViewModel @Inject constructor(
         local,
     ) { schedules, entitlement, state ->
         if (schedules.isEmpty()) {
-            if (state.seeded) HomeUiState.Empty else HomeUiState.Loading
+            HomeUiState.Empty
         } else {
             val now = timeProvider.now()
             val schedule = schedules.sortedWith(
@@ -96,17 +90,10 @@ class HomeViewModel @Inject constructor(
                 refreshError = state.refreshError,
                 pendingOutdatedMessage = state.pendingOutdated,
                 isPro = entitlement.isPro(now),
-                isDemoData = BuildConfig.TRANSIT_PROVIDER != PROVIDER_PROXY,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), HomeUiState.Loading)
 
-    init {
-        viewModelScope.launch {
-            seedDemoData()
-            local.update { it.copy(seeded = true) }
-        }
-    }
 
     /** 교통 정보를 지금 다시 확인한다(교통 상태 칩, 당겨서 새로고침). */
     fun refresh(scheduleId: Long) {
@@ -138,7 +125,6 @@ class HomeViewModel @Inject constructor(
 
     private companion object {
         const val STOP_TIMEOUT_MILLIS = 5_000L
-        const val PROVIDER_PROXY = "proxy"
         val STALE_THRESHOLD: Duration = Duration.ofHours(6)
     }
 }

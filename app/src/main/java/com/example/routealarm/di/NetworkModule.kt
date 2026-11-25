@@ -1,13 +1,13 @@
 package com.example.routealarm.di
 
 import com.example.routealarm.BuildConfig
+import com.example.routealarm.data.remote.PaymentRemoteDataSource
 import com.example.routealarm.data.remote.PlaceSearchRemoteDataSource
+import com.example.routealarm.data.remote.TossTestPaymentRemoteDataSource
 import com.example.routealarm.data.remote.SubscriptionRemoteDataSource
 import com.example.routealarm.data.remote.TransitRemoteDataSource
-import com.example.routealarm.data.remote.fake.FakePlaceSearchRemoteDataSource
-import com.example.routealarm.data.remote.fake.FakeSubscriptionRemoteDataSource
-import com.example.routealarm.data.remote.fake.FakeTransitRemoteDataSource
 import com.example.routealarm.data.remote.proxy.ProxyPlaceSearchRemoteDataSource
+import com.example.routealarm.data.remote.proxy.ProxySubscriptionRemoteDataSource
 import com.example.routealarm.data.remote.proxy.ProxyTransitRemoteDataSource
 import com.example.routealarm.data.remote.proxy.RouteAlarmProxyApi
 import dagger.Module
@@ -24,19 +24,13 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 /**
- * 교통 데이터 제공자 선택 지점.
- *
- * local.properties 의 routealarm.transitProvider 가
- *  - "fake"  : FakeTransitRemoteDataSource (API Key 불필요, 기본값)
- *  - "proxy" : Backend Proxy (routealarm.proxyBaseUrl) 호출
- *
- * 앱 어디에도 교통 API Secret 은 없다. 제공자 변경은 이 모듈 밖의 코드에 영향을 주지 않는다.
+ * 네트워크 설정. 교통·장소·결제·단체 이용권 모두 Backend Proxy(routealarm.proxyBaseUrl)를 호출한다.
+ * 앱 어디에도 외부 API Secret 은 없다. Proxy 가 키를 보관하고 응답을 앱 계약 형식으로 바꿔 준다.
  */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val PROVIDER_PROXY = "proxy"
     private const val TIMEOUT_SECONDS = 15L
 
     @Provides
@@ -63,23 +57,19 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideTransitRemoteDataSource(
-        fake: FakeTransitRemoteDataSource,
-        proxy: ProxyTransitRemoteDataSource,
-    ): TransitRemoteDataSource = if (BuildConfig.TRANSIT_PROVIDER == PROVIDER_PROXY) proxy else fake
+    fun provideTransitRemoteDataSource(proxy: ProxyTransitRemoteDataSource): TransitRemoteDataSource = proxy
 
     @Provides
     @Singleton
-    fun providePlaceSearchRemoteDataSource(
-        fake: FakePlaceSearchRemoteDataSource,
-        proxy: ProxyPlaceSearchRemoteDataSource,
-    ): PlaceSearchRemoteDataSource = if (BuildConfig.TRANSIT_PROVIDER == PROVIDER_PROXY) proxy else fake
+    fun providePlaceSearchRemoteDataSource(proxy: ProxyPlaceSearchRemoteDataSource): PlaceSearchRemoteDataSource = proxy
 
-    /**
-     * 결제·이용권 검증. Google Play Billing + 영수증 검증 서버 구현이 준비되면 여기서 교체한다.
-     * 지금은 시연용 구현만 있으며, 화면에는 실제 결제가 아니라는 안내가 표시된다.
-     */
+    /** 단체 이용권 확인·사용 */
     @Provides
     @Singleton
-    fun provideSubscriptionRemoteDataSource(fake: FakeSubscriptionRemoteDataSource): SubscriptionRemoteDataSource = fake
+    fun provideSubscriptionRemoteDataSource(proxy: ProxySubscriptionRemoteDataSource): SubscriptionRemoteDataSource = proxy
+
+    /** PRO 기간제 이용권 결제(토스페이먼츠 테스트 결제창, 실제 청구 없음) */
+    @Provides
+    @Singleton
+    fun providePaymentRemoteDataSource(toss: TossTestPaymentRemoteDataSource): PaymentRemoteDataSource = toss
 }

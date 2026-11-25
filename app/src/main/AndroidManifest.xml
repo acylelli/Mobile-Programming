@@ -38,6 +38,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- 토스페이먼츠 테스트 결제창에서 돌아오는 링크: routealarm://payment?orderId=…&result=… -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="routealarm" android:host="payment" />
+            </intent-filter>
         </activity>
 
         <!-- 잠금화면 위에 뜨는 알람 화면 -->
