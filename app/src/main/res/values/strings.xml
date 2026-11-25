@@ -293,6 +293,10 @@
     <string name="detail_history_empty">아직 기록이 없어요</string>
     <string name="detail_section_settings">일정 정보</string>
     <string name="detail_repeat_label">반복</string>
+    <string name="detail_skip_holidays">공휴일에는 울리지 않기</string>
+    <string name="detail_skip_holidays_on">공휴일·대체공휴일에는 다음 반복 요일로 넘어가요</string>
+    <string name="detail_skip_holidays_off">공휴일에도 평소처럼 울려요</string>
+    <string name="detail_skip_holidays_next">%1$s %2$s에는 울리지 않아요</string>
     <string name="detail_origin_label">출발지</string>
     <string name="detail_destination_label">도착지</string>
     <string name="detail_disabled_hint">알람이 꺼져 있어요. 켜면 교통 정보를 다시 확인해요.</string>

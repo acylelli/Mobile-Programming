@@ -119,3 +119,23 @@ class DismissPendingAdjustmentUseCase @Inject constructor(
         scheduleRepository.upsert(schedule.copy(pendingAdjustment = null, updatedAt = timeProvider.now()))
     }
 }
+
+/**
+ * "공휴일에는 울리지 않기"를 켜고 끈다. 다음 회차가 바뀔 수 있으므로 켜져 있는 일정은 바로 다시 맞춘다.
+ * (예: 내일이 공휴일인데 켜면 내일 알람이 빠지고 그다음 반복 요일 알람이 잡힌다.)
+ */
+class SetSkipHolidaysUseCase @Inject constructor(
+    private val scheduleRepository: ScheduleRepository,
+    private val syncSchedule: SyncScheduleUseCase,
+    private val timeProvider: TimeProvider,
+) {
+    suspend operator fun invoke(scheduleId: Long, skip: Boolean): AppResult<Unit> {
+        val schedule = scheduleRepository.getSchedule(scheduleId) ?: return AppResult.Failure(AppError.NotFound)
+        if (schedule.skipHolidays == skip) return AppResult.Success(Unit)
+        val updated = schedule.copy(skipHolidays = skip, updatedAt = timeProvider.now())
+        val result = scheduleRepository.upsert(updated)
+        if (result is AppResult.Failure) return result
+        if (updated.enabled) syncSchedule(updated)
+        return AppResult.Success(Unit)
+    }
+}

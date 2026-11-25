@@ -46,6 +46,7 @@ class SaveScheduleUseCase @Inject constructor(
             bufferMinutes = draft.bufferMinutes,
             repeatDays = draft.repeatDays,
             oneTimeDate = preview.oneTimeDate,
+            skipHolidays = draft.skipHolidays,
             alarmMode = draft.alarmMode,
             enabled = enabled,
             createdAt = existing?.createdAt ?: now,

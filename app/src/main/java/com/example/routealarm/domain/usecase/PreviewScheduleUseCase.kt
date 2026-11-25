@@ -30,6 +30,7 @@ data class ScheduleDraft(
     val preparationMinutes: Int,
     val bufferMinutes: Int,
     val alarmMode: AlarmMode = AlarmMode.WAKE_UP_AND_DEPARTURE,
+    val skipHolidays: Boolean = true,
 )
 
 /** 저장 전 "이렇게 계산했어요" 결과 화면에 보여줄 값 */
@@ -77,6 +78,7 @@ class PreviewScheduleUseCase @Inject constructor(
         val guessTarget = resolveNextOccurrence(
             draft.targetArrivalTime, draft.repeatDays, oneTimeDate, now, zone,
             leadTime = fixedLead.plusMinutes(TravelEstimatePolicy.FALLBACK_TRAVEL_MINUTES),
+            skipHolidays = draft.skipHolidays,
         ) ?: return invalid(InvalidInputReason.NO_REPEAT_DAY)
 
         val departureGuess = guessTarget.minus(fixedLead.plusMinutes(TravelEstimatePolicy.FALLBACK_TRAVEL_MINUTES))
@@ -93,6 +95,7 @@ class PreviewScheduleUseCase @Inject constructor(
             resolveNextOccurrence(
                 draft.targetArrivalTime, draft.repeatDays, null, now, zone,
                 leadTime = fixedLead.plus(route.totalDuration).plusMinutes(LEAD_MARGIN_MINUTES),
+                skipHolidays = draft.skipHolidays,
             ) ?: guessTarget
         }
 

@@ -33,6 +33,8 @@ object TestData {
         bufferMinutes: Int = 10,
         alarmMode: AlarmMode = AlarmMode.WAKE_UP_AND_DEPARTURE,
         enabled: Boolean = true,
+        // 공휴일과 상관없는 동작을 검사하는 테스트가 날짜(예: 2026-10-05 대체공휴일)에 흔들리지 않게 기본은 끈다.
+        skipHolidays: Boolean = false,
     ) = Schedule(
         id = 0,
         title = "학교",
@@ -44,6 +46,7 @@ object TestData {
         repeatDays = repeatDays,
         oneTimeDate = oneTimeDate,
         alarmMode = alarmMode,
+        skipHolidays = skipHolidays,
         enabled = enabled,
         createdAt = Instant.EPOCH,
         updatedAt = Instant.EPOCH,

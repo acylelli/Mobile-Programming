@@ -82,6 +82,10 @@ import com.example.routealarm.presentation.navigation.LocalAppSnackbar
 import com.example.routealarm.presentation.taxi.LateRiskCard
 import java.time.Duration
 import java.time.Instant
+import com.example.routealarm.domain.policy.HolidaySkipPolicy
+import java.time.ZoneId
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.clickable
 import kotlinx.coroutines.launch
 
 @Composable
@@ -115,6 +119,7 @@ fun ScheduleDetailRoute(
         onDismissPending = viewModel::dismissPending,
         onApplyHabit = viewModel::applyHabit,
         onDismissHabit = viewModel::dismissHabit,
+        onSkipHolidays = viewModel::setSkipHolidays,
         onOpenMap = { destination ->
             if (!context.openInMapApp(destination)) {
                 scope.launch { snackbar.showSnackbar(context.getString(R.string.detail_map_unavailable)) }
@@ -140,6 +145,7 @@ fun ScheduleDetailScreen(
     onApplyHabit: (Int) -> Unit,
     onDismissHabit: () -> Unit,
     onOpenMap: (Place) -> Unit,
+    onSkipHolidays: (Boolean) -> Unit = {},
 ) {
     val colors = RouteAlarmTheme.colors
     var confirmDelete by remember { mutableStateOf(false) }
@@ -168,6 +174,7 @@ fun ScheduleDetailScreen(
                 onDismissPending = onDismissPending,
                 onApplyHabit = onApplyHabit,
                 onDismissHabit = onDismissHabit,
+                onSkipHolidays = onSkipHolidays,
                 onOpenMap = { onOpenMap(state.schedule.destination) },
                 onDelete = { confirmDelete = true },
             )
@@ -198,6 +205,7 @@ private fun DetailContent(
     onDismissPending: () -> Unit,
     onApplyHabit: (Int) -> Unit,
     onDismissHabit: () -> Unit,
+    onSkipHolidays: (Boolean) -> Unit,
     onOpenMap: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -370,6 +378,10 @@ private fun DetailContent(
                     if (schedule.alarmMode == AlarmMode.WAKE_UP_ONLY) R.string.create_alarm_mode_wake_only else R.string.create_alarm_mode_wake_and_departure,
                 ),
             )
+            if (schedule.isRepeating) {
+                HorizontalDivider(thickness = 1.dp, color = colors.outline)
+                HolidaySkipRow(schedule, now, onSkipHolidays)
+            }
         }
 
         Spacer(Modifier.height(Spacing.lg))
@@ -497,3 +509,29 @@ private fun WakeUpHabitCard(habit: WakeUpHabit, preparationMinutes: Int, onApply
     }
 }
 
+
+/** 반복 일정의 "공휴일에는 울리지 않기" 스위치와, 곧 건너뛸 공휴일 안내 */
+@Composable
+private fun HolidaySkipRow(schedule: Schedule, now: Instant, onChange: (Boolean) -> Unit) {
+    val colors = RouteAlarmTheme.colors
+    val skipped = HolidaySkipPolicy.nextSkipped(schedule, now, ZoneId.systemDefault())
+    Row(
+        Modifier.fillMaxWidth().clickable(role = Role.Switch) { onChange(!schedule.skipHolidays) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.detail_skip_holidays), style = MaterialTheme.typography.labelLarge, color = colors.textPrimary)
+            Text(
+                when {
+                    skipped != null -> stringResource(R.string.detail_skip_holidays_next, TimeFormat.dateWithWeekday(skipped.date), skipped.name)
+                    schedule.skipHolidays -> stringResource(R.string.detail_skip_holidays_on)
+                    else -> stringResource(R.string.detail_skip_holidays_off)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (skipped != null) colors.accentText else colors.textSecondary,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        AppSwitch(checked = schedule.skipHolidays, onCheckedChange = onChange)
+    }
+}

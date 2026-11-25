@@ -40,6 +40,19 @@ class RouteAlarmMigrationTest {
     }
 
     @Test
+    fun migrate2To3_addsSkipHolidaysTurnedOn() {
+        helper.createDatabase(DB, 1).use { db ->
+            db.execSQL(insertPlace(id = 1, name = "다산역", isDemo = 0))
+            db.execSQL(insertSchedule(id = 10, title = "평일 등교", isDemo = 0))
+        }
+        helper.runMigrationsAndValidate(DB, 2, true, Migrations.MIGRATION_1_2).close()
+
+        helper.runMigrationsAndValidate(DB, 3, true, Migrations.MIGRATION_2_3).use { db ->
+            assertEquals(listOf("1"), db.strings("SELECT skipHolidays FROM schedules"))
+        }
+    }
+
+    @Test
     fun migratedDatabaseOpensWithRoomAndReadsSchedules() {
         helper.createDatabase(DB, 1).use { db ->
             db.execSQL(insertPlace(id = 1, name = "다산역", isDemo = 0))

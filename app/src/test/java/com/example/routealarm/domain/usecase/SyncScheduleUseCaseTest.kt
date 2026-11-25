@@ -77,6 +77,21 @@ class SyncScheduleUseCaseTest {
     }
 
     @Test
+    fun `공휴일 건너뛰기를 켜면 대체공휴일 회차를 건너뛰고 끄면 다시 잡는다`() = runTest {
+        // 2026-10-05(월)은 개천절 대체공휴일
+        val schedule = save(TestData.schedule(repeatDays = setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY), skipHolidays = true))
+        val skipped = sync(schedule)
+        assertEquals(seoul(monday.plusDays(1), 9, 0), skipped.plan!!.targetArrival)
+
+        val setSkip = SetSkipHolidaysUseCase(schedules, sync, time)
+        setSkip(schedule.id, skip = false)
+        val restored = schedules.getSchedule(schedule.id)!!
+        assertFalse(restored.skipHolidays)
+        assertEquals(seoul(monday, 9, 0), restored.plan!!.targetArrival)
+        assertEquals(seoul(monday, 7, 15), alarmScheduler.scheduled[schedule.id to AlarmType.WAKE_UP])
+    }
+
+    @Test
     fun `지난 1회 일정은 비활성화되고 알람이 취소된다`() = runTest {
         val schedule = save(TestData.schedule(oneTimeDate = monday))
         sync(schedule)
