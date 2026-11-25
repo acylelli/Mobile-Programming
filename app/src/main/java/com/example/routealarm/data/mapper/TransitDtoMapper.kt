@@ -4,6 +4,7 @@ import com.example.routealarm.data.remote.dto.PlaceDto
 import com.example.routealarm.data.remote.dto.RouteDto
 import com.example.routealarm.data.remote.dto.RouteResponseDto
 import com.example.routealarm.data.remote.dto.SegmentDto
+import com.example.routealarm.domain.model.GeoPoint
 import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.PlaceType
 import com.example.routealarm.domain.model.SegmentType
@@ -51,6 +52,9 @@ object TransitDtoMapper {
         endName = dto.to,
         duration = minutes(dto.minutes),
         arrivalInfo = dto.arrivalMessage,
+        points = dto.points.mapNotNull { pair ->
+            if (pair.size == 2) GeoPoint(pair[0], pair[1]) else null
+        },
     )
 
     fun toDomain(dto: PlaceDto) = Place(

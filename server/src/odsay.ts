@@ -35,7 +35,7 @@ export interface OdsaySubPath {
   startArsID?: string;
   /** 지역 버스 정보 시스템의 정류장 ID(경기: 9자리) */
   startLocalStationID?: string;
-  passStopList?: { stations?: Array<{ stationName?: string }> };
+  passStopList?: { stations?: Array<{ stationName?: string; x?: string; y?: string }> };
 }
 
 export interface OdsayPath {
@@ -178,6 +178,7 @@ function toRoute(path: OdsayPath, departAt: Date): RouteDto | null {
       from: stationName(sub, "start"),
       to: stationName(sub, "end"),
       minutes,
+      ...withPoints(sub),
     });
   });
 
@@ -196,6 +197,22 @@ function toRoute(path: OdsayPath, departAt: Date): RouteDto | null {
     arrival_time: toKstIso(new Date(departAt.getTime() + totalMinutes * 60_000)),
     segments,
   };
+}
+
+/** 지나는 정류장·역 좌표. 좌표가 둘 미만이면 선을 그릴 수 없어 넣지 않는다. */
+function withPoints(sub: OdsaySubPath): { points?: Array<[number, number]> } {
+  const points: Array<[number, number]> = [];
+  for (const station of sub.passStopList?.stations ?? []) {
+    const lat = Number(station.y);
+    const lng = Number(station.x);
+    if (station.x === undefined || station.y === undefined || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    points.push([round6(lat), round6(lng)]);
+  }
+  return points.length >= 2 ? { points } : {};
+}
+
+function round6(value: number): number {
+  return Math.round(value * 1e6) / 1e6;
 }
 
 /** "수도권 2호선" → "2호선". 앱은 "N호선" 이름으로 노선 색을 고른다. 버스는 "76" → "76번". */

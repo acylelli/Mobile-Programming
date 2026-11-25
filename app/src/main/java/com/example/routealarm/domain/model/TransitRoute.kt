@@ -13,6 +13,8 @@ data class TransitSegment(
     val duration: Duration,
     /** "3분 후 도착" 같은 실시간 도착 정보. 제공자가 주지 않으면 null */
     val arrivalInfo: String? = null,
+    /** 탑승 구간이 지나는 정류장·역 좌표(지도 경로선). 도보 구간이나 제공자가 주지 않으면 비어 있다. */
+    val points: List<GeoPoint> = emptyList(),
 )
 
 /**

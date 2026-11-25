@@ -13,6 +13,8 @@ export interface SegmentDto {
   to: string;
   minutes: number;
   arrival_message?: string;
+  /** 탑승 구간이 지나는 정류장·역 좌표 [위도, 경도]. 지도에 경로선을 그릴 때 쓴다. 도보 구간에는 없다. */
+  points?: Array<[number, number]>;
 }
 
 export interface RouteDto {

@@ -2,6 +2,7 @@ package com.example.routealarm.data.mapper
 
 import com.example.routealarm.domain.model.AdjustmentKind
 import com.example.routealarm.domain.model.AlarmPlan
+import com.example.routealarm.domain.model.GeoPoint
 import com.example.routealarm.domain.model.PendingAdjustment
 import com.example.routealarm.domain.model.SegmentType
 import com.example.routealarm.domain.model.TransitRoute
@@ -24,6 +25,8 @@ data class StoredSegment(
     val endName: String,
     val durationSeconds: Long,
     val arrivalInfo: String? = null,
+    /** [위도, 경도] 목록. 이전 버전에 저장된 경로에는 없다. */
+    val points: List<List<Double>> = emptyList(),
 )
 
 @Serializable
@@ -82,7 +85,10 @@ fun TransitRoute.toStored() = StoredRoute(
     transferCount = transferCount,
     delaySeconds = delay.seconds,
     segments = segments.map {
-        StoredSegment(it.type.name, it.lineName, it.startName, it.endName, it.duration.seconds, it.arrivalInfo)
+        StoredSegment(
+            it.type.name, it.lineName, it.startName, it.endName, it.duration.seconds, it.arrivalInfo,
+            points = it.points.map { p -> listOf(p.latitude, p.longitude) },
+        )
     },
 )
 
@@ -103,6 +109,7 @@ fun StoredRoute.toDomain() = TransitRoute(
             endName = it.endName,
             duration = Duration.ofSeconds(it.durationSeconds),
             arrivalInfo = it.arrivalInfo,
+            points = it.points.mapNotNull { p -> if (p.size == 2) GeoPoint(p[0], p[1]) else null },
         )
     },
 )

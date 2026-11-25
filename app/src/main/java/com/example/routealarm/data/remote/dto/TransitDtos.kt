@@ -39,6 +39,8 @@ data class SegmentDto(
     val to: String,
     val minutes: Int,
     @SerialName("arrival_message") val arrivalMessage: String? = null,
+    /** 지나는 정류장·역 좌표 [위도, 경도]. 도보 구간에는 없다. */
+    val points: List<List<Double>> = emptyList(),
 )
 
 @Serializable
