@@ -127,6 +127,11 @@
     <string name="home_pending_cached">실시간 교통 정보를 확인하지 못해 여유를 더했어요. 알람을 %1$d분 앞당길까요?</string>
     <string name="home_pending_apply">변경하기</string>
     <string name="home_pending_dismiss">유지하기</string>
+    <string name="habit_title">기상 습관에 맞춰 볼까요?</string>
+    <string name="habit_body">최근 %1$d번 기상 알람을 평소 %2$d분쯤 늦게 끄셨어요. 준비 시간을 %3$d분 늘리면 그만큼 일찍 깨워 드려서 출발이 늦어지지 않아요.</string>
+    <string name="habit_preparation_change">준비 시간 %1$d분 → %2$d분</string>
+    <string name="habit_apply">%1$d분 늘리기</string>
+    <string name="habit_dismiss">괜찮아요</string>
     <string name="home_pending_outdated">추천이 오래되어 교통 정보를 다시 확인했어요.</string>
     <string name="home_pro_strip_title">출발 전 교통 확인 1회</string>
     <string name="home_pro_strip_body">PRO는 출발 직전까지 실시간 재계산</string>

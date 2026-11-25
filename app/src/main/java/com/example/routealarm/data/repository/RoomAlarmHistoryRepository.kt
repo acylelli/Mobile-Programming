@@ -38,6 +38,9 @@ class RoomAlarmHistoryRepository @Inject constructor(
     override fun observeHistory(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEvent>> =
         dao.observe(scheduleId, limit).map { list -> list.map { it.toDomain() } }
 
+    override fun observeDismissals(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEvent>> =
+        dao.observeDismissals(scheduleId, limit).map { list -> list.map { it.toDomain() } }
+
     override fun observeLatestAdjustments(): Flow<Map<Long, AlarmHistoryEvent>> =
         dao.observeLatestAdjustments().map { list -> list.associate { it.scheduleId to it.toDomain() } }
 

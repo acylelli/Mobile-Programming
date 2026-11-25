@@ -87,6 +87,16 @@ interface AlarmHistoryDao {
     )
     suspend fun recentTravelMinutes(scheduleId: Long, limit: Int): List<Int>
 
+    /** 기상 알람을 끈 기록(예정 기상 시각 포함). 기상 습관 분석에 쓴다. */
+    @Query(
+        """
+        SELECT * FROM alarm_history
+        WHERE scheduleId = :scheduleId AND type = 'DISMISSED' AND newWakeUp IS NOT NULL
+        ORDER BY occurredAt DESC LIMIT :limit
+        """,
+    )
+    fun observeDismissals(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEntity>>
+
     @Query("DELETE FROM alarm_history WHERE occurredAt < :before")
     suspend fun deleteOlderThan(before: Long)
 }
