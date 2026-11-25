@@ -59,7 +59,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 교통 상황 재확인 | PRO: 기상 24h / 3h / 1h / 20분 전에 WorkManager 로 재확인. 무료: 기상 30분 전 1회 |
 | 안전한 자동 조정 | 5분 미만 변화는 무시, 30분 초과 변화는 사용자 확인. PRO 는 자동 조정, 무료 플랜과 자동 조정 OFF 는 변경 추천만 |
 | 기상 알람 + 출발 알림 | 기상 알람(전체 화면, 알람음, 진동, 5·10분 스누즈)과 "10분 뒤 출발" / "지금 출발" 알림 분리 |
-| 알람음·볼륨 | 기본 알람음·부드럽게·휴대폰 벨소리 직접 고르기·무음, 아이폰 설정 같은 볼륨 막대 10~100%(테마 강조색, 휴대폰 알람 볼륨과 관계없이 이 크기로 울리고 끝나면 원래 볼륨으로 복원), 30초에 걸쳐 점점 크게 울리기, 미리 듣기 |
+| 알람음·볼륨 | 기본 알람음·부드럽게·휴대폰 벨소리 직접 고르기·무음, 아이폰 설정 같은 볼륨 막대 10~100%(테마 강조색, 휴대폰 알람 볼륨과 관계없이 이 크기로 울리고 끝나면 원래 볼륨으로 복원), 30초에 걸쳐 점점 크게 울리기, 미리 듣기. 일정 상세에서 일정마다 다른 알람음·볼륨을 고를 수 있다(기본은 "설정 따르기". 등교는 크게, 주말 약속은 부드럽게) |
 | Offline First | 네트워크 실패 시 Room 캐시 → 마지막 계산값으로 알람 유지, 화면에 안내 띠 표시 |
 | 일정 만들기 5단계 | 출발지 → 도착지 → 도착 시각·반복 → 준비 시간 → 여유 시간, 저장 전에 계산 미리보기 |
 | 아이폰식 휠 입력 | 도착 시각(오전/오후 · 시 · 분)과 준비 시간(시간 · 분)을 휠을 돌려 고른다. 시 휠이 11과 12 사이를 지나면 오전/오후가 따라 바뀐다 |
@@ -134,6 +134,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
   </tr>
   <tr>
     <td align="center" valign="top"><img src="docs/screenshots/holiday.png" width="200" alt="공휴일 건너뛰기"><br><sub>공휴일 건너뛰기</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/schedule-sound.png" width="200" alt="일정별 알람음·볼륨"><br><sub>일정별 알람음·볼륨</sub></td>
   </tr>
   <tr>
     <td align="center" valign="top"><img src="docs/screenshots/ringing.png" width="200" alt="기상 알람"><br><sub>기상 알람</sub></td>
@@ -437,7 +438,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ./gradlew testDebugUnitTest
 ```
 
-도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 170개 테스트:
+도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 172개 테스트:
 
 | 테스트 | 검증 내용 |
 |---|---|
@@ -456,7 +457,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `WakeUpHabitPolicyTest` | 기상 습관: 끈 시각 − 예정 시각의 중앙값, 한 번 크게 늦은 날·30일 지난 기록·비정상 값 제외, 3번 미만이면 제안 없음, 적용·넘김 뒤 기록만 다시 모음, 최대 30분 |
 | `WakeUpHabitUseCasesTest` | 습관 제안 적용 시 같은 회차 기상 알람이 07:15 → 07:00 으로 앞당겨져 다시 등록되고 제안이 사라짐 |
 | `RestoreScheduleUseCaseTest` | 되돌리기: 지운 일정이 같은 id·같은 계획으로 돌아오고 기상 알람 재등록, 바꾼 알람은 이전 기상 시각으로 복구 |
-| `AlarmVolumePolicyTest` | 알람 볼륨: 비율 → 알람 볼륨 단계 변환(무음·기기 최소값 아래로 내려가지 않음), 점점 크게 10% → 30초 뒤 100%, 고른 벨소리가 없으면 기본 알람음 |
+| `AlarmVolumePolicyTest` | 알람 볼륨: 비율 → 알람 볼륨 단계 변환(무음·기기 최소값 아래로 내려가지 않음), 점점 크게 10% → 30초 뒤 100%, 고른 벨소리가 없으면 기본 알람음, 일정 알람음이 설정의 소리·볼륨을 덮어쓰고 점점 크게는 설정을 따름 |
 | `HolidayTest` | 공휴일 표(대체공휴일·선거일), 평일 알람이 성탄절·설 연휴(대체공휴일 포함)를 건너뛰고 다음 평일로, 매주 금요일 알람이 공휴일 두 번을 건너뜀, 끄면 공휴일에도 울림, 곧 건너뛸 공휴일 안내 |
 | `NextAlarmTest` | 위젯의 다음 알람: 켜져 있고 출발 전인 일정 중 기상 알람이 가장 이른 것 |
 | `MigrationCoverageTest` | 내보낸 Room 스키마(`app/schemas`)의 버전이 1부터 빠짐없이 이어지고, 이웃한 모든 버전 사이에 Migration 이 있음 |
@@ -466,7 +467,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 
 리포트: `app/build/reports/tests/testDebugUnitTest/index.html`
 
-DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에서 계측 테스트로 확인한다(CI 는 에뮬레이터가 없어 실행하지 않고, 테스트 코드가 컴파일되는지만 확인한다). 현재 19개:
+DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에서 계측 테스트로 확인한다(CI 는 에뮬레이터가 없어 실행하지 않고, 테스트 코드가 컴파일되는지만 확인한다). 현재 20개:
 
 ```bash
 ./gradlew connectedDebugAndroidTest
@@ -474,7 +475,7 @@ DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에�
 
 | 계측 테스트 | 검증 내용 |
 |---|---|
-| `RouteAlarmMigrationTest` | 버전 1 DB 를 만들어 마이그레이션한 뒤 Room 스키마 검증, 2→3 공휴일 건너뛰기 열이 켜진 상태로 추가됨, 사용자 장소·일정·알람 기록 유지와 예시 데이터 삭제, 앱과 같은 설정으로 Room 이 열려 일정을 읽음 |
+| `RouteAlarmMigrationTest` | 버전 1 DB 를 만들어 마이그레이션한 뒤 Room 스키마 검증, 2→3 공휴일 건너뛰기 열이 켜진 상태로 추가됨, 3→4 일정 알람음 열이 비어 있는(설정 따르기) 상태로 추가됨, 사용자 장소·일정·알람 기록 유지와 예시 데이터 삭제, 앱과 같은 설정으로 Room 이 열려 일정을 읽음 |
 | `RouteAlarmDaoTest` | 메모리 SQLite: 일정·계획·경로 좌표가 Entity 를 거쳐 그대로 돌아옴, 켜진 일정만 조회, 일정 삭제 시 알람 기록 함께 삭제, 실시간 이동시간만 안정화 입력, 일정별 최근 조정, 기상 알람 끈 기록, 오래된 기록 정리 |
 | `TransitRefreshWorkerTest` | `TestListenableWorkerBuilder` 로 Worker 실행: 재계산 후 기상 알람 등록·지표 기록, 네트워크 실패 시 재시도 후 포기, 일정 id 없으면 실패 |
 | `ScreenUiTest` | Compose UI: 시간표 빈 화면·요일별 수업·알람 만들기·수업 수정, 모두 지우기 확인 창, 캘린더 권한 요청·반복 일정 추가·일정 선택, 알람 변경 추천 카드 |

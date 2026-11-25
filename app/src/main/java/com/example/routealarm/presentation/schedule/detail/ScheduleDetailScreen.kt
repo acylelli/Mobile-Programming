@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
@@ -40,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -65,8 +68,13 @@ import com.example.routealarm.core.designsystem.theme.Spacing
 import com.example.routealarm.domain.model.AlarmEventType
 import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.AlarmMode
+import com.example.routealarm.domain.model.AlarmSound
 import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.Schedule
+import com.example.routealarm.domain.model.ScheduleSound
+import com.example.routealarm.domain.model.UserPreferences
+import com.example.routealarm.domain.policy.AlarmVolumePolicy
+import com.example.routealarm.domain.policy.HolidaySkipPolicy
 import com.example.routealarm.domain.policy.WakeUpHabit
 import com.example.routealarm.presentation.common.RouteMapLines
 import com.example.routealarm.presentation.common.RouteTimelineBuilder
@@ -79,13 +87,13 @@ import com.example.routealarm.presentation.common.repeatLabel
 import com.example.routealarm.presentation.common.repeatText
 import com.example.routealarm.presentation.home.PendingAdjustmentCard
 import com.example.routealarm.presentation.navigation.LocalAppSnackbar
+import com.example.routealarm.presentation.settings.AlarmSoundSheet
+import com.example.routealarm.presentation.settings.FollowSettingsOption
+import com.example.routealarm.presentation.settings.soundLabelRes
 import com.example.routealarm.presentation.taxi.LateRiskCard
 import java.time.Duration
 import java.time.Instant
-import com.example.routealarm.domain.policy.HolidaySkipPolicy
 import java.time.ZoneId
-import androidx.compose.ui.semantics.Role
-import androidx.compose.foundation.clickable
 import kotlinx.coroutines.launch
 
 @Composable
@@ -120,6 +128,7 @@ fun ScheduleDetailRoute(
         onApplyHabit = viewModel::applyHabit,
         onDismissHabit = viewModel::dismissHabit,
         onSkipHolidays = viewModel::setSkipHolidays,
+        onSound = viewModel::setSound,
         onOpenMap = { destination ->
             if (!context.openInMapApp(destination)) {
                 scope.launch { snackbar.showSnackbar(context.getString(R.string.detail_map_unavailable)) }
@@ -146,6 +155,7 @@ fun ScheduleDetailScreen(
     onDismissHabit: () -> Unit,
     onOpenMap: (Place) -> Unit,
     onSkipHolidays: (Boolean) -> Unit = {},
+    onSound: (ScheduleSound?) -> Unit = {},
 ) {
     val colors = RouteAlarmTheme.colors
     var confirmDelete by remember { mutableStateOf(false) }
@@ -175,6 +185,7 @@ fun ScheduleDetailScreen(
                 onApplyHabit = onApplyHabit,
                 onDismissHabit = onDismissHabit,
                 onSkipHolidays = onSkipHolidays,
+                onSound = onSound,
                 onOpenMap = { onOpenMap(state.schedule.destination) },
                 onDelete = { confirmDelete = true },
             )
@@ -206,6 +217,7 @@ private fun DetailContent(
     onApplyHabit: (Int) -> Unit,
     onDismissHabit: () -> Unit,
     onSkipHolidays: (Boolean) -> Unit,
+    onSound: (ScheduleSound?) -> Unit,
     onOpenMap: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -378,6 +390,8 @@ private fun DetailContent(
                     if (schedule.alarmMode == AlarmMode.WAKE_UP_ONLY) R.string.create_alarm_mode_wake_only else R.string.create_alarm_mode_wake_and_departure,
                 ),
             )
+            HorizontalDivider(thickness = 1.dp, color = colors.outline)
+            ScheduleSoundRow(schedule, state.preferences, onSound)
             if (schedule.isRepeating) {
                 HorizontalDivider(thickness = 1.dp, color = colors.outline)
                 HolidaySkipRow(schedule, now, onSkipHolidays)
@@ -534,4 +548,53 @@ private fun HolidaySkipRow(schedule: Schedule, now: Instant, onChange: (Boolean)
         Spacer(Modifier.width(12.dp))
         AppSwitch(checked = schedule.skipHolidays, onCheckedChange = onChange)
     }
+}
+
+/** 이 일정만의 알람음·볼륨. 누르면 설정과 같은 알람음 시트를 "설정 따르기" 선택지와 함께 연다. */
+@Composable
+private fun ScheduleSoundRow(schedule: Schedule, prefs: UserPreferences, onSound: (ScheduleSound?) -> Unit) {
+    val colors = RouteAlarmTheme.colors
+    var open by remember { mutableStateOf(false) }
+    val effective = AlarmVolumePolicy.forSchedule(prefs, schedule.sound)
+    val settingsSummary = soundSummary(prefs)
+    Row(
+        Modifier.fillMaxWidth().clickable(role = Role.Button) { open = true },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.settings_alarm_sound), style = MaterialTheme.typography.labelLarge, color = colors.textPrimary)
+            Text(
+                if (schedule.sound == null) stringResource(R.string.schedule_sound_follow_value, settingsSummary) else soundSummary(effective),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (schedule.sound == null) colors.textSecondary else colors.accentText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = colors.textTertiary, modifier = Modifier.size(22.dp))
+    }
+    if (open) {
+        // 설정 따르기 상태에서 소리나 볼륨을 바꾸면 설정 값을 바탕으로 이 일정 전용 값을 만든다.
+        val base = schedule.sound ?: AlarmVolumePolicy.fromPreferences(prefs)
+        AlarmSoundSheet(
+            prefs = effective,
+            title = stringResource(R.string.schedule_sound_title),
+            followSettings = FollowSettingsOption(active = schedule.sound == null, summary = settingsSummary, onSelect = { onSound(null) }),
+            showGradual = false,
+            onSound = { onSound(base.copy(sound = it)) },
+            onCustomSound = { uri, title -> onSound(base.copy(sound = AlarmSound.CUSTOM, customUri = uri, customTitle = title)) },
+            onVolume = { if (it != effective.alarmVolumePercent || schedule.sound != null) onSound(base.copy(volumePercent = it)) },
+            onGradual = {},
+            onDismiss = { open = false },
+        )
+    }
+}
+
+@Composable
+private fun soundSummary(prefs: UserPreferences): String {
+    val name = when (prefs.alarmSound) {
+        AlarmSound.CUSTOM -> prefs.customSoundTitle ?: stringResource(R.string.settings_sound_custom)
+        else -> stringResource(soundLabelRes(prefs.alarmSound))
+    }
+    return if (prefs.alarmSound == AlarmSound.SILENT) name else stringResource(R.string.settings_sound_value_format, name, prefs.alarmVolumePercent)
 }

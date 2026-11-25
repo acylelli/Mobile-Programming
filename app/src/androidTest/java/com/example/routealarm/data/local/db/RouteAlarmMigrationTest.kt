@@ -53,6 +53,22 @@ class RouteAlarmMigrationTest {
     }
 
     @Test
+    fun migrate3To4_addsScheduleSoundColumnsAsFollowSettings() {
+        helper.createDatabase(DB, 1).use { db ->
+            db.execSQL(insertPlace(id = 1, name = "다산역", isDemo = 0))
+            db.execSQL(insertSchedule(id = 10, title = "평일 등교", isDemo = 0))
+        }
+        helper.runMigrationsAndValidate(DB, 3, true, Migrations.MIGRATION_1_2, Migrations.MIGRATION_2_3).close()
+
+        helper.runMigrationsAndValidate(DB, 4, true, Migrations.MIGRATION_3_4).use { db ->
+            db.query("SELECT soundType, soundUri, soundTitle, soundVolume FROM schedules").use { cursor ->
+                cursor.moveToFirst()
+                (0..3).forEach { assertEquals(true, cursor.isNull(it)) }
+            }
+        }
+    }
+
+    @Test
     fun migratedDatabaseOpensWithRoomAndReadsSchedules() {
         helper.createDatabase(DB, 1).use { db ->
             db.execSQL(insertPlace(id = 1, name = "다산역", isDemo = 0))

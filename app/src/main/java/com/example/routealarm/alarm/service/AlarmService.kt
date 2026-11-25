@@ -14,6 +14,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.example.routealarm.alarm.notification.AlarmNotifications
 import com.example.routealarm.alarm.sound.AlarmSoundPlayer
+import com.example.routealarm.domain.policy.AlarmVolumePolicy
 import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
 import com.example.routealarm.domain.usecase.HandleAlarmEventUseCase
@@ -67,7 +68,8 @@ class AlarmService : Service() {
     private suspend fun startRinging(id: Long) {
         val schedule = scheduleRepository.getSchedule(id)
         if (schedule == null) { stopSelf(); return }
-        val prefs = preferencesRepository.current()
+        // 일정 전용 알람음·볼륨이 있으면 설정 위에 덮어쓴다.
+        val prefs = AlarmVolumePolicy.forSchedule(preferencesRepository.current(), schedule.sound)
 
         val notification = notifications.buildRingingNotification(schedule)
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0

@@ -5,6 +5,7 @@ import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.core.util.TimeProvider
 import com.example.routealarm.domain.model.AlarmEventType
 import com.example.routealarm.domain.model.AlarmHistoryEvent
+import com.example.routealarm.domain.model.ScheduleSound
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
 import com.example.routealarm.domain.repository.AlarmScheduler
 import com.example.routealarm.domain.repository.ScheduleRepository
@@ -137,5 +138,17 @@ class SetSkipHolidaysUseCase @Inject constructor(
         if (result is AppResult.Failure) return result
         if (updated.enabled) syncSchedule(updated)
         return AppResult.Success(Unit)
+    }
+}
+
+/** 일정 전용 알람음·볼륨을 정한다. null 이면 설정을 따른다. 알람 시각은 바뀌지 않으므로 다시 등록하지 않는다. */
+class SetScheduleSoundUseCase @Inject constructor(
+    private val scheduleRepository: ScheduleRepository,
+    private val timeProvider: TimeProvider,
+) {
+    suspend operator fun invoke(scheduleId: Long, sound: ScheduleSound?): AppResult<Unit> {
+        val schedule = scheduleRepository.getSchedule(scheduleId) ?: return AppResult.Failure(AppError.NotFound)
+        val result = scheduleRepository.upsert(schedule.copy(sound = sound, updatedAt = timeProvider.now()))
+        return if (result is AppResult.Failure) result else AppResult.Success(Unit)
     }
 }
