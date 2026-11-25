@@ -3,6 +3,7 @@ package com.example.routealarm.domain.repository
 import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.RouteQueryResult
+import com.example.routealarm.domain.model.TaxiEstimate
 import java.time.Instant
 
 /**
@@ -18,4 +19,9 @@ interface TransitRepository {
         destination: Place,
         departureTime: Instant,
     ): AppResult<RouteQueryResult>
+}
+
+/** 지각 위험일 때 보여 줄 택시 예상 시간·요금 */
+interface TaxiRepository {
+    suspend fun estimate(origin: Place, destination: Place): AppResult<TaxiEstimate>
 }
