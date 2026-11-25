@@ -1,4 +1,6 @@
 # Render Blueprint: Proxy 서버(server/) 배포 설정
+# 지금 운영 중인 서비스는 이 파일 없이 공개 저장소 주소로 만들었다(server/README.md 배포 참고).
+# 저장소 주인 계정으로 Render 를 GitHub 와 연결할 때 쓰는 설정이다.
 # Render 대시보드 > New > Blueprint 에서 이 저장소를 고르면 아래 서비스가 만들어진다.
 # API 키는 여기에 쓰지 않는다. 처음 만들 때 대시보드에서 값을 입력한다(sync: false).
 services:

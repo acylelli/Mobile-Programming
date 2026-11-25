@@ -39,22 +39,38 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 
 ## 배포 (Render)
 
-운영 주소: **https://routealarm-proxy.onrender.com** (싱가포르, 무료 인스턴스)
+운영 주소: **https://routealarm-proxy.onrender.com** (싱가포르, 무료 인스턴스). 앱의 `proxyBaseUrl` 기본값으로 들어가 있다.
 
-저장소 루트의 [`render.yaml`](../render.yaml) 이 배포 설정이다. 싱가포르 리전 무료 인스턴스로 `server/` 를 띄우고, `main` 에서 CI 가 통과한 커밋만 자동 배포한다.
+### 지금 운영 방식
 
-1. [Render](https://render.com) 에 GitHub 계정으로 가입하고 **New > Blueprint** 에서 이 저장소를 고른다.
-   저장소 주인이 아니라 Blueprint 로 저장소가 보이지 않으면 **New > Web Service > Public Git Repository** 에 저장소 주소를 넣고 Root Directory `server`, Build Command `npm ci`, Start Command `npm start`, Health Check Path `/healthz` 로 직접 만든다(지금 서비스는 이 방식으로 만들었다).
-2. 처음 만들 때 `ODSAY_API_KEY`, `KAKAO_REST_API_KEY` 값을 입력한다(저장소에는 키가 없다).
-3. 서비스 화면 오른쪽 위 **Connect > Outbound** 에 있는 출구 IP 들을 ODsay LAB 의 서버 IP 로 모두 등록한다. 등록 전에는 경로 조회가 502 로 실패한다.
-4. 배포가 끝나면 `https://<서비스 이름>.onrender.com/healthz` 가 `{"ok":true}` 를 주는지 확인한다. 지금 운영 중인 주소는 `https://routealarm-proxy.onrender.com/` 이고 앱의 `proxyBaseUrl` 기본값으로 들어가 있다.
-5. 잠들지 않게 하려면 저장소 **Settings > Secrets and variables > Actions > Variables** 에 `PROXY_HEALTHCHECK_URL`(위 `/healthz` 주소)을 넣는다. [`keep-alive`](../.github/workflows/keep-alive.yml) 워크플로가 10분마다 깨운다. 저장소 설정 권한이 없으면 cron-job.org 같은 외부 서비스로 같은 주소를 10분마다 호출해도 된다.
+| 항목 | 방식 |
+|---|---|
+| 서비스 생성 | **New > Web Service > Public Git Repository** 에 저장소 주소를 넣어 만들었다(Root Directory `server`, Build `npm ci`, Start `npm start`, Health Check `/healthz`) |
+| 배포 | **수동**. GitHub 와 연결하지 않은 공개 저장소 방식이라 `main` 에 병합해도 자동으로 배포되지 않는다 |
+| 키 | Render 서비스의 **Environment** 에 `ODSAY_API_KEY`, `KAKAO_REST_API_KEY`, `NODE_VERSION=20` |
+| 잠들기 방지 | [cron-job.org](https://cron-job.org) 가 10분마다 `/healthz` 를 호출한다 |
 
-무료 인스턴스 참고:
+### `server/` 를 바꾼 뒤 배포하기
 
-- 15분 동안 요청이 없으면 잠들고, 깨어나는 데 30초 이상 걸린다. 앱의 네트워크 제한시간(15초)보다 길어서 그 사이 요청은 캐시로 대체된다. keep-alive 를 켜 두면 거의 생기지 않는다.
+1. PR 을 `main` 에 병합한다(CI 통과 확인).
+2. Render 의 `routealarm-proxy` 서비스 화면 오른쪽 위 **Manual Deploy > Deploy latest commit** 을 누른다.
+3. 배포 상태가 **Live** 가 되면 `/healthz` 가 `{"ok":true}` 를 주는지, 바꾼 내용이 응답에 반영됐는지 확인한다.
+
+앱 코드만 바뀐 경우에는 다시 배포할 필요가 없다.
+
+### 처음부터 새로 만들 때
+
+1. [Render](https://render.com) 에 가입하고 위 표대로 Web Service 를 만든다. 키는 이때 Environment 에 입력한다(저장소에는 키가 없다).
+2. 서비스 화면 오른쪽 위 **Connect > Outbound** 에 있는 출구 IP 들을 ODsay LAB 의 서버 IP 로 모두 등록한다. 등록 전에는 경로 조회가 502 로 실패한다.
+3. cron-job.org 에 `https://<서비스 이름>.onrender.com/healthz` 를 10분 간격으로 등록한다.
+
+저장소 주인 계정으로 Render 를 GitHub 와 연결할 수 있다면 **New > Blueprint** 로 [`render.yaml`](../render.yaml) 을 쓰는 편이 낫다. 그러면 `main` 에서 CI 가 통과한 커밋이 자동 배포되고, 저장소 변수 `PROXY_HEALTHCHECK_URL` 을 넣으면 [`keep-alive`](../.github/workflows/keep-alive.yml) 워크플로가 cron-job.org 대신 서버를 깨운다. 지금은 둘 다 쓰지 않는다.
+
+### 무료 인스턴스 참고
+
+- 15분 동안 요청이 없으면 잠들고, 깨어나는 데 30초 이상 걸린다. 앱의 네트워크 제한시간(15초)보다 길어서 그 사이 요청은 캐시로 대체된다. 10분마다 깨우고 있어서 거의 생기지 않는다.
 - 무료 사용 시간은 워크스페이스당 월 750시간이라, 이 서비스 하나를 24시간 켜 두는 정도까지 된다. 무료 서비스를 더 만들면 모자랄 수 있다.
-- 예약 워크플로는 `main` 에 병합된 뒤부터 돌고, 저장소에 60일 동안 활동이 없으면 GitHub 가 멈춘다.
+- cron-job.org 는 계속 실패하는 작업을 자동으로 끈다. 실패 알림 메일을 받으면 서버 상태를 확인한다.
 
 ## 변환 규칙
 
