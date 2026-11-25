@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { UpstreamError } from "../src/contract.ts";
-import { type OdsayResponse, toRouteResponse } from "../src/odsay.ts";
+import { lineName, type OdsayResponse, toRouteResponse } from "../src/odsay.ts";
 
 // 동구릉 근처 → 한성대학교 실제 ODsay 응답에서 필요한 필드만 남긴 것
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/odsay-routes.json", import.meta.url), "utf8")) as OdsayResponse;
@@ -37,10 +37,14 @@ test("처음·마지막 도보는 WALK 구간, 탈것 사이 도보는 환승 �
   assert.equal(sum, subway.total_minutes);
 });
 
-test("버스는 버스 번호를 노선명으로 쓰고 정류장 이름은 그대로 둔다", () => {
+test("버스는 버스 번호에 '번'을 붙여 노선명으로 쓰고 정류장 이름은 그대로 둔다", () => {
   const mixed = toRouteResponse(fixture, departAt).routes[0]!;
-  const bus = mixed.segments.find((s) => s.mode === "BUS")!;
-  assert.equal(bus.line_name, "6");
+  const buses = mixed.segments.filter((s) => s.mode === "BUS");
+  assert.deepEqual(
+    buses.map((s) => s.line_name),
+    ["6번", "종로03번"],
+  );
+  const bus = buses[0]!;
   assert.equal(bus.from, "농수산물시장");
   assert.ok(mixed.segments.some((s) => s.line_name === "경의중앙선"));
 });
@@ -60,4 +64,10 @@ test("키 인증 실패 같은 오류는 502 로 던진다", () => {
 test("도보만 있는 경로는 버린다", () => {
   const walkOnly: OdsayResponse = { result: { path: [{ info: { totalTime: 10 }, subPath: [{ trafficType: 3, sectionTime: 10 }] }] } };
   assert.deepEqual(toRouteResponse(walkOnly, departAt).routes, []);
+});
+
+test("이미 '번'으로 끝나는 버스 번호에는 다시 붙이지 않는다", () => {
+  assert.equal(lineName({ trafficType: 2, sectionTime: 5, lane: [{ busNo: "N26" }] }), "N26번");
+  assert.equal(lineName({ trafficType: 2, sectionTime: 5, lane: [{ busNo: "1번" }] }), "1번");
+  assert.equal(lineName({ trafficType: 2, sectionTime: 5, lane: [{ name: "공항버스" }] }), "공항버스");
 });

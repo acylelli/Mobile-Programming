@@ -138,12 +138,18 @@ function toRoute(path: OdsayPath, departAt: Date): RouteDto | null {
   };
 }
 
-/** "수도권 2호선" → "2호선". 앱은 "N호선" 이름으로 노선 색을 고른다. */
+/** "수도권 2호선" → "2호선". 앱은 "N호선" 이름으로 노선 색을 고른다. 버스는 "76" → "76번". */
 export function lineName(sub: OdsaySubPath): string | undefined {
   const lane = sub.lane?.[0];
   if (!lane) return undefined;
-  if (sub.trafficType === BUS) return lane.busNo ?? lane.name;
+  if (sub.trafficType === BUS) return lane.busNo ? busLabel(lane.busNo) : lane.name;
   return lane.name?.replace(/^수도권\s*/, "");
+}
+
+/** 앱은 노선명을 그대로 "76번 승차", "76번 27분" 처럼 보여 준다. 이미 "번"으로 끝나면 그대로 둔다. */
+function busLabel(busNo: string): string {
+  const trimmed = busNo.trim();
+  return trimmed.endsWith("번") ? trimmed : `${trimmed}번`;
 }
 
 /** 지하철역은 "역"을 붙여 앱의 다른 화면(검색 결과·Fake 데이터)과 표기를 맞춘다. */
