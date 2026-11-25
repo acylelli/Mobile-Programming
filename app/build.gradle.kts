@@ -33,6 +33,8 @@ android {
     // 마이그레이션 테스트(androidTest)가 내보낸 Room 스키마(app/schemas)를 읽는다.
     sourceSets {
         getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        // 계측 테스트(Worker 등)도 단위 테스트와 같은 Fake 저장소·TestData 를 쓴다.
+        getByName("androidTest").java.srcDir("src/test/java/com/example/routealarm/fake")
     }
     namespace = "com.example.routealarm"
     compileSdk = 36
@@ -136,6 +138,8 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.work.testing)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

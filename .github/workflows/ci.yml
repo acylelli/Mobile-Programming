@@ -34,7 +34,7 @@ jobs:
 
       # local.properties 가 없으면 transitProvider=fake 로 빌드된다(API 키 불필요).
       - name: Build, test, lint
-        run: ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug --console=plain
 
       - name: 테스트·Lint 리포트 업로드
         if: failure()
