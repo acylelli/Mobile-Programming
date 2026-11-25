@@ -4,4 +4,5 @@ sdk.dir=/Users/<you>/Library/Android/sdk
 # fake | proxy  (기본값 fake: API 키 없이 모든 기능 시연 가능)
 routealarm.transitProvider=fake
 # 교통/장소 검색 Backend Proxy 주소. 실제 ODsay/TMAP/Kakao 키는 Proxy 서버 환경변수에만 둔다.
+# 에뮬레이터에서 로컬 서버(server/, npm run dev)에 붙을 때는 http://10.0.2.2:8080/ (debug 빌드만 http 허용)
 routealarm.proxyBaseUrl=https://your-proxy.example.com/

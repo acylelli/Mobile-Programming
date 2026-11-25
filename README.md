@@ -277,6 +277,10 @@ app/src/test/java/com/example/routealarm
 ├── core              휠 선택기 계산 규칙과 움직임 단위 테스트
 ├── domain            계산·정책·갱신·구독 시나리오 단위 테스트
 └── presentation      노선도 화면 모델 단위 테스트
+
+server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검색을 앱 계약 형식으로 변환
+├── src               app(라우팅·입력 검증), odsay, kakao, contract(응답 형식)
+└── test              변환 규칙·입력 검증 테스트 (실제 ODsay 응답 일부를 fixture 로 사용)
 ```
 
 ## 11. 실행 방법
@@ -316,6 +320,16 @@ routealarm.proxyBaseUrl=https://your-proxy.example.com/
 Proxy 가 구현해야 하는 응답 형식은 [docs/proxy-api.md](docs/proxy-api.md) 에 있다.
 ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형식으로 정규화하면 앱 코드는 바뀌지 않는다.
 
+이 저장소의 [`server/`](server/README.md) 가 그 Proxy 구현이다(ODsay 대중교통 길찾기 + Kakao 로컬 검색).
+키는 `server/.env` 나 배포 서비스 환경변수에만 두고, 에뮬레이터에서 로컬 서버에 붙을 때는 다음처럼 설정한다.
+
+```properties
+routealarm.transitProvider=proxy
+routealarm.proxyBaseUrl=http://10.0.2.2:8080/
+```
+
+https 배포는 Render 무료 인스턴스를 쓴다([`render.yaml`](render.yaml)). 절차는 [server/README.md 배포](server/README.md#배포-render) 에 있다.
+
 제공자를 앱 안에서 직접 구현하고 싶다면 `TransitRemoteDataSource` 를 구현하고 `di/NetworkModule.kt` 에서 바인딩만 바꾸면 된다.
 
 ## 13. 테스트 방법
@@ -342,6 +356,15 @@ ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형
 | `WheelStateTest` | 휠의 움직임을 프레임 단위로 검증: 끌기 방향과 끝 저항, 튕긴 뒤 미리 정한 칸에 정확히 멈춤, 도는 휠을 잡아 멈추기, 잡고 있는 휠은 옮기지 않음, 바깥 값이 관성보다 우선, 취소된 움직임이 칸 사이에 남는 경우, 도는 도중의 오전/오후 전환 |
 
 리포트: `app/build/reports/tests/testDebugUnitTest/index.html`
+
+Proxy 서버 테스트는 `cd server && npm test` 로 실행한다(외부 API 를 호출하지 않아 키가 필요 없다).
+
+### CI
+
+GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main` 푸시와 모든 PR 에서 두 작업을 돌린다.
+
+- **Android**: `assembleDebug`, `testDebugUnitTest`, `lintDebug` (JDK 17, fake 제공자라 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
+- **Proxy 서버**: `npm ci`, 타입 검사, `npm test` (Node 20)
 
 ## 14. 주요 설계 결정
 
@@ -377,7 +400,8 @@ ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형
 
 ## 15. 향후 개선사항
 
-- [ ] 실제 Backend Proxy 서버 구현 (ODsay/TMAP 정규화)
+- [x] 실제 Backend Proxy 서버 구현 (ODsay 경로·Kakao 장소 검색 정규화, `server/`)
+- [ ] Proxy 서버 https 배포, 실시간 도착 API 로 `delay_minutes`·`arrival_message` 채우기
 - [ ] Google Play Billing 연동과 영수증 검증 서버, 단체 이용권 발급·관리
 - [ ] 무료 플랜 배너 광고, 지각 위험 시 택시·공유 모빌리티 안내
 - [ ] 상세 화면 지도(경로 폴리라인) 표시

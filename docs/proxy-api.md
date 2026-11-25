@@ -6,6 +6,8 @@ Proxy 서버는 환경변수로 실제 API 키를 보관하고, 제공자별 응
 
 앱 쪽 구현: `data/remote/proxy/ProxyApi.kt`, DTO: `data/remote/dto/TransitDtos.kt`
 
+서버 구현: [`server/`](../server/README.md) (Node.js, ODsay 대중교통 길찾기 + Kakao 로컬 검색)
+
 ## 설정
 
 `local.properties`
@@ -16,6 +18,8 @@ routealarm.proxyBaseUrl=https://your-proxy.example.com/
 ```
 
 `fake` 로 두면 `FakeTransitRemoteDataSource` 가 사용되어 API 키 없이 모든 기능을 시연할 수 있다.
+
+에뮬레이터에서 개발 PC 의 서버(`server/`, `npm run dev`)에 붙을 때는 `routealarm.proxyBaseUrl=http://10.0.2.2:8080/` 을 쓴다. http 는 debug 빌드에서만 허용된다.
 
 ## GET /v1/transit/routes
 
@@ -54,7 +58,7 @@ routealarm.proxyBaseUrl=https://your-proxy.example.com/
 - `total_minutes` = 도보 + 탑승 + 환승 + 대기 (지연 포함). 위 예시는 8 + 31 + 1 + 18 + 7 = 65분으로, 앱의 Fake 데이터와 UI 설계서 홈 화면 예시와 같다.
 - `line_name` 은 홈 노선도의 구간 색을 정하는 데도 쓴다(예: "2호선" → 초록, "8호선" → 분홍). 수도권 지하철 노선명은 "N호선" 형태로 준다.
 - `delay_minutes` 는 평소 대비 실시간 지연. 앱은 이 값으로 교통 상태 Chip 과 추가 여유시간을 계산한다.
-- `realtime` 이 `false` 면 앱은 실시간 정보가 아니라는 안내를 표시하고 불확실성 여유(+5분)를 더한다.
+- `realtime` 이 `false` 면 앱은 실시간 정보가 아니라는 안내를 표시하고 불확실성 여유(+5분)를 더한다. 방금 조회한 결과는 `true` 로 준다.
 - `mode` 는 `WALK | BUS | SUBWAY | TRAIN`, 그 외는 `ETC` 로 처리된다.
 - 알 수 없는 필드는 무시된다(`ignoreUnknownKeys`). 필드를 추가해도 구버전 앱이 깨지지 않는다.
 
