@@ -47,5 +47,12 @@ object Migrations {
     }
 
     /** 앱이 아는 모든 마이그레이션. 버전을 올릴 때마다 여기에 더한다. */
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2)
+    /** 2 → 3: 일정에 "공휴일에는 울리지 않기"(skipHolidays)를 추가했다. 기존 반복 일정도 켜진 상태로 시작한다. */
+    val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE schedules ADD COLUMN skipHolidays INTEGER NOT NULL DEFAULT 1")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 }

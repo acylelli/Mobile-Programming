@@ -83,6 +83,8 @@ data class CreateScheduleUiState(
     val bufferPreset: BufferPreset? = BufferPreset.NORMAL,
     val customBufferMinutes: Int = 10,
     val alarmMode: AlarmMode = AlarmMode.WAKE_UP_AND_DEPARTURE,
+    /** 편집할 때 기존 일정의 공휴일 건너뛰기 설정을 그대로 유지한다(설정은 상세 화면에서 바꾼다). */
+    val skipHolidays: Boolean = true,
     val search: PlaceSearchState = PlaceSearchState.Idle,
     /** 즐겨찾기 빈 칸(회사 등)에 넣을 장소를 검색하는 중이면 그 종류 */
     val registeringType: PlaceType? = null,
@@ -195,6 +197,7 @@ class CreateScheduleViewModel @Inject constructor(
                         bufferPreset = BufferPreset.entries.firstOrNull { it.minutes == existing.bufferMinutes },
                         customBufferMinutes = existing.bufferMinutes,
                         alarmMode = existing.alarmMode,
+                        skipHolidays = existing.skipHolidays,
                     )
                 } else {
                     // 캘린더 일정에서 왔으면 그 날짜·시각에 한 번 도착하는 일정으로 시작한다.
@@ -452,6 +455,7 @@ class CreateScheduleViewModel @Inject constructor(
         preparationMinutes = preparationMinutes,
         bufferMinutes = bufferMinutes,
         alarmMode = alarmMode,
+        skipHolidays = skipHolidays,
     )
 
     private companion object {

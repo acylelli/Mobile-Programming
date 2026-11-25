@@ -21,6 +21,7 @@ import com.example.routealarm.domain.usecase.ObserveWakeUpHabitUseCase
 import com.example.routealarm.domain.usecase.RefreshOutcome
 import com.example.routealarm.domain.usecase.RefreshTransitTimeUseCase
 import com.example.routealarm.domain.usecase.SetScheduleEnabledUseCase
+import com.example.routealarm.domain.usecase.SetSkipHolidaysUseCase
 import com.example.routealarm.presentation.common.UndoManager
 import com.example.routealarm.presentation.navigation.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,6 +63,7 @@ class ScheduleDetailViewModel @Inject constructor(
     private val applyWakeUpHabit: ApplyWakeUpHabitUseCase,
     private val dismissWakeUpHabit: DismissWakeUpHabitUseCase,
     private val undoManager: UndoManager,
+    private val setSkipHolidaysUseCase: SetSkipHolidaysUseCase,
 ) : ViewModel() {
 
     private val scheduleId: Long = savedStateHandle.toRoute<Route.ScheduleDetail>().scheduleId
@@ -141,6 +143,13 @@ class ScheduleDetailViewModel @Inject constructor(
 
     fun dismissHabit() {
         viewModelScope.launch { dismissWakeUpHabit(scheduleId) }
+    }
+
+    fun setSkipHolidays(skip: Boolean) {
+        viewModelScope.launch {
+            val result = setSkipHolidaysUseCase(scheduleId, skip)
+            if (result is AppResult.Failure) _message.value = result.error
+        }
     }
 
     fun consumeMessage() {

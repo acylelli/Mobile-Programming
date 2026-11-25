@@ -60,6 +60,8 @@ data class ScheduleEntity(
     /** 월=1 ... 일=64 비트마스크 */
     val repeatDaysMask: Int,
     val oneTimeEpochDay: Long?,
+    /** 반복 일정이 공휴일에 울리지 않게 한다(버전 3에서 추가, 기존 일정은 켜짐) */
+    @ColumnInfo(defaultValue = "1") val skipHolidays: Boolean = true,
     val alarmMode: String,
     val enabled: Boolean,
     val createdAt: Long,

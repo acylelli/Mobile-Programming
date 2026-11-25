@@ -84,6 +84,7 @@ class RefreshTransitTimeUseCase @Inject constructor(
             now = now,
             zone = timeProvider.zone(),
             leadTime = schedule.occurrenceLeadTime(),
+            skipHolidays = schedule.skipHolidays,
         )
         if (target == null || !target.isAfter(now)) {
             syncSchedule(schedule) // 끝난 1회 일정 정리

@@ -38,6 +38,7 @@ class SyncScheduleUseCase @Inject constructor(
             now = now,
             zone = timeProvider.zone(),
             leadTime = schedule.occurrenceLeadTime(),
+            skipHolidays = schedule.skipHolidays,
         )
 
         if (target == null || (!schedule.isRepeating && !target.isAfter(now))) {

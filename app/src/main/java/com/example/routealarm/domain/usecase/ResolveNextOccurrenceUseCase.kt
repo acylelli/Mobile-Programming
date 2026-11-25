@@ -7,6 +7,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import com.example.routealarm.domain.policy.KoreanHolidays
 import javax.inject.Inject
 
 /**
@@ -15,7 +16,8 @@ import javax.inject.Inject
  * - 반복 일정: 오늘부터 7일 뒤까지 반복 요일 중, (목표시각 - leadTime) 이 아직 지나지 않은 첫 날.
  *   leadTime 은 그 회차의 마지막 이벤트(출발 알림 또는 기상 알람)까지의 시간이다.
  *   즉 오늘 회차의 마지막 알림이 지나야 다음 회차로 넘어간다.
- * - 1회 일정: 지정된 날짜 그대로(과거 여부는 호출자가 판단).
+ * - skipHolidays 면 공휴일(대체공휴일 포함)인 날은 건너뛴다. 설 연휴처럼 며칠이 이어져도 찾을 수 있게 3주까지 본다.
+ * - 1회 일정: 지정된 날짜 그대로(과거 여부는 호출자가 판단). 1회 일정은 공휴일이어도 울린다.
  *
  * ZonedDateTime.of 는 DST 로 존재하지 않는 시각(봄 전환의 02:30 등)을 자동으로 뒤로 밀어준다.
  */
@@ -28,6 +30,7 @@ class ResolveNextOccurrenceUseCase @Inject constructor() {
         now: Instant,
         zone: ZoneId,
         leadTime: Duration,
+        skipHolidays: Boolean = false,
     ): Instant? {
         if (repeatDays.isEmpty()) {
             return oneTimeDate?.let { ZonedDateTime.of(it, targetTime, zone).toInstant() }
@@ -37,6 +40,7 @@ class ResolveNextOccurrenceUseCase @Inject constructor() {
             .asSequence()
             .map { today.plusDays(it) }
             .filter { it.dayOfWeek in repeatDays }
+            .filterNot { skipHolidays && KoreanHolidays.isHoliday(it) }
             .map { ZonedDateTime.of(it, targetTime, zone).toInstant() }
             .firstOrNull { it.minus(leadTime).isAfter(now) }
     }
@@ -52,7 +56,7 @@ class ResolveNextOccurrenceUseCase @Inject constructor() {
     }
 
     private companion object {
-        /** 오늘 + 다음 주 같은 요일까지 */
-        const val DAYS_TO_SEARCH = 7L
+        /** 오늘부터 3주. 공휴일을 건너뛰지 않으면 7일 안에서 항상 찾는다. */
+        const val DAYS_TO_SEARCH = 21L
     }
 }

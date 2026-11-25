@@ -29,6 +29,8 @@ data class Schedule(
     /** 비어 있으면 [oneTimeDate] 하루만 울리는 일정 */
     val repeatDays: Set<DayOfWeek> = emptySet(),
     val oneTimeDate: LocalDate? = null,
+    /** 반복 일정이 공휴일(대체공휴일 포함)에는 울리지 않게 한다. 1회 일정에는 쓰지 않는다. */
+    val skipHolidays: Boolean = true,
     val alarmMode: AlarmMode = AlarmMode.WAKE_UP_AND_DEPARTURE,
     val enabled: Boolean = true,
     val createdAt: Instant,
