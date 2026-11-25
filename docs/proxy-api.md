@@ -115,3 +115,4 @@ DTO: `data/remote/dto/SubscriptionDtos.kt`
 
 - 5xx / 4xx → 앱은 `AppError.Server(code)` 로 변환하고 Room 캐시(24시간 이내)가 있으면 그것으로 대체한다.
 - 네트워크 불가 → `AppError.Network`, 동일하게 캐시 폴백.
+- 429 → 요청이 너무 많거나(IP 별 분당 한도) 서버의 하루 외부 API 호출 상한에 도달한 경우. `Retry-After` 헤더에 다시 시도할 수 있을 때까지 남은 초를 준다. 앱은 다른 서버 오류와 똑같이 처리한다.

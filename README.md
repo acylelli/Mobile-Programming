@@ -279,7 +279,7 @@ app/src/test/java/com/example/routealarm
 └── presentation      노선도 화면 모델 단위 테스트
 
 server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검색을 앱 계약 형식으로 변환
-├── src               app(라우팅·입력 검증), odsay, kakao, contract(응답 형식)
+├── src               app(라우팅·입력 검증), guard(요청 제한·하루 상한·캐시), odsay, kakao, contract(응답 형식)
 └── test              변환 규칙·입력 검증 테스트 (실제 ODsay 응답 일부를 fixture 로 사용)
 ```
 
