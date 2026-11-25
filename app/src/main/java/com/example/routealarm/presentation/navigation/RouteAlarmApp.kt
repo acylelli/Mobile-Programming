@@ -22,8 +22,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -44,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -55,17 +58,18 @@ import com.example.routealarm.core.designsystem.component.AppIcons
 import com.example.routealarm.core.designsystem.theme.AppType
 import com.example.routealarm.core.designsystem.theme.RouteAlarmTheme
 import com.example.routealarm.presentation.alarmlist.AlarmListRoute
+import com.example.routealarm.presentation.calendar.CalendarImportRoute
+import com.example.routealarm.presentation.common.UndoViewModel
 import com.example.routealarm.presentation.home.HomeRoute
 import com.example.routealarm.presentation.onboarding.OnboardingScreen
 import com.example.routealarm.presentation.schedule.create.CreateScheduleRoute
 import com.example.routealarm.presentation.schedule.detail.ScheduleDetailRoute
-import com.example.routealarm.presentation.calendar.CalendarImportRoute
 import com.example.routealarm.presentation.settings.SettingsRoute
-import com.example.routealarm.presentation.timetable.TimetableRoute
 import com.example.routealarm.presentation.settings.theme.ThemeRoute
 import com.example.routealarm.presentation.subscription.GroupPassRoute
 import com.example.routealarm.presentation.subscription.PaywallSheet
 import com.example.routealarm.presentation.subscription.SubscriptionRoute
+import com.example.routealarm.presentation.timetable.TimetableRoute
 import kotlinx.coroutines.launch
 
 private const val TRANSITION_MILLIS = 220
@@ -105,6 +109,21 @@ fun RouteAlarmApp(
     // PRO 페이월은 어느 화면에서든 잠긴 기능을 눌렀을 때 뜨는 바텀시트라 앱 최상위에서 한 번만 관리한다.
     var paywallVisible by rememberSaveable { mutableStateOf(false) }
     val showPaywall = { paywallVisible = true }
+
+    // 알람 변경 되돌리기: 화면을 떠나도 유지되도록 앱 최상위에서 스낵바를 띄운다.
+    val undoViewModel: UndoViewModel = hiltViewModel()
+    LaunchedEffect(undoViewModel) {
+        undoViewModel.offers.collect { offer ->
+            scope.launch {
+                val result = snackbar.showSnackbar(
+                    message = context.getString(offer.messageRes),
+                    actionLabel = context.getString(R.string.common_undo),
+                    duration = SnackbarDuration.Long,
+                )
+                if (result == SnackbarResult.ActionPerformed) undoViewModel.undo(offer)
+            }
+        }
+    }
 
     /**
      * 탭으로 이동한다. 항상 홈 위에 한 화면만 쌓는다(뒤로 가기 = 홈).

@@ -4,13 +4,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.example.routealarm.R
 import com.example.routealarm.core.common.AppError
 import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.Schedule
+import com.example.routealarm.domain.policy.WakeUpHabit
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
-import com.example.routealarm.domain.policy.WakeUpHabit
 import com.example.routealarm.domain.usecase.ApplyPendingAdjustmentUseCase
 import com.example.routealarm.domain.usecase.ApplyWakeUpHabitUseCase
 import com.example.routealarm.domain.usecase.DeleteScheduleUseCase
@@ -20,8 +21,10 @@ import com.example.routealarm.domain.usecase.ObserveWakeUpHabitUseCase
 import com.example.routealarm.domain.usecase.RefreshOutcome
 import com.example.routealarm.domain.usecase.RefreshTransitTimeUseCase
 import com.example.routealarm.domain.usecase.SetScheduleEnabledUseCase
+import com.example.routealarm.presentation.common.UndoManager
 import com.example.routealarm.presentation.navigation.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +33,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 sealed interface ScheduleDetailUiState {
     data object Loading : ScheduleDetailUiState
@@ -49,7 +51,7 @@ sealed interface ScheduleDetailUiState {
 @HiltViewModel
 class ScheduleDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    scheduleRepository: ScheduleRepository,
+    private val scheduleRepository: ScheduleRepository,
     historyRepository: AlarmHistoryRepository,
     private val refreshTransitTime: RefreshTransitTimeUseCase,
     private val setScheduleEnabled: SetScheduleEnabledUseCase,
@@ -59,6 +61,7 @@ class ScheduleDetailViewModel @Inject constructor(
     observeWakeUpHabit: ObserveWakeUpHabitUseCase,
     private val applyWakeUpHabit: ApplyWakeUpHabitUseCase,
     private val dismissWakeUpHabit: DismissWakeUpHabitUseCase,
+    private val undoManager: UndoManager,
 ) : ViewModel() {
 
     private val scheduleId: Long = savedStateHandle.toRoute<Route.ScheduleDetail>().scheduleId
@@ -100,8 +103,12 @@ class ScheduleDetailViewModel @Inject constructor(
 
     fun delete() {
         viewModelScope.launch {
+            val snapshot = scheduleRepository.getSchedule(scheduleId)
             when (val result = deleteSchedule(scheduleId)) {
-                is AppResult.Success -> local.update { it.copy(deleted = true) }
+                is AppResult.Success -> {
+                    local.update { it.copy(deleted = true) }
+                    snapshot?.let { undoManager.offer(R.string.undo_deleted, it) }
+                }
                 is AppResult.Failure -> _message.value = result.error
             }
         }
@@ -109,8 +116,12 @@ class ScheduleDetailViewModel @Inject constructor(
 
     fun applyPending() {
         viewModelScope.launch {
-            val result = applyPendingAdjustment(scheduleId)
-            if (result is AppResult.Failure) _message.value = result.error
+            val snapshot = scheduleRepository.getSchedule(scheduleId)
+            when (val result = applyPendingAdjustment(scheduleId)) {
+                is AppResult.Failure -> _message.value = result.error
+                // 변경안이 낡아 다시 계산만 요청한 경우(false)는 바뀐 것이 없다.
+                is AppResult.Success -> if (result.data) snapshot?.let { undoManager.offer(R.string.undo_changed, it) }
+            }
         }
     }
 
@@ -120,8 +131,11 @@ class ScheduleDetailViewModel @Inject constructor(
 
     fun applyHabit(extraMinutes: Int) {
         viewModelScope.launch {
-            val result = applyWakeUpHabit(scheduleId, extraMinutes)
-            if (result is AppResult.Failure) _message.value = result.error
+            val snapshot = scheduleRepository.getSchedule(scheduleId)
+            when (val result = applyWakeUpHabit(scheduleId, extraMinutes)) {
+                is AppResult.Failure -> _message.value = result.error
+                is AppResult.Success -> snapshot?.let { undoManager.offer(R.string.undo_changed, it) }
+            }
         }
     }
 

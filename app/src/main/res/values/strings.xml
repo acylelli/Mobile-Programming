@@ -35,6 +35,9 @@
     <!-- 공통 -->
     <string name="common_retry">다시 시도</string>
     <string name="common_cancel">취소</string>
+    <string name="common_undo">되돌리기</string>
+    <string name="undo_deleted">알람을 삭제했어요.</string>
+    <string name="undo_changed">알람 시각을 바꿨어요.</string>
     <string name="common_save">저장</string>
     <string name="common_confirm">확인</string>
     <string name="common_delete">삭제</string>
@@ -259,7 +262,7 @@
     <string name="alarms_limit_message">무료 플랜은 일정을 %1$d개까지 만들 수 있어요.</string>
     <string name="alarms_limit_action">PRO 보기</string>
     <string name="alarms_delete_confirm_title">일정을 삭제할까요?</string>
-    <string name="alarms_delete_confirm_body">알람도 함께 사라지고 되돌릴 수 없어요.</string>
+    <string name="alarms_delete_confirm_body">알람도 함께 사라져요. 지운 직후에는 아래 되돌리기로 살릴 수 있어요.</string>
 
     <!-- 일정 상세 (UI-D-002) -->
     <string name="detail_title">일정 상세</string>
