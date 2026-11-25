@@ -5,7 +5,7 @@ import { type Clock, clientIp, DailyQuota, RateLimiter, TtlCache } from "./guard
 import { fetchKakaoPlaces } from "./kakao.ts";
 import { createGroupPassRouter, DEFAULT_GROUP_PASSES, type GroupPassConfig } from "./grouppass.ts";
 import { createPaymentsRouter, type TossKeys } from "./payments.ts";
-import { fetchOdsayRaw, firstRideTarget, type OdsayResponse, type RideTarget, toRouteResponse, toRoutesWithPaths } from "./odsay.ts";
+import { attachLaneGeometry, fetchOdsayRaw, firstRideTarget, type OdsayResponse, type RideTarget, toRouteResponse, toRoutesWithPaths } from "./odsay.ts";
 import { type Arrival, applyArrival, fetchBusArrivals, fetchSubwayArrivals, firstCatchable, type RealtimeKeys } from "./realtime.ts";
 
 /** 남용 방지 한도. 환경변수로 바꿀 수 있다(src/index.ts). */
@@ -105,6 +105,10 @@ export function createApp(config: AppConfig) {
     if (!raw) {
       if (rejectIfQuotaExceeded(res, odsayQuota, "ODsay")) return;
       raw = await fetchOdsayRaw(config.odsayApiKey, coords, config.fetchImpl);
+      // 지도용 실제 노선 모양. 같은 하루 상한을 나눠 쓰고, 경로와 함께 캐시되므로 같은 경로는 다시 부르지 않는다.
+      if (raw.error === undefined) {
+        await attachLaneGeometry(config.odsayApiKey, raw, () => odsayQuota.take(), config.fetchImpl);
+      }
       // 오류 응답이면 여기서 예외가 나므로 캐시에는 정상 응답만 들어간다.
       const body = toRouteResponse(raw, departAt);
       routeCache.set(key, raw);
