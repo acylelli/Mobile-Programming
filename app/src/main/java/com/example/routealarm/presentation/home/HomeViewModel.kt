@@ -2,6 +2,7 @@ package com.example.routealarm.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.routealarm.R
 import com.example.routealarm.core.common.AppError
 import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.core.util.TimeProvider
@@ -12,7 +13,11 @@ import com.example.routealarm.domain.usecase.ApplyPendingAdjustmentUseCase
 import com.example.routealarm.domain.usecase.DismissPendingAdjustmentUseCase
 import com.example.routealarm.domain.usecase.RefreshOutcome
 import com.example.routealarm.domain.usecase.RefreshTransitTimeUseCase
+import com.example.routealarm.presentation.common.UndoManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Duration
+import java.time.Instant
+import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,9 +28,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Duration
-import java.time.Instant
-import javax.inject.Inject
 
 sealed interface HomeUiState {
     data object Loading : HomeUiState
@@ -53,12 +55,13 @@ sealed interface HomeEvent {
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    scheduleRepository: ScheduleRepository,
+    private val scheduleRepository: ScheduleRepository,
     subscriptionRepository: SubscriptionRepository,
     private val refreshTransitTime: RefreshTransitTimeUseCase,
     private val applyPendingAdjustment: ApplyPendingAdjustmentUseCase,
     private val dismissPendingAdjustment: DismissPendingAdjustmentUseCase,
     private val timeProvider: TimeProvider,
+    private val undoManager: UndoManager,
 ) : ViewModel() {
 
     private data class LocalState(
@@ -112,8 +115,13 @@ class HomeViewModel @Inject constructor(
 
     fun applyPending(scheduleId: Long) {
         viewModelScope.launch {
+            val snapshot = scheduleRepository.getSchedule(scheduleId)
             when (val result = applyPendingAdjustment(scheduleId)) {
-                is AppResult.Success -> if (!result.data) local.update { it.copy(pendingOutdated = true) }
+                is AppResult.Success -> if (!result.data) {
+                    local.update { it.copy(pendingOutdated = true) }
+                } else {
+                    snapshot?.let { undoManager.offer(R.string.undo_changed, it) }
+                }
                 is AppResult.Failure -> _events.send(HomeEvent.ShowMessage(result.error))
             }
         }
