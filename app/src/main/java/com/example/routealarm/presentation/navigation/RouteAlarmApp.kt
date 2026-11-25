@@ -110,6 +110,14 @@ fun RouteAlarmApp(
      *   쌓여 있던 화면(만들기 단계)을 버린다. true 로 두면 저장해 둔 스택이 복원되어 만들기 화면으로 되돌아간다.
      */
     fun openTab(route: Route, keepState: Boolean = true) {
+        if (route == Route.Home) {
+            // 홈은 모든 탭의 바닥이라 위에 쌓인 화면을 걷어내기만 한다. 홈에도 저장·복원을 적용하면 홈 위에 쌓여 있던
+            // 탭(예: 알람 목록)이 그대로 복원되어, 홈을 눌러도 다른 탭이 열렸다(새로 설치해 온보딩을 거친 경우).
+            if (!navController.popBackStack<Route.Home>(inclusive = false)) {
+                navController.navigate(Route.Home) { launchSingleTop = true }
+            }
+            return
+        }
         navController.navigate(route) {
             popUpTo<Route.Home> { saveState = keepState }
             launchSingleTop = true

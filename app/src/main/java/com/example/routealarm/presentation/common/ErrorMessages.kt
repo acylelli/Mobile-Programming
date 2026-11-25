@@ -9,7 +9,8 @@ import com.example.routealarm.core.common.InvalidInputReason
 @StringRes
 fun AppError.messageRes(): Int = when (this) {
     AppError.Network -> R.string.error_network
-    is AppError.Server -> R.string.error_server
+    // 429: 서버의 요청 제한(분당 한도·하루 상한). 잠시 기다리면 되는 상황이라 일반 서버 오류와 구분해 안내한다.
+    is AppError.Server -> if (code == HTTP_TOO_MANY_REQUESTS) R.string.error_too_many_requests else R.string.error_server
     AppError.NoRoute -> R.string.error_no_route
     AppError.PlaceSearchFailed -> R.string.error_place_search
     AppError.LocationPermissionDenied -> R.string.error_location_permission
@@ -31,3 +32,5 @@ fun AppError.messageRes(): Int = when (this) {
     }
     is AppError.Unknown -> R.string.error_unknown
 }
+
+private const val HTTP_TOO_MANY_REQUESTS = 429

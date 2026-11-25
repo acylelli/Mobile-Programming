@@ -1,7 +1,7 @@
 package com.example.routealarm.data.remote
 
-import android.net.Uri
-import com.example.routealarm.BuildConfig
+import com.example.routealarm.data.remote.dto.CreateOrderRequestDto
+import com.example.routealarm.data.remote.dto.CreateOrderResponseDto
 import com.example.routealarm.data.remote.dto.PaymentResultDto
 import com.example.routealarm.data.remote.proxy.RouteAlarmProxyApi
 import javax.inject.Inject
@@ -14,8 +14,8 @@ import javax.inject.Inject
  * 앱은 결제 결과를 스스로 판단하지 않는다. 결제창에서 돌아오면 서버가 승인한 결과만 조회해 저장한다.
  */
 interface PaymentRemoteDataSource {
-    /** 브라우저로 열 결제창 주소 */
-    fun checkoutUrl(productId: String): String
+    /** 서버에 주문을 만든다. 받은 주문 번호를 기억해 두면 앱으로 돌아오지 못해도 결과를 확인할 수 있다. */
+    suspend fun createOrder(productId: String): CreateOrderResponseDto
 
     /** 서버가 승인한 주문 결과 */
     suspend fun fetchResult(orderId: String): PaymentResultDto
@@ -24,12 +24,8 @@ interface PaymentRemoteDataSource {
 class TossTestPaymentRemoteDataSource @Inject constructor(
     private val api: RouteAlarmProxyApi,
 ) : PaymentRemoteDataSource {
-    override fun checkoutUrl(productId: String): String =
-        Uri.parse(BuildConfig.PROXY_BASE_URL).buildUpon()
-            .appendEncodedPath("pay/checkout")
-            .appendQueryParameter("product", productId)
-            .build()
-            .toString()
+    override suspend fun createOrder(productId: String): CreateOrderResponseDto =
+        api.createOrder(CreateOrderRequestDto(productId))
 
     override suspend fun fetchResult(orderId: String): PaymentResultDto = api.getPayment(orderId)
 }

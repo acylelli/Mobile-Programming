@@ -6,11 +6,13 @@ import { type Clock, clientIp, RateLimiter, TtlCache } from "./guard.ts";
  * PRO 기간제 이용권 테스트 결제(토스페이먼츠, API 개별 연동 키).
  *
  * 흐름
- *  1. 앱이 브라우저로 GET /pay/checkout?product=… 을 연다 → 서버가 주문을 만들고 토스 결제창을 띄우는 페이지를 준다.
+ *  1. 앱이 POST /v1/payments/orders 로 주문을 만들고(주문 번호를 기억해 둠) 받은 checkout_url 을 브라우저로 연다.
+ *     → 서버가 토스 결제창을 띄우는 페이지를 준다. (예전 앱은 GET /pay/checkout?product=… 로 바로 열며, 이것도 계속 지원한다.)
  *  2. 결제창에서 결제하면 토스가 GET /pay/success?paymentKey&orderId&amount 로 돌려보낸다.
  *  3. 서버가 주문 금액과 비교한 뒤 시크릿 키로 결제를 승인(POST /v1/payments/confirm)하고 이용 기간을 기록한다.
  *  4. 결과 페이지가 앱 딥링크(routealarm://payment?orderId=…)로 돌아간다.
  *  5. 앱은 GET /v1/payments/{orderId} 로 서버가 승인한 결과를 받아 PRO 를 적용한다(앱은 결제 결과를 스스로 판단하지 않는다).
+ *     딥링크로 돌아오지 않고 브라우저를 닫아도, 앱이 다시 열릴 때 기억해 둔 주문 번호로 같은 조회를 한다.
  *
  * 테스트 키(test_ck_/test_sk_)를 쓰는 동안은 실제 돈이 나가지 않는다.
  * 주문은 메모리에만 두므로 서버가 재시작하면 진행 중인 주문은 사라진다(테스트 범위).
@@ -68,15 +70,43 @@ export function createPaymentsRouter(keys: TossKeys, clock: Clock, fetchImpl: ty
     next();
   });
 
-  router.get("/pay/checkout", (req, res) => {
-    const productId = String(req.query.product ?? "");
+  function createOrder(productId: string): Order | null {
     const product = PRODUCTS[productId];
-    if (!product) {
-      res.status(400).type("html").send(resultPage("잘못된 상품이에요", "앱에서 다시 시도해 주세요.", null));
-      return;
-    }
+    if (!product) return null;
     const order: Order = { orderId: `ra_${randomUUID()}`, productId, amount: product.amount, status: "READY" };
     orders.set(order.orderId, order);
+    return order;
+  }
+
+  /** 앱이 결제 전에 주문을 만든다. 주문 번호를 앱이 먼저 알아야, 결제 후 앱으로 돌아오지 않아도 결과를 확인할 수 있다. */
+  router.post("/v1/payments/orders", express.json({ limit: "1kb" }), (req, res) => {
+    const order = createOrder(String((req.body as { product_id?: unknown } | undefined)?.product_id ?? ""));
+    if (!order) {
+      res.status(400).json({ error: "unknown product" });
+      return;
+    }
+    const url = new URL(`${publicBaseUrl(req)}/pay/checkout`);
+    url.searchParams.set("orderId", order.orderId);
+    res.json({ order_id: order.orderId, checkout_url: url.toString() });
+  });
+
+  router.get("/pay/checkout", (req, res) => {
+    // 새 앱: 미리 만든 주문(orderId) / 예전 앱: 상품(product)으로 여기서 주문을 만든다.
+    const existing = typeof req.query.orderId === "string" ? orders.get(req.query.orderId) : undefined;
+    const order = existing ?? (typeof req.query.product === "string" ? createOrder(req.query.product) : null);
+    if (!order) {
+      res.status(400).type("html").send(resultPage("주문을 찾을 수 없어요", "앱에서 다시 시도해 주세요.", null));
+      return;
+    }
+    if (order.status !== "READY") {
+      res.type("html").send(
+        order.status === "PAID"
+          ? resultPage("이미 결제한 주문이에요", "앱으로 돌아가면 PRO 가 적용돼요.", appLink(order, "success"))
+          : resultPage("결제하지 못한 주문이에요", "앱에서 다시 결제해 주세요.", appLink(order, "fail")),
+      );
+      return;
+    }
+    const product = PRODUCTS[order.productId]!;
     const base = publicBaseUrl(req);
     res.type("html").send(
       checkoutPage({

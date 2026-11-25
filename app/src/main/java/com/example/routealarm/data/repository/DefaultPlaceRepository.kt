@@ -67,7 +67,8 @@ class DefaultPlaceRepository @Inject constructor(
         } catch (e: IOException) {
             AppResult.Failure(AppError.Network)
         } catch (e: HttpException) {
-            AppResult.Failure(AppError.PlaceSearchFailed)
+            // 429(서버 요청 제한)는 검색어 문제가 아니므로 "잠시 후 다시" 안내로 구분한다.
+            AppResult.Failure(if (e.code() == HTTP_TOO_MANY_REQUESTS) AppError.Server(e.code()) else AppError.PlaceSearchFailed)
         }
     }
 
@@ -99,5 +100,6 @@ class DefaultPlaceRepository @Inject constructor(
     private companion object {
         val RECENT_SEARCHES = stringPreferencesKey("recent_place_searches")
         val RECENT_SERIALIZER = ListSerializer(StoredRecentPlace.serializer())
+        const val HTTP_TOO_MANY_REQUESTS = 429
     }
 }

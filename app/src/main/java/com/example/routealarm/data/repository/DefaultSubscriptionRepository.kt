@@ -59,6 +59,10 @@ class DefaultSubscriptionRepository @Inject constructor(
         val ORGANIZATION = stringPreferencesKey("entitlement_organization")
         val VERIFIED_AT = longPreferencesKey("entitlement_verified_at")
         val ALL = listOf(PLAN, STARTED_AT, TRIAL_ENDS_AT, EXPIRES_AT, AUTO_RENEW, ORGANIZATION, VERIFIED_AT)
+
+        /** 결제창으로 보낸 주문. 플랜 정보([ALL])와 따로 둔다. */
+        val PENDING_ORDER_ID = stringPreferencesKey("payment_pending_order_id")
+        val PENDING_ORDER_AT = longPreferencesKey("payment_pending_order_at")
     }
 
     override val entitlement: Flow<Entitlement> = dataStore.data
@@ -67,11 +71,37 @@ class DefaultSubscriptionRepository @Inject constructor(
 
     override suspend fun current(): Entitlement = entitlement.first()
 
-    override fun checkoutUrl(product: SubscriptionProduct): String = payment.checkoutUrl(product.productId)
+    override suspend fun startCheckout(product: SubscriptionProduct): AppResult<String> = remoteCall {
+        val order = payment.createOrder(product.productId)
+        dataStore.edit { prefs ->
+            prefs[Keys.PENDING_ORDER_ID] = order.orderId
+            prefs[Keys.PENDING_ORDER_AT] = timeProvider.now().toEpochMilli()
+        }
+        order.checkoutUrl
+    }
+
+    override suspend fun pendingOrderId(): String? = withContext(ioDispatcher) {
+        val prefs = runCatching { dataStore.data.first() }.getOrNull() ?: return@withContext null
+        val id = prefs[Keys.PENDING_ORDER_ID] ?: return@withContext null
+        val at = prefs[Keys.PENDING_ORDER_AT]?.let(Instant::ofEpochMilli)
+        // 서버는 주문을 하루만 보관한다. 그보다 오래된 주문은 더 확인하지 않는다.
+        if (at == null || at.plus(PENDING_ORDER_TTL).isBefore(timeProvider.now())) {
+            clearPendingOrder(id)
+            null
+        } else {
+            id
+        }
+    }
+
+    private suspend fun clearPendingOrder(orderId: String) {
+        dataStore.edit { prefs -> if (prefs[Keys.PENDING_ORDER_ID] == orderId) prefs.remove(Keys.PENDING_ORDER_ID) }
+    }
 
     override suspend fun completePayment(orderId: String): AppResult<Entitlement> = remoteCall {
         val result = payment.fetchResult(orderId)
         val status = result.subscription
+        // 실패로 끝난 주문은 더 확인할 필요가 없다. 결제 중(READY)이면 나중에 다시 확인하도록 남긴다.
+        if (result.status == PAYMENT_FAILED) clearPendingOrder(orderId)
         // 서버가 승인(PAID)한 주문만 적용한다. 취소·실패·대기 중이면 지금 플랜을 그대로 둔다.
         if (result.status != PAYMENT_PAID || status == null) throw PaymentNotCompleted()
         val now = timeProvider.now()
@@ -87,7 +117,10 @@ class DefaultSubscriptionRepository @Inject constructor(
             // 기간제 이용권: 자동 갱신 없이 결제한 기간만 PRO
             autoRenew = false,
             lastVerifiedAt = now,
-        ).also { save(it) }
+        ).also {
+            save(it)
+            clearPendingOrder(orderId)
+        }
     }
 
     override suspend fun verifyGroupPass(code: String): AppResult<GroupPass> = remoteCall {
@@ -188,5 +221,7 @@ class DefaultSubscriptionRepository @Inject constructor(
 
     private companion object {
         const val PAYMENT_PAID = "PAID"
+        const val PAYMENT_FAILED = "FAILED"
+        val PENDING_ORDER_TTL: java.time.Duration = java.time.Duration.ofHours(24)
     }
 }

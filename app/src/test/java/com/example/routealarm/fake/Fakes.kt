@@ -228,12 +228,25 @@ class FakeSubscriptionRepository(
         )
     }
 
-    override fun checkoutUrl(product: SubscriptionProduct): String = "https://proxy.test/pay/checkout?product=${product.productId}"
+    /** 결제창으로 보낸 뒤 확인하지 못한 주문 */
+    var pendingOrder: String? = null
+    private var nextOrder = 1
+
+    override suspend fun startCheckout(product: SubscriptionProduct): AppResult<String> {
+        failWith?.let { return AppResult.Failure(it) }
+        val orderId = "ra_${nextOrder++}"
+        pendingOrder = orderId
+        return AppResult.Success("https://proxy.test/pay/checkout?orderId=$orderId")
+    }
+
+    override suspend fun pendingOrderId(): String? = pendingOrder
 
     override suspend fun completePayment(orderId: String): AppResult<Entitlement> {
         failWith?.let { return AppResult.Failure(it) }
+        // 아직 결제 중인 주문은 기억해 두고, 승인된 주문만 PRO 로 바꾼 뒤 지운다.
         val product = paidOrders[orderId] ?: return AppResult.Failure(AppError.PurchaseFailed)
         grantPro(product)
+        if (pendingOrder == orderId) pendingOrder = null
         return AppResult.Success(state.value)
     }
 

@@ -6,7 +6,7 @@
 |---|---|
 | `GET /v1/transit/routes` | ODsay 대중교통 길찾기 (`searchPubTransPathT`) |
 | `GET /v1/places/search` | Kakao 로컬 키워드 검색 |
-| `GET /pay/checkout`, `/pay/success`, `/pay/fail`, `GET /v1/payments/{orderId}` | 토스페이먼츠 테스트 결제 (`src/payments.ts`) |
+| `POST /v1/payments/orders`, `GET /pay/checkout`, `/pay/success`, `/pay/fail`, `GET /v1/payments/{orderId}` | 토스페이먼츠 테스트 결제 (`src/payments.ts`) |
 | `GET /v1/group-passes/{code}`, `POST /v1/group-passes/{code}/redeem` | 없음 — 서버가 테스트 코드 관리 (`src/grouppass.ts`) |
 | `GET /healthz` | 상태 확인 (배포 서비스 헬스체크용) |
 
@@ -82,7 +82,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | 첫 탑승 | API | 필요한 키 |
 |---|---|---|
 | 수도권 지하철 | 서울 열린데이터광장 실시간 지하철 도착정보 (역 이름) | `SEOUL_SUBWAY_API_KEY` |
-| 서울 버스 | 공공데이터포털 서울특별시_버스도착정보조회 (정류장 고유번호) | `DATA_GO_KR_SERVICE_KEY` |
+| 서울 버스 | 공공데이터포털 서울특별시_버스도착정보조회 (노선 전체 조회 후 정류장 고유번호로 선택) | `DATA_GO_KR_SERVICE_KEY` |
 | 경기 버스 | 공공데이터포털 경기도_버스도착정보 조회 (정류소 ID) | `DATA_GO_KR_SERVICE_KEY` |
 
 - 정류장에 닿는 시각(출발 + 첫 도보) 이후 처음 오는 차를 골라 `wait_minutes` 를 다시 계산하고, 총 소요시간·도착 시각도 그만큼 바꾼다.

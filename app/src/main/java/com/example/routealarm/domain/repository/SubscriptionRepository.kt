@@ -18,10 +18,19 @@ interface SubscriptionRepository {
 
     suspend fun current(): Entitlement
 
-    /** 브라우저로 열 결제창(토스페이먼츠 테스트 결제) 주소 */
-    fun checkoutUrl(product: SubscriptionProduct): String
+    /**
+     * 서버에 주문을 만들고 브라우저로 열 결제창(토스페이먼츠 테스트 결제) 주소를 돌려준다.
+     * 주문 번호는 [pendingOrderId] 로 기억해 둔다.
+     */
+    suspend fun startCheckout(product: SubscriptionProduct): AppResult<String>
 
-    /** 결제창에서 돌아온 주문을 서버에 확인하고, 승인됐으면 그 기간만큼 PRO 를 적용한다. */
+    /** 결제창으로 보낸 뒤 아직 결과를 확인하지 못한 주문 */
+    suspend fun pendingOrderId(): String?
+
+    /**
+     * 주문을 서버에 확인하고, 승인됐으면 그 기간만큼 PRO 를 적용한다.
+     * 승인되거나 실패로 끝난 주문은 기억에서 지운다. 아직 결제 중(READY)이면 남겨 둔다.
+     */
     suspend fun completePayment(orderId: String): AppResult<Entitlement>
 
     /** 코드의 기관·이용 기간·남은 인원을 확인만 한다(적용하지 않음). */

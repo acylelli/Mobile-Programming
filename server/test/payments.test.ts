@@ -117,3 +117,32 @@ test("키가 없으면 결제 경로를 끈다", async () => {
     assert.equal((await fetch(`${base}/v1/payments/ra_x`)).status, 503);
   });
 });
+
+test("앱이 먼저 주문을 만들면 주문 번호와 결제창 주소를 주고, 그 주소로 같은 주문의 결제창이 열린다", async () => {
+  await withServer(keys, approve, async (base) => {
+    const res = await fetch(`${base}/v1/payments/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: "routealarm_pro_yearly" }),
+    });
+    assert.equal(res.status, 200);
+    const { order_id, checkout_url } = (await res.json()) as { order_id: string; checkout_url: string };
+    assert.match(order_id, /^ra_/);
+    assert.equal(new URL(checkout_url).searchParams.get("orderId"), order_id);
+
+    const page = await (await fetch(checkout_url)).text();
+    assert.match(page, new RegExp(`orderId: "${order_id}"`));
+    assert.match(page, /value: 24000/);
+
+    // 결제 전 조회는 READY, 결제 후에는 같은 주문 번호로 결과를 확인할 수 있다
+    assert.equal(((await (await fetch(`${base}/v1/payments/${order_id}`)).json()) as { status: string }).status, "READY");
+    await fetch(`${base}/pay/success?paymentKey=pk&orderId=${order_id}&amount=24000`);
+    assert.equal(((await (await fetch(`${base}/v1/payments/${order_id}`)).json()) as { status: string }).status, "PAID");
+
+    // 이미 결제한 주문의 결제창은 다시 열리지 않는다
+    assert.match(await (await fetch(checkout_url)).text(), /이미 결제한 주문이에요/);
+
+    const bad = await fetch(`${base}/v1/payments/orders`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    assert.equal(bad.status, 400);
+  });
+});
