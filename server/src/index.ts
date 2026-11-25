@@ -26,15 +26,26 @@ const limits: GuardLimits = {
   searchPerMinute: limitEnv("SEARCH_PER_MINUTE", DEFAULT_LIMITS.searchPerMinute),
   odsayDailyLimit: limitEnv("ODSAY_DAILY_LIMIT", DEFAULT_LIMITS.odsayDailyLimit),
   kakaoDailyLimit: limitEnv("KAKAO_DAILY_LIMIT", DEFAULT_LIMITS.kakaoDailyLimit),
+  realtimeDailyLimit: limitEnv("REALTIME_DAILY_LIMIT", DEFAULT_LIMITS.realtimeDailyLimit),
+};
+
+/** 실시간 도착 키는 선택이다. 없으면 시간표 기준으로만 응답한다. */
+const realtimeKeys = {
+  seoulSubwayKey: process.env.SEOUL_SUBWAY_API_KEY?.trim() || undefined,
+  dataGoKrKey: process.env.DATA_GO_KR_SERVICE_KEY?.trim() || undefined,
 };
 
 const app = createApp({
   odsayApiKey: requireEnv("ODSAY_API_KEY"),
   kakaoRestApiKey: requireEnv("KAKAO_REST_API_KEY"),
   limits,
+  realtimeKeys,
 });
 
 const port = Number(process.env.PORT ?? 8080);
 app.listen(port, () => {
-  console.log(`RouteAlarm proxy listening on :${port}`, limits);
+  console.log(`RouteAlarm proxy listening on :${port}`, limits, {
+    realtimeSubway: Boolean(realtimeKeys.seoulSubwayKey),
+    realtimeBus: Boolean(realtimeKeys.dataGoKrKey),
+  });
 });

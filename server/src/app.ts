@@ -3,7 +3,8 @@ import type { PlaceSearchResponseDto } from "./contract.ts";
 import { UpstreamError } from "./contract.ts";
 import { type Clock, clientIp, DailyQuota, RateLimiter, TtlCache } from "./guard.ts";
 import { fetchKakaoPlaces } from "./kakao.ts";
-import { fetchOdsayRaw, type OdsayResponse, toRouteResponse } from "./odsay.ts";
+import { fetchOdsayRaw, firstRideTarget, type OdsayResponse, type RideTarget, toRouteResponse, toRoutesWithPaths } from "./odsay.ts";
+import { type Arrival, applyArrival, fetchBusArrivals, fetchSubwayArrivals, firstCatchable, type RealtimeKeys } from "./realtime.ts";
 
 /** 남용 방지 한도. 환경변수로 바꿀 수 있다(src/index.ts). */
 export interface GuardLimits {
@@ -15,6 +16,8 @@ export interface GuardLimits {
   odsayDailyLimit: number;
   /** 하루(한국 시간) Kakao 호출 상한 */
   kakaoDailyLimit: number;
+  /** 하루(한국 시간) 실시간 도착 API 호출 상한 (지하철·서울 버스·경기 버스 각각) */
+  realtimeDailyLimit: number;
 }
 
 export const DEFAULT_LIMITS: GuardLimits = {
@@ -22,12 +25,15 @@ export const DEFAULT_LIMITS: GuardLimits = {
   searchPerMinute: 60,
   odsayDailyLimit: 1_000,
   kakaoDailyLimit: 10_000,
+  realtimeDailyLimit: 900,
 };
 
 export interface AppConfig {
   odsayApiKey: string;
   kakaoRestApiKey: string;
   limits?: Partial<GuardLimits>;
+  /** 없으면 실시간 도착 정보 없이 시간표 기준으로만 응답한다. */
+  realtimeKeys?: RealtimeKeys;
   /** 테스트에서 외부 호출을 대신한다. */
   fetchImpl?: typeof fetch;
   /** 테스트에서 시간을 대신한다. */
@@ -40,6 +46,15 @@ const MINUTE_MS = 60_000;
 const ROUTE_CACHE_TTL_MS = 60_000;
 /** 장소 검색 결과는 자주 바뀌지 않으므로 10분 동안 재사용한다. */
 const SEARCH_CACHE_TTL_MS = 10 * 60_000;
+/**
+ * 실시간 도착 정보는 출발이 이만큼 가까울 때만 쓴다. 그보다 먼 출발에 "지금 3분 후 도착"을 붙이면
+ * 사용자가 실제로 탈 차가 아니라서 오히려 틀린 안내가 된다.
+ */
+const REALTIME_WINDOW_MS = 30 * 60_000;
+/** 실시간 조회는 짧게만 재사용한다. */
+const REALTIME_CACHE_TTL_MS = 30_000;
+/** 경로마다 첫 탑승 구간 하나씩, 상위 몇 개 경로까지만 조회한다(외부 호출 수 제한). */
+const REALTIME_MAX_ROUTES = 3;
 
 export function createApp(config: AppConfig) {
   const limits = { ...DEFAULT_LIMITS, ...config.limits };
@@ -50,6 +65,7 @@ export function createApp(config: AppConfig) {
   const kakaoQuota = new DailyQuota(limits.kakaoDailyLimit, clock);
   const routeCache = new TtlCache<OdsayResponse>(ROUTE_CACHE_TTL_MS, 1_000, clock);
   const searchCache = new TtlCache<PlaceSearchResponseDto>(SEARCH_CACHE_TTL_MS, 1_000, clock);
+  const realtime = createRealtime(config.realtimeKeys ?? {}, limits.realtimeDailyLimit, clock, config.fetchImpl);
 
   const app = express();
   app.disable("x-powered-by");
@@ -79,17 +95,22 @@ export function createApp(config: AppConfig) {
 
     const coords = { originLat, originLng, destinationLat, destinationLng };
     const key = [originLat, originLng, destinationLat, destinationLng].map((v) => v.toFixed(4)).join(",");
-    const cached = routeCache.get(key);
-    if (cached) {
-      res.json(toRouteResponse(cached, departAt));
+    let raw = routeCache.get(key);
+    if (!raw) {
+      if (rejectIfQuotaExceeded(res, odsayQuota, "ODsay")) return;
+      raw = await fetchOdsayRaw(config.odsayApiKey, coords, config.fetchImpl);
+      // 오류 응답이면 여기서 예외가 나므로 캐시에는 정상 응답만 들어간다.
+      const body = toRouteResponse(raw, departAt);
+      routeCache.set(key, raw);
+      if (!realtime.applies(departAt)) {
+        res.json(body);
+        return;
+      }
+    } else if (!realtime.applies(departAt)) {
+      res.json(toRouteResponse(raw, departAt));
       return;
     }
-    if (rejectIfQuotaExceeded(res, odsayQuota, "ODsay")) return;
-    const raw = await fetchOdsayRaw(config.odsayApiKey, coords, config.fetchImpl);
-    // 오류 응답이면 여기서 예외가 나므로 캐시에는 정상 응답만 들어간다.
-    const body = toRouteResponse(raw, departAt);
-    routeCache.set(key, raw);
-    res.json(body);
+    res.json(await realtime.adjust(raw, departAt));
   });
 
   app.get("/v1/places/search", async (req, res) => {
@@ -124,6 +145,62 @@ export function createApp(config: AppConfig) {
   });
 
   return app;
+}
+
+/** 출발 30분 이내 경로의 첫 탑승 구간에 실시간 도착 정보를 반영한다. */
+function createRealtime(keys: RealtimeKeys, dailyLimit: number, clock: Clock, fetchImpl?: typeof fetch) {
+  const cache = new TtlCache<Arrival[] | null>(REALTIME_CACHE_TTL_MS, 500, clock);
+  const quotas = {
+    subway: new DailyQuota(dailyLimit, clock),
+    seoul: new DailyQuota(dailyLimit, clock),
+    gyeonggi: new DailyQuota(dailyLimit, clock),
+  };
+  const enabled = Boolean(keys.seoulSubwayKey || keys.dataGoKrKey);
+
+  async function arrivals(target: RideTarget): Promise<Arrival[] | null> {
+    const cacheKey = JSON.stringify(target);
+    const hit = cache.get(cacheKey);
+    if (hit !== undefined) return hit;
+    let result: Arrival[] | null = null;
+    if (target.kind === "subway") {
+      if (!keys.seoulSubwayKey || !quotas.subway.take()) return null;
+      result = await fetchSubwayArrivals(keys.seoulSubwayKey, target.query, fetchImpl);
+    } else {
+      if (!keys.dataGoKrKey || !quotas[target.query.region].take()) return null;
+      result = await fetchBusArrivals(keys.dataGoKrKey, target.query, fetchImpl);
+    }
+    cache.set(cacheKey, result);
+    return result;
+  }
+
+  return {
+    applies(departAt: Date): boolean {
+      const untilDeparture = departAt.getTime() - clock();
+      // 1분 정도 지난 출발 시각까지는 "지금 출발"로 본다.
+      return enabled && untilDeparture >= -60_000 && untilDeparture <= REALTIME_WINDOW_MS;
+    },
+
+    async adjust(raw: OdsayResponse, departAt: Date) {
+      const pairs = toRoutesWithPaths(raw, departAt);
+      const secondsUntilDeparture = Math.max(0, (departAt.getTime() - clock()) / 1000);
+      const routes = await Promise.all(
+        pairs.map(async ({ route, path }, index) => {
+          if (index >= REALTIME_MAX_ROUTES) return route;
+          const target = firstRideTarget(path);
+          if (!target) return route;
+          const list = await arrivals(target);
+          if (!list) return route;
+          // 첫 도보까지 마친 뒤 정류장에 닿는 시각
+          const walkBefore = route.segments[0]?.mode === "WALK" ? route.segments[0].minutes : 0;
+          const atStop = secondsUntilDeparture + walkBefore * 60;
+          const catchable = firstCatchable(list, atStop);
+          return catchable ? applyArrival(route, atStop, catchable) : route;
+        }),
+      );
+      routes.sort((a, b) => a.total_minutes - b.total_minutes);
+      return { realtime: true, routes };
+    },
+  };
 }
 
 /** 앱은 429 를 서버 오류로 받아 캐시된 경로로 대체한다. */

@@ -1,4 +1,5 @@
 import { type RouteDto, type RouteResponseDto, type SegmentDto, toKstIso, UpstreamError } from "./contract.ts";
+import type { BusQuery, SubwayQuery } from "./realtime.ts";
 
 /*
  * ODsay 대중교통 길찾기(searchPubTransPathT) → 앱 경로 계약 변환.
@@ -8,7 +9,8 @@ import { type RouteDto, type RouteResponseDto, type SegmentDto, toKstIso, Upstre
  * - 처음·마지막 도보는 WALK 구간으로 내려주고, 탈것 사이의 도보는 환승 시간(transfer_minutes)으로 합친다.
  *   앱 노선도는 탈것 두 개가 연달아 있으면 그 사이를 환승으로 그리기 때문이다.
  * - ODsay 총 소요시간과 구간 합의 차이는 대기 시간(wait_minutes)으로 둔다.
- * - 실시간 지연(delay_minutes)은 ODsay 길찾기 응답에 없어서 0 으로 둔다(실시간 도착 API 연동 시 채운다).
+ * - 실시간 지연(delay_minutes)은 ODsay 길찾기 응답에 없어서 0 으로 둔다.
+ * - 출발이 가까우면 app.ts 가 첫 탑승 구간의 실시간 도착 정보로 대기 시간과 도착 안내를 다시 채운다(realtime.ts).
  */
 
 const ODSAY_ENDPOINT = "https://api.odsay.com/v1/api/searchPubTransPathT";
@@ -18,13 +20,20 @@ const MAX_ROUTES = 5;
 const SUBWAY = 1;
 const BUS = 2;
 const WALK = 3;
+/** ODsay busCityCode: 서울 */
+const SEOUL_CITY_CODE = 1000;
 
 export interface OdsaySubPath {
   trafficType: number;
   sectionTime: number;
   startName?: string;
   endName?: string;
-  lane?: Array<{ name?: string; busNo?: string }>;
+  lane?: Array<{ name?: string; busNo?: string; busLocalBlID?: string; busCityCode?: number; subwayCode?: number }>;
+  /** 서울 버스 정류장 고유번호(예: "08718") */
+  startArsID?: string;
+  /** 지역 버스 정보 시스템의 정류장 ID(경기: 9자리) */
+  startLocalStationID?: string;
+  passStopList?: { stations?: Array<{ stationName?: string }> };
 }
 
 export interface OdsayPath {
@@ -81,13 +90,44 @@ export function toRouteResponse(body: OdsayResponse, departAt: Date): RouteRespo
     // 키 오류·호출 한도 초과 등은 앱 쪽 문제가 아니므로 502 로 돌려주고 앱은 캐시로 대체한다.
     throw new UpstreamError(502, `ODsay 오류 ${code}: ${message}`);
   }
-  const routes = (body.result?.path ?? [])
-    .map((path) => toRoute(path, departAt))
-    .filter((route): route is RouteDto => route !== null)
-    .sort((a, b) => a.total_minutes - b.total_minutes)
-    .slice(0, MAX_ROUTES);
   // ODsay 는 요청 시점에 바로 계산한 결과다. 앱의 realtime=false 는 "캐시로 대체한 값"을 뜻하므로 true 로 둔다.
-  return { realtime: true, routes };
+  return { realtime: true, routes: toRoutesWithPaths(body, departAt).map((r) => r.route) };
+}
+
+/** 경로와 그 경로의 ODsay 원본을 함께 돌려준다. 실시간 보정에 원본의 정류장·노선 ID 가 필요하다. */
+export function toRoutesWithPaths(body: OdsayResponse, departAt: Date): Array<{ route: RouteDto; path: OdsayPath }> {
+  return (body.result?.path ?? [])
+    .map((path) => ({ route: toRoute(path, departAt), path }))
+    .filter((r): r is { route: RouteDto; path: OdsayPath } => r.route !== null)
+    .sort((a, b) => a.route.total_minutes - b.route.total_minutes)
+    .slice(0, MAX_ROUTES);
+}
+
+export type RideTarget =
+  | { kind: "subway"; query: SubwayQuery }
+  | { kind: "bus"; query: BusQuery };
+
+/** 첫 탑승 구간의 실시간 조회 대상. 조회할 수 없는 지역·노선이면 null */
+export function firstRideTarget(path: OdsayPath): RideTarget | null {
+  const ride = path.subPath.find((s) => s.trafficType !== WALK);
+  const lane = ride?.lane?.[0];
+  if (!ride || !lane) return null;
+  if (ride.trafficType === SUBWAY) {
+    const station = ride.startName;
+    const nextStation = ride.passStopList?.stations?.[1]?.stationName;
+    if (!station || !nextStation) return null;
+    return { kind: "subway", query: { station, nextStation, odsayLineCode: lane.subwayCode } };
+  }
+  if (ride.trafficType === BUS && lane.busLocalBlID) {
+    if (lane.busCityCode === SEOUL_CITY_CODE && ride.startArsID) {
+      return { kind: "bus", query: { region: "seoul", stationKey: ride.startArsID.replace(/-/g, ""), routeId: lane.busLocalBlID } };
+    }
+    // 경기 버스 노선·정류소 ID 는 2 로 시작하는 9자리다.
+    if (/^2\d{8}$/.test(lane.busLocalBlID) && ride.startLocalStationID) {
+      return { kind: "bus", query: { region: "gyeonggi", stationKey: ride.startLocalStationID, routeId: lane.busLocalBlID } };
+    }
+  }
+  return null;
 }
 
 function toRoute(path: OdsayPath, departAt: Date): RouteDto | null {
