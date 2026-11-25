@@ -14,6 +14,8 @@ import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.policy.AdjustmentDecision
 import com.example.routealarm.domain.policy.AdjustmentPolicy
 import com.example.routealarm.domain.policy.TravelEstimatePolicy
+import com.example.routealarm.domain.policy.TravelObservation
+import com.example.routealarm.domain.policy.TravelPatternPolicy
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
 import com.example.routealarm.domain.repository.AlarmNotifier
 import com.example.routealarm.domain.repository.LocationRepository
@@ -103,10 +105,13 @@ class RefreshTransitTimeUseCase @Inject constructor(
         }
         val route = query.bestRoute ?: return handleFailure(schedule, AppError.NoRoute, now)
 
-        val recentTravel = historyRepository.recentTravelDurations(
-            scheduleId,
-            TravelEstimatePolicy.HISTORY_SAMPLE_SIZE,
+        // 같은 요일·시간대 기록이 충분하면 그것을, 아니면 요일과 상관없는 최근 기록을 안정화 입력으로 쓴다.
+        val slotTravel = TravelPatternPolicy.slotSamples(
+            historyRepository.travelObservations(scheduleId), departureGuess, now, timeProvider.zone(),
         )
+        val recentTravel = slotTravel.ifEmpty {
+            historyRepository.recentTravelDurations(scheduleId, TravelEstimatePolicy.HISTORY_SAMPLE_SIZE)
+        }
         val input = PlanInput(
             targetArrival = target,
             currentTravel = route.totalDuration,
@@ -124,6 +129,13 @@ class RefreshTransitTimeUseCase @Inject constructor(
             is AppResult.Failure -> return handleFailure(schedule, result.error, now)
         }
         metricsRepository.record(MetricType.ALARM_RECALCULATION)
+        if (query.isRealtime) {
+            // 이 회차의 실제 이동시간. 출발에 가까운 확인일수록 나중에 덮어써서 마지막 값이 남는다.
+            historyRepository.recordTravel(
+                scheduleId,
+                TravelObservation(target, newPlan.departure, route.totalDuration.toMinutesCeil()),
+            )
+        }
 
         val oldPlan = schedule.plan
         if (oldPlan == null || oldPlan.targetArrival != newPlan.targetArrival) {
@@ -277,3 +289,7 @@ class RefreshTransitTimeUseCase @Inject constructor(
         val IMMEDIATE_ALARM_DELAY: Duration = Duration.ofSeconds(5)
     }
 }
+
+private fun Duration.toMinutesCeil(): Int = ((toMillis() + MILLIS_PER_MINUTE - 1) / MILLIS_PER_MINUTE).toInt()
+
+private const val MILLIS_PER_MINUTE = 60_000L

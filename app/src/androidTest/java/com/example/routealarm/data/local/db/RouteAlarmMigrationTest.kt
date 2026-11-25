@@ -69,6 +69,27 @@ class RouteAlarmMigrationTest {
     }
 
     @Test
+    fun migrate4To5_addsTravelObservationsTable() {
+        helper.createDatabase(DB, 1).use { db ->
+            db.execSQL(insertPlace(id = 1, name = "다산역", isDemo = 0))
+            db.execSQL(insertSchedule(id = 10, title = "평일 등교", isDemo = 0))
+        }
+        helper.runMigrationsAndValidate(DB, 4, true, Migrations.MIGRATION_1_2, Migrations.MIGRATION_2_3, Migrations.MIGRATION_3_4).close()
+
+        helper.runMigrationsAndValidate(DB, 5, true, Migrations.MIGRATION_4_5).use { db ->
+            db.execSQL(
+                "INSERT INTO travel_observations (scheduleId, occurrenceTarget, departureAt, travelMinutes, observedAt) VALUES (10, 1, 0, 55, 0)",
+            )
+            // 같은 회차를 다시 넣으면 고유 인덱스 때문에 덮어쓴다.
+            db.execSQL(
+                "INSERT OR REPLACE INTO travel_observations (scheduleId, occurrenceTarget, departureAt, travelMinutes, observedAt) VALUES (10, 1, 0, 61, 0)",
+            )
+            assertEquals(listOf("61"), db.strings("SELECT travelMinutes FROM travel_observations"))
+            assertEquals(listOf("평일 등교"), db.strings("SELECT title FROM schedules"))
+        }
+    }
+
+    @Test
     fun migratedDatabaseOpensWithRoomAndReadsSchedules() {
         helper.createDatabase(DB, 1).use { db ->
             db.execSQL(insertPlace(id = 1, name = "다산역", isDemo = 0))
