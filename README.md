@@ -94,7 +94,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | UI-F-004 | 학교 시간표 | `timetable/TimetableScreen.kt` |
 | UI-F-005 | 캘린더 연동 | `calendar/CalendarImportScreen.kt` |
 
-에뮬레이터(Pixel 10 Pro, Android 17)에서 배포 서버의 실제 데이터로 캡처한 화면이다(다산역 → 한성대학교, 평일 09:00 도착). 자동 조정·변경 추천 두 장은 실제 교통 지연을 마음대로 만들 수 없어, 가짜 지연을 넣을 수 있던 이전 버전에서 캡처한 화면이다.
+에뮬레이터(Pixel 10 Pro, Android 17)에서 배포 서버의 실제 데이터로 캡처한 화면이다(다산역 → 한성대학교). 알람 목록의 요일별 알람은 아래 학교 시간표에서 만든 것이다. 자동 조정·변경 추천 두 장은 실제 교통 지연을 마음대로 만들 수 없어, 가짜 지연을 넣을 수 있던 이전 버전에서 캡처한 화면이다.
 
 | 온보딩 | 홈 | 일정 만들기 (장소) | 도착 시각 (휠) |
 |---|---|---|---|
@@ -104,9 +104,19 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 |---|---|---|---|
 | ![준비 시간](docs/screenshots/preparation.png) | ![결과](docs/screenshots/result.png) | ![알람](docs/screenshots/alarms.png) | ![상세](docs/screenshots/detail.png) |
 
-| 설정 | 기상 알람 |
+| 일정 상세 — 경로 지도 (카카오맵) | 설정 (연동 메뉴) |
 |---|---|
-| ![설정](docs/screenshots/settings.png) | ![알람 울림](docs/screenshots/ringing.png) |
+| ![경로 지도](docs/screenshots/detail-map.png) | ![설정](docs/screenshots/settings.png) |
+
+학교 시간표는 에브리타임 시간표 캡처(2026년 2학기) 한 장으로 테스트했다. 사진을 고르면 기기 안에서 글자를 읽어 요일별 수업으로 바꾸고, 틀린 곳은 눌러서 고친 뒤, 요일마다 첫 수업에 맞춘 알람을 만든다. 캘린더 화면의 일정은 에뮬레이터 캘린더에 넣은 시연용 일정이다.
+
+| 시간표 사진 인식 | 수업 수정 | 첫 수업 알람 만들기 | 캘린더 연동 |
+|---|---|---|---|
+| ![시간표 인식](docs/screenshots/timetable.png) | ![수업 수정](docs/screenshots/timetable-edit.png) | ![시간표 알람](docs/screenshots/timetable-alarms.png) | ![캘린더](docs/screenshots/calendar.png) |
+
+| 기상 알람 |
+|---|
+| ![알람 울림](docs/screenshots/ringing.png) |
 
 | PRO 페이월 | 단체 이용권 | 구독 관리 | 테마 선택 |
 |---|---|---|---|
