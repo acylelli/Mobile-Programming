@@ -328,6 +328,8 @@ routealarm.transitProvider=proxy
 routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ```
 
+https 배포는 Render 무료 인스턴스를 쓴다([`render.yaml`](render.yaml)). 절차는 [server/README.md 배포](server/README.md#배포-render) 에 있다.
+
 제공자를 앱 안에서 직접 구현하고 싶다면 `TransitRemoteDataSource` 를 구현하고 `di/NetworkModule.kt` 에서 바인딩만 바꾸면 된다.
 
 ## 13. 테스트 방법

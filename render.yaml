@@ -1,0 +1,24 @@
+# Render Blueprint: Proxy 서버(server/) 배포 설정
+# Render 대시보드 > New > Blueprint 에서 이 저장소를 고르면 아래 서비스가 만들어진다.
+# API 키는 여기에 쓰지 않는다. 처음 만들 때 대시보드에서 값을 입력한다(sync: false).
+services:
+  - type: web
+    name: routealarm-proxy
+    runtime: node
+    plan: free
+    # 한국과 가장 가까운 리전
+    region: singapore
+    branch: main
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    # CI 가 통과한 커밋만 배포한다.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: ODSAY_API_KEY
+        sync: false
+      - key: KAKAO_REST_API_KEY
+        sync: false

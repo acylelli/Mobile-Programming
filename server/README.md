@@ -37,6 +37,22 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 - http 접속은 debug 빌드에서 `10.0.2.2`, `localhost`, `127.0.0.1` 만 허용된다(`app/src/debug/res/xml/network_security_config.xml`). 실기기나 release 빌드는 https 로 배포한 주소를 쓴다.
 - proxy 로 바꾸면 설정 > 데모의 **가상 교통 지연**, **네트워크 오류 시뮬레이션** 은 동작하지 않는다(fake 전용). 시연할 때는 `fake` 로 돌려 둔다.
 
+## 배포 (Render)
+
+저장소 루트의 [`render.yaml`](../render.yaml) 이 배포 설정이다. 싱가포르 리전 무료 인스턴스로 `server/` 를 띄우고, `main` 에서 CI 가 통과한 커밋만 자동 배포한다.
+
+1. [Render](https://render.com) 에 GitHub 계정으로 가입하고 **New > Blueprint** 에서 이 저장소를 고른다.
+2. 처음 만들 때 `ODSAY_API_KEY`, `KAKAO_REST_API_KEY` 값을 입력한다(저장소에는 키가 없다).
+3. 서비스 화면 오른쪽 위 **Connect > Outbound** 에 있는 출구 IP 들을 ODsay LAB 의 서버 IP 로 모두 등록한다. 등록 전에는 경로 조회가 502 로 실패한다.
+4. 배포가 끝나면 `https://<서비스 이름>.onrender.com/healthz` 가 `{"ok":true}` 를 주는지 확인하고, 앱 `local.properties` 의 `routealarm.proxyBaseUrl` 을 그 주소(끝에 `/`)로 바꾼다.
+5. 잠들지 않게 하려면 저장소 **Settings > Secrets and variables > Actions > Variables** 에 `PROXY_HEALTHCHECK_URL`(위 `/healthz` 주소)을 넣는다. [`keep-alive`](../.github/workflows/keep-alive.yml) 워크플로가 10분마다 깨운다.
+
+무료 인스턴스 참고:
+
+- 15분 동안 요청이 없으면 잠들고, 깨어나는 데 30초 이상 걸린다. 앱의 네트워크 제한시간(15초)보다 길어서 그 사이 요청은 캐시로 대체된다. keep-alive 를 켜 두면 거의 생기지 않는다.
+- 무료 사용 시간은 워크스페이스당 월 750시간이라, 이 서비스 하나를 24시간 켜 두는 정도까지 된다. 무료 서비스를 더 만들면 모자랄 수 있다.
+- 예약 워크플로는 `main` 에 병합된 뒤부터 돌고, 저장소에 60일 동안 활동이 없으면 GitHub 가 멈춘다.
+
 ## 변환 규칙
 
 - 경로는 총 소요시간이 짧은 순으로 최대 5개를 준다.
