@@ -59,6 +59,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 교통 상황 재확인 | PRO: 기상 24h / 3h / 1h / 20분 전에 WorkManager 로 재확인. 무료: 기상 30분 전 1회 |
 | 안전한 자동 조정 | 5분 미만 변화는 무시, 30분 초과 변화는 사용자 확인. PRO 는 자동 조정, 무료 플랜과 자동 조정 OFF 는 변경 추천만 |
 | 기상 알람 + 출발 알림 | 기상 알람(전체 화면, 알람음, 진동, 5·10분 스누즈)과 "10분 뒤 출발" / "지금 출발" 알림 분리 |
+| 알람음·볼륨 | 기본 알람음·부드럽게·휴대폰 벨소리 직접 고르기·무음, 볼륨 10~100%(휴대폰 알람 볼륨과 관계없이 이 크기로 울리고 끝나면 원래 볼륨으로 복원), 30초에 걸쳐 점점 크게 울리기, 미리 듣기 |
 | Offline First | 네트워크 실패 시 Room 캐시 → 마지막 계산값으로 알람 유지, 화면에 안내 띠 표시 |
 | 일정 만들기 5단계 | 출발지 → 도착지 → 도착 시각·반복 → 준비 시간 → 여유 시간, 저장 전에 계산 미리보기 |
 | 아이폰식 휠 입력 | 도착 시각(오전/오후 · 시 · 분)과 준비 시간(시간 · 분)을 휠을 돌려 고른다. 시 휠이 11과 12 사이를 지나면 오전/오후가 따라 바뀐다 |
@@ -135,6 +136,9 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
     <td align="center" valign="top"><img src="docs/screenshots/widget.png" width="200" alt="홈 화면 위젯"><br><sub>홈 화면 위젯</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/settings.png" width="200" alt="설정 (연동 메뉴)"><br><sub>설정 (연동 메뉴)</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/theme.png" width="200" alt="테마 선택"><br><sub>테마 선택</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/alarm-sound.png" width="200" alt="알람음·볼륨·점점 크게"><br><sub>알람음·볼륨·점점 크게</sub></td>
   </tr>
 </table>
 
@@ -410,7 +414,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ./gradlew testDebugUnitTest
 ```
 
-도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 158개 테스트:
+도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 163개 테스트:
 
 | 테스트 | 검증 내용 |
 |---|---|
@@ -429,6 +433,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `WakeUpHabitPolicyTest` | 기상 습관: 끈 시각 − 예정 시각의 중앙값, 한 번 크게 늦은 날·30일 지난 기록·비정상 값 제외, 3번 미만이면 제안 없음, 적용·넘김 뒤 기록만 다시 모음, 최대 30분 |
 | `WakeUpHabitUseCasesTest` | 습관 제안 적용 시 같은 회차 기상 알람이 07:15 → 07:00 으로 앞당겨져 다시 등록되고 제안이 사라짐 |
 | `RestoreScheduleUseCaseTest` | 되돌리기: 지운 일정이 같은 id·같은 계획으로 돌아오고 기상 알람 재등록, 바꾼 알람은 이전 기상 시각으로 복구 |
+| `AlarmVolumePolicyTest` | 알람 볼륨: 비율 → 알람 볼륨 단계 변환(무음·기기 최소값 아래로 내려가지 않음), 점점 크게 10% → 30초 뒤 100%, 고른 벨소리가 없으면 기본 알람음 |
 | `NextAlarmTest` | 위젯의 다음 알람: 켜져 있고 출발 전인 일정 중 기상 알람이 가장 이른 것 |
 | `MigrationCoverageTest` | 내보낸 Room 스키마(`app/schemas`)의 버전이 1부터 빠짐없이 이어지고, 이웃한 모든 버전 사이에 Migration 이 있음 |
 | `TimetableTest` | 실제 에브리타임 시간표 캡처의 글자 위치와 ML Kit 실제 인식 결과(요일·시각 일부 누락, 글자 붙음)에서 같은 수업 8개 읽기, 12시간제 시각 변환, 요일별 첫 수업 알람 제안과 같은 시각 요일 묶기, 다시 만들 때 예전 알람 교체(일부 실패 시 남김) |
