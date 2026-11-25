@@ -130,6 +130,13 @@
     <string name="home_pending_cached">실시간 교통 정보를 확인하지 못해 여유를 더했어요. 알람을 %1$d분 앞당길까요?</string>
     <string name="home_pending_apply">변경하기</string>
     <string name="home_pending_dismiss">유지하기</string>
+    <string name="widget_name">다음 알람</string>
+    <string name="widget_description">다음 기상 알람 시각과 출발·도착, 교통 상태를 보여 줘요.</string>
+    <string name="widget_title">다음 알람</string>
+    <string name="widget_label">%1$s · %2$s</string>
+    <string name="widget_summary">%1$s %2$s 도착 | %3$s 출발</string>
+    <string name="widget_empty">예정된 알람이 없어요</string>
+    <string name="widget_empty_hint">눌러서 알람 만들기</string>
     <string name="habit_title">기상 습관에 맞춰 볼까요?</string>
     <string name="habit_body">최근 %1$d번 기상 알람을 평소 %2$d분쯤 늦게 끄셨어요. 준비 시간을 %3$d분 늘리면 그만큼 일찍 깨워 드려서 출발이 늦어지지 않아요.</string>
     <string name="habit_preparation_change">준비 시간 %1$d분 → %2$d분</string>

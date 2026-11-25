@@ -129,6 +129,7 @@ dependencies {
     // Google Play 서비스가 모델을 따로 받는 방식은 에뮬레이터에서 몇 분이 지나도 받아지지 않아, 처음 쓸 때 바로 동작하는 쪽을 골랐다.
     implementation(libs.mlkit.text.recognition.korean)
     implementation(libs.kakao.map)
+    implementation(libs.androidx.glance.appwidget)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
