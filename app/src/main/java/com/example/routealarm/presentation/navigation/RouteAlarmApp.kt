@@ -219,10 +219,6 @@ fun RouteAlarmApp(
                     paywallVisible = false
                     navController.navigate(Route.GroupPass) { launchSingleTop = true }
                 },
-                onSubscribed = {
-                    paywallVisible = false
-                    scope.launch { snackbar.showSnackbar(context.getString(R.string.paywall_trial_started)) }
-                },
             )
         }
     }

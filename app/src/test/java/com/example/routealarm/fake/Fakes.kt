@@ -103,10 +103,6 @@ class FakeScheduleRepository : ScheduleRepository {
         return AppResult.Success(Unit)
     }
 
-    override suspend fun deleteDemoSchedules(): AppResult<Unit> {
-        schedules.update { map -> map.filterValues { !it.isDemo } }
-        return AppResult.Success(Unit)
-    }
 }
 
 class FakeAlarmScheduler(var exactAllowed: Boolean = true) : AlarmScheduler {
@@ -199,10 +195,6 @@ class FakePreferencesRepository(initial: UserPreferences = UserPreferences()) : 
     override suspend fun setColorTheme(theme: ColorTheme) = state.update { it.copy(colorTheme = theme) }
     override suspend fun setLastPaywallPromptDay(epochDay: Long) = state.update { it.copy(lastPaywallPromptEpochDay = epochDay) }
     override suspend fun setOnboardingCompleted() = state.update { it.copy(onboardingCompleted = true) }
-    override suspend fun setDemoSeeded() = state.update { it.copy(demoSeeded = true) }
-    override suspend fun setDemoExtraDelay(minutes: Int) = state.update { it.copy(demo = it.demo.copy(extraDelayMinutes = minutes)) }
-    override suspend fun setDemoNetworkFailure(enabled: Boolean) =
-        state.update { it.copy(demo = it.demo.copy(simulateNetworkFailure = enabled)) }
 }
 
 /** 결제·서버 없이 플랜을 바꿔 볼 수 있는 구독 저장소 */
@@ -215,22 +207,29 @@ class FakeSubscriptionRepository(
     val passes = mutableMapOf<String, GroupPass>()
 
     override val entitlement: Flow<Entitlement> = state
-    override val isSimulated: Boolean = true
     override suspend fun current(): Entitlement = state.value
 
-    override suspend fun startTrial(product: SubscriptionProduct): AppResult<Entitlement> {
-        failWith?.let { return AppResult.Failure(it) }
+    /** 서버가 승인한 주문(주문번호 → 상품). 테스트에서 미리 넣어 둔다. */
+    val paidOrders = mutableMapOf<String, SubscriptionProduct>()
+
+    /** 테스트 준비용: 결제를 거치지 않고 PRO 상태로 만든다. */
+    fun grantPro(product: SubscriptionProduct) {
         val now = time?.now() ?: Instant.EPOCH
-        val trialEnd = now.plus(Duration.ofDays(SubscriptionProduct.TRIAL_DAYS))
-        val entitlement = Entitlement(
+        state.value = Entitlement(
             plan = if (product == SubscriptionProduct.YEARLY) PlanType.PRO_YEARLY else PlanType.PRO_MONTHLY,
             startedAt = now,
-            trialEndsAt = trialEnd,
-            expiresAt = trialEnd,
-            autoRenew = true,
+            expiresAt = now.plus(Duration.ofDays(if (product == SubscriptionProduct.YEARLY) 365 else 30)),
+            autoRenew = false,
         )
-        state.value = entitlement
-        return AppResult.Success(entitlement)
+    }
+
+    override fun checkoutUrl(product: SubscriptionProduct): String = "https://proxy.test/pay/checkout?product=${product.productId}"
+
+    override suspend fun completePayment(orderId: String): AppResult<Entitlement> {
+        failWith?.let { return AppResult.Failure(it) }
+        val product = paidOrders[orderId] ?: return AppResult.Failure(AppError.PurchaseFailed)
+        grantPro(product)
+        return AppResult.Success(state.value)
     }
 
     override suspend fun verifyGroupPass(code: String): AppResult<GroupPass> {

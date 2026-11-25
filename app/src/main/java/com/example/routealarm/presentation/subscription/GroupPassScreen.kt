@@ -146,14 +146,12 @@ fun GroupPassScreen(
 
             // 코드 입력(①)
             CodeField(code, onCodeChange)
-            if (state.isSimulated) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    stringResource(R.string.group_pass_demo_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.textTertiary,
-                )
-            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.group_pass_test_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textTertiary,
+            )
 
             // 확인 결과(②): 서버 검증 후 기관, 이용 기간, 적용 플랜
             Spacer(Modifier.height(16.dp))

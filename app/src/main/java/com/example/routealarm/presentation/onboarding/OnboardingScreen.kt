@@ -214,8 +214,8 @@ private fun TargetCard() {
     val colors = RouteAlarmTheme.colors
     SurfaceCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            SampleRow(stringResource(R.string.onboarding_sample_from), stringResource(R.string.demo_origin_name))
-            SampleRow(stringResource(R.string.onboarding_sample_to), stringResource(R.string.demo_destination_name))
+            SampleRow(stringResource(R.string.onboarding_sample_from), stringResource(R.string.onboarding_sample_origin))
+            SampleRow(stringResource(R.string.onboarding_sample_to), stringResource(R.string.onboarding_sample_destination))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.onboarding_sample_when), style = MaterialTheme.typography.bodyLarge, color = colors.textSecondary, modifier = Modifier.weight(1f))
                 Text(stringResource(R.string.onboarding_sample_target), style = MaterialTheme.typography.headlineMedium, color = colors.accentText)

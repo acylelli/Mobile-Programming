@@ -15,7 +15,6 @@ import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.usecase.ApplyGroupPassUseCase
 import com.example.routealarm.domain.usecase.GroupPassCode
 import com.example.routealarm.domain.usecase.ResetSubscriptionUseCase
-import com.example.routealarm.domain.usecase.StartProTrialUseCase
 import com.example.routealarm.domain.usecase.VerifyGroupPassUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -48,21 +47,19 @@ data class PaywallUiState(
     val option: PaywallOption = PaywallOption.YEARLY,
     val isProcessing: Boolean = false,
     val error: AppError? = null,
-    /** 실제 결제가 일어나지 않는 시연용 빌드인지(화면에 안내 표시) */
-    val isSimulated: Boolean = false,
 )
 
 sealed interface PaywallEvent {
-    data object Subscribed : PaywallEvent
+    /** 브라우저로 결제창을 연다. 결제가 끝나면 앱 딥링크로 돌아온다(MainActivity). */
+    data class OpenCheckout(val url: String) : PaywallEvent
 }
 
 @HiltViewModel
 class PaywallViewModel @Inject constructor(
-    subscriptionRepository: SubscriptionRepository,
-    private val startProTrial: StartProTrialUseCase,
+    private val subscriptionRepository: SubscriptionRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(PaywallUiState(isSimulated = subscriptionRepository.isSimulated))
+    private val _uiState = MutableStateFlow(PaywallUiState())
     val uiState: StateFlow<PaywallUiState> = _uiState.asStateFlow()
 
     private val _events = Channel<PaywallEvent>(Channel.BUFFERED)
@@ -73,21 +70,10 @@ class PaywallViewModel @Inject constructor(
 
     fun select(option: PaywallOption) = _uiState.update { it.copy(option = option, error = null) }
 
-    /** 7일 무료체험을 시작하고 결제 창을 호출한다(④). */
-    fun startTrial() {
-        val state = _uiState.value
-        val product = state.option.product ?: return
-        if (state.isProcessing) return
-        _uiState.update { it.copy(isProcessing = true, error = null) }
-        viewModelScope.launch {
-            when (val result = startProTrial(product)) {
-                is AppResult.Success -> {
-                    _uiState.update { it.copy(isProcessing = false) }
-                    _events.send(PaywallEvent.Subscribed)
-                }
-                is AppResult.Failure -> _uiState.update { it.copy(isProcessing = false, error = result.error) }
-            }
-        }
+    /** 선택한 이용권의 결제창(토스페이먼츠 테스트 결제)을 연다(④). 결과는 앱 딥링크로 돌아와 MainViewModel 이 적용한다. */
+    fun pay() {
+        val product = _uiState.value.option.product ?: return
+        viewModelScope.launch { _events.send(PaywallEvent.OpenCheckout(subscriptionRepository.checkoutUrl(product))) }
     }
 }
 
@@ -103,7 +89,6 @@ sealed interface GroupPassCheck {
 data class GroupPassUiState(
     val check: GroupPassCheck = GroupPassCheck.Idle,
     val isApplying: Boolean = false,
-    val isSimulated: Boolean = false,
 )
 
 sealed interface GroupPassEvent {
@@ -115,12 +100,11 @@ sealed interface GroupPassEvent {
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class GroupPassViewModel @Inject constructor(
-    subscriptionRepository: SubscriptionRepository,
     private val verifyGroupPass: VerifyGroupPassUseCase,
     private val applyGroupPass: ApplyGroupPassUseCase,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(GroupPassUiState(isSimulated = subscriptionRepository.isSimulated))
+    private val _uiState = MutableStateFlow(GroupPassUiState())
     val uiState: StateFlow<GroupPassUiState> = _uiState.asStateFlow()
 
     private val _events = Channel<GroupPassEvent>(Channel.BUFFERED)
@@ -214,7 +198,6 @@ data class SubscriptionUiState(
     val entitlement: Entitlement = Entitlement.Free,
     val isPro: Boolean = false,
     val isInTrial: Boolean = false,
-    val isSimulated: Boolean = false,
 )
 
 @HiltViewModel
@@ -231,13 +214,12 @@ class SubscriptionViewModel @Inject constructor(
                 entitlement = entitlement,
                 isPro = entitlement.isPro(now),
                 isInTrial = entitlement.isInTrial(now),
-                isSimulated = subscriptionRepository.isSimulated,
             )
         }
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            SubscriptionUiState(isSimulated = subscriptionRepository.isSimulated),
+            SubscriptionUiState(),
         )
 
     /** 시연용: 결제가 실제로 일어나지 않았으므로 앱 안에서 무료 플랜으로 되돌릴 수 있게 한다. */

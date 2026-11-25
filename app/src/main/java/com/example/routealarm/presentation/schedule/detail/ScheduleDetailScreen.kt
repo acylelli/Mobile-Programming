@@ -47,7 +47,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.routealarm.R
 import com.example.routealarm.core.designsystem.component.AppSwitch
 import com.example.routealarm.core.designsystem.component.BackHeader
-import com.example.routealarm.core.designsystem.component.DemoBadge
 import com.example.routealarm.core.designsystem.component.ErrorState
 import com.example.routealarm.core.designsystem.component.LoadingState
 import com.example.routealarm.core.designsystem.component.NoticeStrip
@@ -202,10 +201,6 @@ private fun DetailContent(
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(repeatLabel(schedule.repeatDays, schedule.oneTimeDate), style = MaterialTheme.typography.labelMedium, color = colors.textSecondary)
-            if (schedule.isDemo) {
-                Spacer(Modifier.width(8.dp))
-                DemoBadge()
-            }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(

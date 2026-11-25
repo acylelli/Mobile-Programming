@@ -11,5 +11,4 @@ interface ScheduleRepository {
     suspend fun getEnabledSchedules(): List<Schedule>
     suspend fun upsert(schedule: Schedule): AppResult<Long>
     suspend fun delete(id: Long): AppResult<Unit>
-    suspend fun deleteDemoSchedules(): AppResult<Unit>
 }

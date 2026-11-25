@@ -27,3 +27,14 @@ data class GroupPassDto(
     @SerialName("valid_until") val validUntil: String,
     @SerialName("remaining_seats") val remainingSeats: Int,
 )
+
+/** Proxy 서버의 테스트 결제 주문 결과(GET /v1/payments/{orderId}) */
+@Serializable
+data class PaymentResultDto(
+    @SerialName("order_id") val orderId: String,
+    /** READY | PAID | FAILED */
+    val status: String,
+    @SerialName("fail_code") val failCode: String? = null,
+    /** PAID 일 때만 있다. 기간제 이용권이라 auto_renew 는 false */
+    val subscription: SubscriptionStatusDto? = null,
+)

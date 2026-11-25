@@ -1,4 +1,5 @@
 import { createApp, DEFAULT_LIMITS, type GuardLimits } from "./app.ts";
+import { parseGroupPasses } from "./grouppass.ts";
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -35,11 +36,27 @@ const realtimeKeys = {
   dataGoKrKey: process.env.DATA_GO_KR_SERVICE_KEY?.trim() || undefined,
 };
 
+/** 토스페이먼츠 API 개별 연동 키(테스트). 없으면 결제 경로가 꺼진다. */
+const tossKeys = {
+  clientKey: process.env.TOSS_CLIENT_KEY?.trim() || undefined,
+  secretKey: process.env.TOSS_SECRET_KEY?.trim() || undefined,
+};
+
+let groupPasses;
+try {
+  groupPasses = parseGroupPasses(process.env.GROUP_PASSES);
+} catch (e) {
+  console.error((e as Error).message);
+  process.exit(1);
+}
+
 const app = createApp({
   odsayApiKey: requireEnv("ODSAY_API_KEY"),
   kakaoRestApiKey: requireEnv("KAKAO_REST_API_KEY"),
   limits,
   realtimeKeys,
+  tossKeys,
+  groupPasses,
 });
 
 const port = Number(process.env.PORT ?? 8080);
@@ -47,5 +64,7 @@ app.listen(port, () => {
   console.log(`RouteAlarm proxy listening on :${port}`, limits, {
     realtimeSubway: Boolean(realtimeKeys.seoulSubwayKey),
     realtimeBus: Boolean(realtimeKeys.dataGoKrKey),
+    payments: Boolean(tossKeys.clientKey && tossKeys.secretKey),
+    groupPasses: groupPasses.length,
   });
 });

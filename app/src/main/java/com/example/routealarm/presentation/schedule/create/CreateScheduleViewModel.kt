@@ -254,7 +254,7 @@ class CreateScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             var chosen = place
             if (registering != null) {
-                val favorite = place.copy(id = 0, type = registering, isDemo = false)
+                val favorite = place.copy(id = 0, type = registering)
                 val id = (placeRepository.savePlace(favorite) as? AppResult.Success)?.data ?: 0
                 chosen = favorite.copy(id = id)
             } else if (fromSearch) {

@@ -20,9 +20,3 @@ interface PlaceRepository {
     }
 }
 
-/** 첫 실행 예시 데이터(집 → 한성대학교). 문자열 리소스를 쓰기 위해 data 계층에서 구현한다. */
-interface DemoDataProvider {
-    fun demoOrigin(): Place
-    fun demoDestination(): Place
-    fun demoTitle(): String
-}

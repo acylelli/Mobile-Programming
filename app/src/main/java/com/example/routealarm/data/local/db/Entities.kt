@@ -15,7 +15,6 @@ data class PlaceEntity(
     val latitude: Double,
     val longitude: Double,
     val type: String,
-    val isDemo: Boolean,
     val createdAt: Long,
 )
 
@@ -63,7 +62,6 @@ data class ScheduleEntity(
     val oneTimeEpochDay: Long?,
     val alarmMode: String,
     val enabled: Boolean,
-    val isDemo: Boolean,
     val createdAt: Long,
     val updatedAt: Long,
     @Embedded(prefix = "plan_") val plan: PlanColumns?,

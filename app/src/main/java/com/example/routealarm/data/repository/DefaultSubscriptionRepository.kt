@@ -13,6 +13,7 @@ import com.example.routealarm.core.common.IoDispatcher
 import com.example.routealarm.core.util.TimeProvider
 import com.example.routealarm.data.mapper.enumValueOrDefault
 import com.example.routealarm.data.remote.GroupPassNotFoundException
+import com.example.routealarm.data.remote.PaymentRemoteDataSource
 import com.example.routealarm.data.remote.SubscriptionRemoteDataSource
 import com.example.routealarm.data.remote.dto.GroupPassDto
 import com.example.routealarm.domain.model.Entitlement
@@ -44,6 +45,7 @@ import javax.inject.Singleton
 class DefaultSubscriptionRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     private val remote: SubscriptionRemoteDataSource,
+    private val payment: PaymentRemoteDataSource,
     private val timeProvider: TimeProvider,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : SubscriptionRepository {
@@ -59,23 +61,31 @@ class DefaultSubscriptionRepository @Inject constructor(
         val ALL = listOf(PLAN, STARTED_AT, TRIAL_ENDS_AT, EXPIRES_AT, AUTO_RENEW, ORGANIZATION, VERIFIED_AT)
     }
 
-    override val isSimulated: Boolean get() = remote.isSimulated
-
     override val entitlement: Flow<Entitlement> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { it.toEntitlement() }
 
     override suspend fun current(): Entitlement = entitlement.first()
 
-    override suspend fun startTrial(product: SubscriptionProduct): AppResult<Entitlement> = remoteCall {
-        val status = remote.startSubscription(product.productId)
+    override fun checkoutUrl(product: SubscriptionProduct): String = payment.checkoutUrl(product.productId)
+
+    override suspend fun completePayment(orderId: String): AppResult<Entitlement> = remoteCall {
+        val result = payment.fetchResult(orderId)
+        val status = result.subscription
+        // 서버가 승인(PAID)한 주문만 적용한다. 취소·실패·대기 중이면 지금 플랜을 그대로 둔다.
+        if (result.status != PAYMENT_PAID || status == null) throw PaymentNotCompleted()
         val now = timeProvider.now()
+        val plan = when (status.productId) {
+            SubscriptionProduct.YEARLY.productId -> PlanType.PRO_YEARLY
+            SubscriptionProduct.MONTHLY.productId -> PlanType.PRO_MONTHLY
+            else -> throw PaymentNotCompleted()
+        }
         Entitlement(
-            plan = if (product == SubscriptionProduct.YEARLY) PlanType.PRO_YEARLY else PlanType.PRO_MONTHLY,
+            plan = plan,
             startedAt = parseInstant(status.startedAt) ?: now,
-            trialEndsAt = status.trialEndsAt?.let(::parseInstant),
-            expiresAt = parseInstant(status.expiresAt),
-            autoRenew = status.autoRenew,
+            expiresAt = parseInstant(status.expiresAt) ?: throw PaymentNotCompleted(),
+            // 기간제 이용권: 자동 갱신 없이 결제한 기간만 PRO
+            autoRenew = false,
             lastVerifiedAt = now,
         ).also { save(it) }
     }
@@ -158,6 +168,8 @@ class DefaultSubscriptionRepository @Inject constructor(
 
     private class GroupPassRejected(val error: AppError) : Exception()
 
+    private class PaymentNotCompleted : Exception()
+
     private suspend fun <T> remoteCall(block: suspend () -> T): AppResult<T> = withContext(ioDispatcher) {
         try {
             AppResult.Success(block())
@@ -165,10 +177,16 @@ class DefaultSubscriptionRepository @Inject constructor(
             AppResult.Failure(e.error)
         } catch (e: GroupPassNotFoundException) {
             AppResult.Failure(AppError.GroupPassInvalid)
+        } catch (e: PaymentNotCompleted) {
+            AppResult.Failure(AppError.PurchaseFailed)
         } catch (e: IOException) {
             AppResult.Failure(AppError.Network)
         } catch (e: HttpException) {
             AppResult.Failure(AppError.Server(e.code()))
         }
+    }
+
+    private companion object {
+        const val PAYMENT_PAID = "PAID"
     }
 }

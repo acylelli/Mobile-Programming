@@ -117,7 +117,14 @@ fun SubscriptionScreen(
                         if (entitlement.isPersonalSubscription) {
                             entitlement.expiresAt?.let {
                                 DetailRow(
-                                    stringResource(if (state.isInTrial) R.string.subscription_first_payment else R.string.subscription_next_payment),
+                                    stringResource(
+                                        when {
+                                            state.isInTrial -> R.string.subscription_first_payment
+                                            entitlement.autoRenew -> R.string.subscription_next_payment
+                                            // 기간제 이용권(테스트 결제)은 결제한 기간이 끝나면 무료 플랜이 된다.
+                                            else -> R.string.subscription_valid_until
+                                        },
+                                    ),
                                     TimeFormat.dottedDate(it),
                                 )
                             }
@@ -145,21 +152,22 @@ fun SubscriptionScreen(
             Spacer(Modifier.height(Spacing.lg))
             if (!state.isPro) {
                 SecondaryButton(stringResource(R.string.settings_group_pass), onClick = onOpenGroupPass, modifier = Modifier.fillMaxWidth())
-            } else if (entitlement.isPersonalSubscription) {
+            } else if (entitlement.isPersonalSubscription && entitlement.autoRenew) {
                 // 해지는 Google Play 구독 관리에서 한다. 결제 기간이 끝나면 무료 플랜으로 바뀌고 일정은 그대로 남는다.
                 SecondaryButton(stringResource(R.string.subscription_manage_on_play), onClick = onManageOnPlay, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
                 Paragraph(stringResource(R.string.subscription_cancel_notice), style = MaterialTheme.typography.bodySmall)
             }
-            if (state.isSimulated && state.isPro) {
+            if (state.isPro) {
+                // 테스트 결제·테스트 이용권을 다시 해 볼 수 있도록 무료 플랜으로 되돌린다.
                 Spacer(Modifier.height(8.dp))
-                TextLink(stringResource(R.string.subscription_reset_demo), onClick = onResetToFree, modifier = Modifier.align(Alignment.CenterHorizontally))
+                TextLink(stringResource(R.string.subscription_reset_test), onClick = onResetToFree, modifier = Modifier.align(Alignment.CenterHorizontally))
             }
             Spacer(Modifier.height(Spacing.lg))
         }
         if (!state.isPro) {
             PrimaryButton(
-                text = stringResource(R.string.paywall_start_trial, SubscriptionProduct.TRIAL_DAYS.toInt()),
+                text = stringResource(R.string.subscription_buy_pro),
                 onClick = onShowPaywall,
                 modifier = Modifier.fillMaxWidth().padding(start = Spacing.screen, end = Spacing.screen, top = 8.dp, bottom = 16.dp),
             )

@@ -25,7 +25,6 @@ fun PlaceEntity.toDomain() = Place(
     latitude = latitude,
     longitude = longitude,
     type = enumValueOrDefault(type, PlaceType.CUSTOM),
-    isDemo = isDemo,
 )
 
 fun Place.toEntity(createdAt: Instant) = PlaceEntity(
@@ -35,7 +34,6 @@ fun Place.toEntity(createdAt: Instant) = PlaceEntity(
     latitude = latitude,
     longitude = longitude,
     type = type.name,
-    isDemo = isDemo,
     createdAt = createdAt.toEpochMilli(),
 )
 
@@ -77,7 +75,6 @@ class ScheduleEntityMapper(private val json: Json) {
             oneTimeDate = entity.oneTimeEpochDay?.let(LocalDate::ofEpochDay),
             alarmMode = enumValueOrDefault(entity.alarmMode, AlarmMode.WAKE_UP_AND_DEPARTURE),
             enabled = entity.enabled,
-            isDemo = entity.isDemo,
             createdAt = Instant.ofEpochMilli(entity.createdAt),
             updatedAt = Instant.ofEpochMilli(entity.updatedAt),
             plan = entity.plan?.toDomain(route),
@@ -101,7 +98,6 @@ class ScheduleEntityMapper(private val json: Json) {
         oneTimeEpochDay = schedule.oneTimeDate?.toEpochDay(),
         alarmMode = schedule.alarmMode.name,
         enabled = schedule.enabled,
-        isDemo = schedule.isDemo,
         createdAt = schedule.createdAt.toEpochMilli(),
         updatedAt = schedule.updatedAt.toEpochMilli(),
         plan = schedule.plan?.toColumns(),

@@ -62,6 +62,10 @@ import com.example.routealarm.presentation.common.wonText
 private const val TAB_PERSONAL = 0
 private const val TAB_GROUP = 1
 
+/** Proxy 서버의 이용 기간과 같다(server/src/payments.ts). */
+private const val MONTHLY_DAYS = 30
+private const val YEARLY_DAYS = 365
+
 /**
  * PRO 페이월 — UI-E-001.
  * 잠긴 기능을 눌렀을 때만 뜨는 바텀시트다. 스스로 뜨지 않는다(SFR-015 PRO 안내 원칙).
@@ -70,17 +74,22 @@ private const val TAB_GROUP = 1
 fun PaywallSheet(
     onDismiss: () -> Unit,
     onOpenGroupPass: () -> Unit,
-    onSubscribed: () -> Unit,
     viewModel: PaywallViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(TAB_PERSONAL) }
 
+    val context = LocalContext.current
     LaunchedEffect(viewModel) {
         viewModel.reset()
         viewModel.events.collect { event ->
             when (event) {
-                PaywallEvent.Subscribed -> onSubscribed()
+                is PaywallEvent.OpenCheckout -> {
+                    // 결제는 브라우저의 토스페이먼츠 결제창에서 진행한다. 끝나면 routealarm://payment 로 앱에 돌아온다.
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, event.url.toUri())) }
+                        .onFailure { Toast.makeText(context, R.string.payment_browser_unavailable, Toast.LENGTH_SHORT).show() }
+                    onDismiss()
+                }
             }
         }
     }
@@ -108,7 +117,7 @@ fun PaywallSheet(
             )
             Spacer(Modifier.height(14.dp))
             if (tab == TAB_PERSONAL) {
-                PersonalPlans(state, onSelect = viewModel::select, onStart = viewModel::startTrial, onContinueFree = onDismiss)
+                PersonalPlans(state, onSelect = viewModel::select, onStart = viewModel::pay, onContinueFree = onDismiss)
             } else {
                 GroupPlans(onOpenGroupPass = onOpenGroupPass)
             }
@@ -176,21 +185,25 @@ private fun PersonalPlans(
         Text(stringResource(error.messageRes()), style = MaterialTheme.typography.bodySmall, color = colors.danger)
     }
 
-    // 무료체험 시작(④)
+    // 결제(④): 토스페이먼츠 테스트 결제창
     Spacer(Modifier.height(14.dp))
     val isFree = state.option == PaywallOption.FREE
     PrimaryButton(
-        text = stringResource(if (isFree) R.string.paywall_continue_free else R.string.paywall_start_trial, SubscriptionProduct.TRIAL_DAYS.toInt()),
+        text = if (isFree) {
+            stringResource(R.string.paywall_continue_free)
+        } else {
+            stringResource(R.string.paywall_pay, TimeFormat.amount(state.option.product!!.priceWon))
+        },
         onClick = if (isFree) onContinueFree else onStart,
         loading = state.isProcessing,
         modifier = Modifier.fillMaxWidth(),
     )
-    // 결제 안내(⑤): 체험 종료 알림, 이후 결제 금액, 해지 가능 여부를 분명하게
+    // 결제 안내(⑤): 이용 기간과 자동 갱신 여부를 분명하게
     Spacer(Modifier.height(10.dp))
     Text(
         when (state.option) {
-            PaywallOption.YEARLY -> stringResource(R.string.paywall_footnote_yearly, TimeFormat.amount(SubscriptionProduct.YEARLY.priceWon))
-            PaywallOption.MONTHLY -> stringResource(R.string.paywall_footnote_monthly, TimeFormat.amount(SubscriptionProduct.MONTHLY.priceWon))
+            PaywallOption.YEARLY -> stringResource(R.string.paywall_footnote_checkout, YEARLY_DAYS)
+            PaywallOption.MONTHLY -> stringResource(R.string.paywall_footnote_checkout, MONTHLY_DAYS)
             PaywallOption.FREE -> stringResource(R.string.paywall_footnote_free)
         },
         style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.labelSmall.fontSize * 1.1f),
@@ -198,10 +211,10 @@ private fun PersonalPlans(
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
     )
-    if (state.isSimulated) {
+    if (!isFree) {
         Spacer(Modifier.height(4.dp))
         Text(
-            stringResource(R.string.paywall_simulated_notice),
+            stringResource(R.string.paywall_checkout_notice),
             style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.labelSmall.fontSize * 1.1f),
             color = colors.textTertiary,
             textAlign = TextAlign.Center,

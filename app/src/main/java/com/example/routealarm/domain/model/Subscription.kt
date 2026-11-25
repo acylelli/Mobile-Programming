@@ -5,16 +5,12 @@ import java.time.LocalDate
 
 enum class PlanType { FREE, PRO_MONTHLY, PRO_YEARLY, GROUP_PASS }
 
-/** Google Play 정기 결제 상품(INR-003). 금액은 화면 표시용이며 실제 청구는 Play 가 처리한다. */
+/** PRO 기간제 이용권(월간 30일, 연간 365일). 금액은 Proxy 서버의 결제 금액과 같아야 한다(서버 값이 기준). */
 enum class SubscriptionProduct(val productId: String, val priceWon: Int) {
     YEARLY("routealarm_pro_yearly", 24_000),
     MONTHLY("routealarm_pro_monthly", 2_900),
     ;
 
-    companion object {
-        /** 첫 구독에 제공하는 무료체험 기간 */
-        const val TRIAL_DAYS = 7L
-    }
 }
 
 /**

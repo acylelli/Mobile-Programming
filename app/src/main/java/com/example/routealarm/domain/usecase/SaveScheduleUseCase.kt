@@ -26,7 +26,6 @@ class SaveScheduleUseCase @Inject constructor(
     suspend operator fun invoke(
         preview: SchedulePreview,
         editingScheduleId: Long? = null,
-        isDemo: Boolean = false,
         enabled: Boolean = true,
     ): AppResult<SaveScheduleResult> {
         if (preview.outcome is PlanOutcome.TooLate && preview.draft.repeatDays.isEmpty()) {
@@ -49,7 +48,6 @@ class SaveScheduleUseCase @Inject constructor(
             oneTimeDate = preview.oneTimeDate,
             alarmMode = draft.alarmMode,
             enabled = enabled,
-            isDemo = isDemo,
             createdAt = existing?.createdAt ?: now,
             updatedAt = now,
             plan = preview.outcome.plan,

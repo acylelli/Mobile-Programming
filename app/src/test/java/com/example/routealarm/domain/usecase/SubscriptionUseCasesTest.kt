@@ -40,8 +40,8 @@ class SubscriptionUseCasesTest {
     private val restore = RestoreAlarmsUseCase(schedules, sync)
     private val quota = CheckScheduleQuotaUseCase(schedules, subscription, time)
 
-    private suspend fun addSchedule(isDemo: Boolean = false, enabled: Boolean = true): Long {
-        val result = schedules.upsert(TestData.schedule(oneTimeDate = day, enabled = enabled).copy(isDemo = isDemo))
+    private suspend fun addSchedule(enabled: Boolean = true): Long {
+        val result = schedules.upsert(TestData.schedule(oneTimeDate = day, enabled = enabled))
         return (result as AppResult.Success).data
     }
 
@@ -63,31 +63,27 @@ class SubscriptionUseCasesTest {
     }
 
     @Test
-    fun `예시 일정은 무료 플랜 한도에 세지 않는다`() = runTest {
-        addSchedule(isDemo = true, enabled = false)
-        addSchedule()
-
-        assertEquals(ScheduleQuota.Limited(used = 1, limit = 2), quota())
-    }
-
-    @Test
     fun `PRO 는 일정 수 제한이 없다`() = runTest {
         repeat(3) { addSchedule() }
-        subscription.startTrial(SubscriptionProduct.YEARLY)
+        subscription.grantPro(SubscriptionProduct.YEARLY)
 
         assertEquals(ScheduleQuota.Unlimited, quota())
     }
 
     @Test
-    fun `무료체험을 시작하면 7일 뒤 첫 결제가 예정된 PRO 가 된다`() = runTest {
-        val result = StartProTrialUseCase(subscription, restore)(SubscriptionProduct.YEARLY)
+    fun `서버가 승인한 결제만 PRO 로 적용되고 결제한 기간이 지나면 무료가 된다`() = runTest {
+        subscription.paidOrders["ra_paid"] = SubscriptionProduct.MONTHLY
 
+        val notPaid = CompletePaymentUseCase(subscription, restore)("ra_unknown")
+        assertTrue(notPaid is AppResult.Failure)
+        assertFalse(subscription.current().isPro(time.instant))
+
+        val result = CompletePaymentUseCase(subscription, restore)("ra_paid")
         val entitlement = (result as AppResult.Success).data
-        assertEquals(PlanType.PRO_YEARLY, entitlement.plan)
-        assertTrue(entitlement.isPro(time.instant))
-        assertTrue(entitlement.isInTrial(time.instant))
-        assertEquals(time.instant.plus(Duration.ofDays(7)), entitlement.trialEndsAt)
-        assertFalse(entitlement.isInTrial(time.instant.plus(Duration.ofDays(8))))
+        assertEquals(PlanType.PRO_MONTHLY, entitlement.plan)
+        assertFalse(entitlement.autoRenew)
+        assertTrue(entitlement.isPro(time.instant.plus(Duration.ofDays(29))))
+        assertFalse(entitlement.isPro(time.instant.plus(Duration.ofDays(31))))
     }
 
     @Test
@@ -109,7 +105,8 @@ class SubscriptionUseCasesTest {
         // 무료: 기상(07:20) 30분 전 한 번
         assertEquals(seoul(day, 6, 50), refreshScheduler.scheduled[id])
 
-        StartProTrialUseCase(subscription, restore)(SubscriptionProduct.MONTHLY)
+        subscription.paidOrders["ra_paid"] = SubscriptionProduct.MONTHLY
+        CompletePaymentUseCase(subscription, restore)("ra_paid")
 
         // PRO: 가장 가까운 체크포인트(3시간 전)부터 출발 직전까지
         assertEquals(seoul(day, 4, 20), refreshScheduler.scheduled[id])
@@ -181,7 +178,7 @@ class SubscriptionUseCasesTest {
     @Test
     fun `개인 구독 중에 단체 이용권을 적용하면 자동 갱신 해지 안내가 필요하다`() = runTest {
         subscription.passes["HSU-2026-WAKE7"] = FakeSubscriptionRepository.hansungPass()
-        subscription.startTrial(SubscriptionProduct.MONTHLY)
+        subscription.grantPro(SubscriptionProduct.MONTHLY)
 
         val result = ApplyGroupPassUseCase(subscription, restore, time)("HSU-2026-WAKE7")
 
@@ -190,7 +187,7 @@ class SubscriptionUseCasesTest {
 
     @Test
     fun `검증 서버에 연결하지 못하면 마지막으로 확인된 플랜을 유지한다`() = runTest {
-        subscription.startTrial(SubscriptionProduct.YEARLY)
+        subscription.grantPro(SubscriptionProduct.YEARLY)
         subscription.passes["HSU-2026-WAKE7"] = FakeSubscriptionRepository.hansungPass()
         subscription.failWith = AppError.Network
 
@@ -202,7 +199,7 @@ class SubscriptionUseCasesTest {
 
     @Test
     fun `무료 플랜으로 되돌려도 일정은 삭제하지 않는다`() = runTest {
-        subscription.startTrial(SubscriptionProduct.YEARLY)
+        subscription.grantPro(SubscriptionProduct.YEARLY)
         repeat(3) { addSchedule() }
 
         ResetSubscriptionUseCase(subscription, restore)()

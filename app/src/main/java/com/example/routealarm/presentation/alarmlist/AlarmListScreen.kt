@@ -46,7 +46,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.routealarm.R
 import com.example.routealarm.core.designsystem.component.AppCard
 import com.example.routealarm.core.designsystem.component.AppSwitch
-import com.example.routealarm.core.designsystem.component.DemoBadge
 import com.example.routealarm.core.designsystem.component.EmptyState
 import com.example.routealarm.core.designsystem.component.LoadingState
 import com.example.routealarm.core.designsystem.component.Pill
@@ -191,10 +190,6 @@ private fun AlarmCard(item: AlarmListItem, now: Instant, onClick: () -> Unit, on
                     style = MaterialTheme.typography.labelMedium,
                     color = colors.textSecondary,
                 )
-                if (schedule.isDemo) {
-                    Spacer(Modifier.width(8.dp))
-                    DemoBadge()
-                }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

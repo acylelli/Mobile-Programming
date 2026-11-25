@@ -18,7 +18,4 @@ interface PreferencesRepository {
     suspend fun setColorTheme(theme: ColorTheme)
     suspend fun setLastPaywallPromptDay(epochDay: Long)
     suspend fun setOnboardingCompleted()
-    suspend fun setDemoSeeded()
-    suspend fun setDemoExtraDelay(minutes: Int)
-    suspend fun setDemoNetworkFailure(enabled: Boolean)
 }
