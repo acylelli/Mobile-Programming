@@ -56,12 +56,17 @@ class FakeTransitRepository(
     var failWith: AppError? = null,
     var isRealtime: Boolean = true,
     var fetchedAt: Instant = Instant.EPOCH,
+    /** 서버가 붙여 주는 첫 탑승 실시간 도착 안내("약 8분 후 도착") */
+    var arrivalInfo: String? = null,
 ) : TransitRepository {
     var callCount = 0
+        private set
+    var lastDepartureTime: Instant? = null
         private set
 
     override suspend fun getRoutes(origin: Place, destination: Place, departureTime: Instant): AppResult<RouteQueryResult> {
         callCount++
+        lastDepartureTime = departureTime
         failWith?.let { return AppResult.Failure(it) }
         val total = Duration.ofMinutes(travelMinutes)
         val route = TransitRoute(
@@ -73,7 +78,7 @@ class FakeTransitRepository(
             arrivalTime = departureTime.plus(total),
             transferCount = 0,
             segments = listOf(
-                TransitSegment(SegmentType.SUBWAY, "8호선", origin.name, destination.name, total),
+                TransitSegment(SegmentType.SUBWAY, "8호선", origin.name, destination.name, total, arrivalInfo),
             ),
             delay = Duration.ofMinutes(delayMinutes),
         )

@@ -17,6 +17,8 @@
     <string name="notification_departure_reminder_text">%1$s 출발 예정이에요.</string>
     <string name="notification_departure_now_title">지금 출발하세요</string>
     <string name="notification_departure_now_text">지금 출발하면 %1$s에 %2$s 도착 예정이에요.</string>
+    <!-- 출발 알림 둘째 줄: "다산역 8호선 · 약 8분 후 도착" (서버의 실시간 도착 안내) -->
+    <string name="notification_departure_boarding">%1$s · %2$s</string>
     <string name="notification_adjusted_title">%1$s · 알람 시간이 변경됐어요</string>
     <string name="notification_adjusted_earlier">교통 상황이 변경되어 %1$s 알람이 %2$d분 앞당겨졌어요. %3$s → %4$s</string>
     <string name="notification_adjusted_cached">실시간 교통 정보를 가져오지 못해 마지막 경로 기준으로 여유를 더했어요. 알람을 %1$s → %2$s로 변경했어요.</string>

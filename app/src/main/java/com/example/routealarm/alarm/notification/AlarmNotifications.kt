@@ -21,6 +21,7 @@ import com.example.routealarm.alarm.service.AlarmService
 import com.example.routealarm.core.util.TimeProvider
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.repository.AlarmNotifier
+import com.example.routealarm.domain.usecase.boardingInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -101,7 +102,7 @@ class AlarmNotifications @Inject constructor(
             NOTIFICATION_DEPARTURE_BASE + schedule.id.toInt(),
             CHANNEL_DEPARTURE,
             title = context.getString(R.string.notification_departure_reminder_title),
-            text = context.getString(R.string.notification_departure_reminder_text, formatTime(plan.departure)),
+            text = withBoarding(context.getString(R.string.notification_departure_reminder_text, formatTime(plan.departure)), schedule),
             scheduleId = schedule.id,
         )
     }
@@ -112,7 +113,10 @@ class AlarmNotifications @Inject constructor(
             NOTIFICATION_DEPARTURE_BASE + schedule.id.toInt(),
             CHANNEL_DEPARTURE,
             title = context.getString(R.string.notification_departure_now_title),
-            text = context.getString(R.string.notification_departure_now_text, formatTime(plan.estimatedArrival), schedule.destination.name),
+            text = withBoarding(
+                context.getString(R.string.notification_departure_now_text, formatTime(plan.estimatedArrival), schedule.destination.name),
+                schedule,
+            ),
             scheduleId = schedule.id,
         )
     }
@@ -193,6 +197,13 @@ class AlarmNotifications @Inject constructor(
             .apply { if (action != null) addAction(action) }
             .build()
         runCatching { manager.notify(id, notification) }
+    }
+
+    /** 첫 탑승 구간에 실시간 도착 안내가 있으면 다음 줄에 "다산역 8호선 · 약 8분 후 도착"을 붙인다. */
+    private fun withBoarding(text: String, schedule: Schedule): String {
+        val boarding = schedule.plan?.boardingInfo() ?: return text
+        val where = listOfNotNull(boarding.stationName, boarding.lineName).joinToString(" ")
+        return text + "\n" + context.getString(R.string.notification_departure_boarding, where, boarding.arrivalInfo)
     }
 
     private fun accentColor(): Int = ContextCompat.getColor(context, R.color.primary)
