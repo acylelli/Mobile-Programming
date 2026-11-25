@@ -143,7 +143,11 @@ class CreateScheduleViewModel @Inject constructor(
     private val timeProvider: TimeProvider,
 ) : ViewModel() {
 
-    private val editScheduleId: Long? = savedStateHandle.toRoute<Route.CreateSchedule>().editScheduleId
+    private val route = savedStateHandle.toRoute<Route.CreateSchedule>()
+    private val editScheduleId: Long? = route.editScheduleId
+
+    /** 캘린더 일정에서 넘어온 도착지 검색어. 도착지 단계에 들어갈 때 검색창에 채운다. */
+    private var pendingDestinationQuery: String? = route.prefillDestination?.takeIf { it.isNotBlank() }
 
     private val _uiState = MutableStateFlow(CreateScheduleUiState(isEditing = editScheduleId != null))
     val uiState: StateFlow<CreateScheduleUiState> = _uiState.asStateFlow()
@@ -193,7 +197,13 @@ class CreateScheduleViewModel @Inject constructor(
                         alarmMode = existing.alarmMode,
                     )
                 } else {
+                    // 캘린더 일정에서 왔으면 그 날짜·시각에 한 번 도착하는 일정으로 시작한다.
+                    val prefillTime = route.prefillArrival?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
+                    val prefillDate = route.prefillDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                     state.copy(
+                        targetTime = prefillTime ?: state.targetTime,
+                        repeatDays = if (prefillTime != null) emptySet() else state.repeatDays,
+                        oneTimeDate = prefillDate?.takeIf { !it.isBefore(timeProvider.nowZoned().toLocalDate()) },
                         preparationMinutes = prefs.defaultPreparationMinutes,
                         bufferPreset = BufferPreset.entries.firstOrNull { it.minutes == prefs.defaultBufferMinutes },
                         customBufferMinutes = prefs.defaultBufferMinutes,
@@ -357,6 +367,11 @@ class CreateScheduleViewModel @Inject constructor(
             calculate()
         } else {
             _uiState.update { it.cleared().copy(step = CreateStep.entries[it.stepIndex + 1]) }
+            // 캘린더 일정의 장소로 도착지를 바로 검색해 둔다(한 번만).
+            if (_uiState.value.step == CreateStep.DESTINATION) {
+                pendingDestinationQuery?.let { onQueryChange(it) }
+                pendingDestinationQuery = null
+            }
         }
     }
 

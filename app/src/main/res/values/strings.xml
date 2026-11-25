@@ -35,6 +35,7 @@
     <!-- 공통 -->
     <string name="common_retry">다시 시도</string>
     <string name="common_cancel">취소</string>
+    <string name="common_save">저장</string>
     <string name="common_confirm">확인</string>
     <string name="common_delete">삭제</string>
     <string name="common_next">다음</string>
@@ -393,8 +394,6 @@
     <string name="settings_section_integration">연동</string>
     <string name="settings_timetable">학교 시간표 연동</string>
     <string name="settings_calendar">캘린더 연동</string>
-    <string name="settings_coming_soon">곧 제공될 기능이에요.</string>
-    <string name="settings_coming_soon_short">준비 중</string>
     <string name="settings_section_display">화면</string>
     <string name="settings_theme">테마</string>
     <string name="settings_section_subscription">구독</string>
@@ -444,6 +443,8 @@
     <string name="error_network">인터넷 연결을 확인해 주세요.</string>
     <string name="error_server">교통 정보 서버에 문제가 있어요. 잠시 후 다시 시도해 주세요.</string>
     <string name="error_too_many_requests">지금 요청이 많아 잠시 쉬고 있어요. 조금 뒤에 다시 시도해 주세요.</string>
+    <string name="error_calendar_permission">캘린더를 읽으려면 캘린더 권한이 필요해요.</string>
+    <string name="error_timetable_not_recognized">사진에서 요일과 시각을 찾지 못했어요. 시간표 전체가 보이게 찍은 사진인지 확인해 주세요.</string>
     <string name="error_no_route">출발지와 도착지 사이의 대중교통 경로를 찾지 못했어요.</string>
     <string name="error_place_search">장소를 검색하지 못했어요.</string>
     <string name="error_location_permission">위치 권한이 없어요. 출발지를 직접 검색해 주세요.</string>
@@ -492,4 +493,52 @@
     <string name="cd_duration_adjusted">고를 수 있는 범위를 벗어나 %1$s으로 맞췄어요</string>
     <string name="cd_wheel_next">다음 값</string>
     <string name="cd_wheel_previous">이전 값</string>
+
+    <!-- 학교 시간표 -->
+    <string name="timetable_title">학교 시간표</string>
+    <string name="timetable_body">시간표를 넣으면 요일마다 첫 수업에 맞춰 알람을 만들어 드려요.</string>
+    <string name="timetable_from_image">사진</string>
+    <string name="timetable_from_calendar">캘린더</string>
+    <string name="timetable_add_class">수업 추가</string>
+    <string name="timetable_edit_class">수업 수정</string>
+    <string name="timetable_delete_class">이 수업 삭제</string>
+    <string name="timetable_empty_title">아직 수업이 없어요</string>
+    <string name="timetable_empty_body">시간표 캡처 사진이나 캘린더에서 가져오거나 직접 추가해 주세요.</string>
+    <string name="timetable_day_format">%1$s요일</string>
+    <string name="timetable_clear_all">시간표 모두 지우기</string>
+    <string name="timetable_create_alarms">알람 %1$d개 만들기</string>
+    <string name="timetable_class_name">수업 이름</string>
+    <string name="timetable_class_room">강의실 (선택)</string>
+    <string name="timetable_class_start">시작 시각</string>
+    <string name="timetable_recognized">수업 %1$d개를 읽었어요. 틀린 곳은 눌러서 고쳐 주세요.</string>
+    <string name="timetable_alarms_created">알람 %1$d개를 만들었어요.</string>
+    <string name="timetable_alarms_replaced">알람 %1$d개를 만들고, 예전 시간표 알람 %2$d개를 지웠어요.</string>
+    <string name="timetable_replaces_previous">예전에 시간표로 만든 알람 %1$d개는 새 알람이 모두 만들어지면 지워져요.</string>
+    <string name="timetable_clear_confirm_title">시간표를 모두 지울까요?</string>
+    <string name="timetable_clear_confirm_body">수업 목록만 지워지고, 이미 만든 알람은 그대로 남아요. 새 시간표로 알람을 다시 만들면 예전 알람은 새 알람으로 바뀌어요.</string>
+    <string name="timetable_alarms_partly_created">알람 %1$d개를 만들었어요. %2$d개는 경로를 찾지 못해 만들지 못했어요.</string>
+    <string name="timetable_alarm_sheet_title">첫 수업에 맞춰 알람 만들기</string>
+    <string name="timetable_alarm_sheet_body">요일마다 가장 이른 수업에 도착하도록 기상 알람을 맞춰요. 준비·여유 시간은 설정의 기본값을 써요.</string>
+    <string name="timetable_proposal_arrival">%1$s 도착</string>
+    <string name="timetable_origin">출발지</string>
+    <string name="timetable_destination">도착지 (학교)</string>
+    <string name="timetable_choose_place">눌러서 고르기</string>
+    <string name="timetable_pick_origin">어디에서 출발하나요?</string>
+    <string name="timetable_pick_destination">학교를 골라 주세요</string>
+
+    <!-- 캘린더 연동 -->
+    <string name="calendar_title">캘린더 연동</string>
+    <string name="calendar_body">기기 캘린더의 앞으로 2주 일정이에요. Google·삼성 캘린더 일정도 여기에 보여요.</string>
+    <string name="calendar_permission_title">캘린더를 읽어도 될까요?</string>
+    <string name="calendar_permission_body">일정의 시각과 장소로 알람을 만들 때만 읽어요. 캘린더를 바꾸거나 서버로 보내지 않아요.</string>
+    <string name="calendar_permission_allow">캘린더 권한 허용</string>
+    <string name="calendar_empty_title">앞으로 2주 일정이 없어요</string>
+    <string name="calendar_empty_body">하루 종일 일정은 도착 시각이 없어서 보이지 않아요.</string>
+    <string name="calendar_weekly">매주 반복 일정</string>
+    <string name="calendar_weekly_format">매주 %1$s %2$s</string>
+    <string name="calendar_add_weekly">반복 일정 %1$d개를 시간표에 추가</string>
+    <string name="calendar_added_to_timetable">수업 %1$d개를 시간표에 추가했어요.</string>
+    <string name="calendar_upcoming">다가오는 일정</string>
+    <string name="calendar_upcoming_hint">일정을 누르면 그 시각에 맞춰 도착하는 알람을 만들 수 있어요.</string>
+    <string name="calendar_untitled">(제목 없음)</string>
 </resources>

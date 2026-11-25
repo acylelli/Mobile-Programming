@@ -234,7 +234,7 @@ private val DESTINATION_SLOTS = listOf(PlaceType.SCHOOL, PlaceType.HOME, PlaceTy
 private val ORIGIN_SLOTS = listOf(PlaceType.HOME, PlaceType.SCHOOL, PlaceType.WORK)
 
 @Composable
-private fun SearchResults(search: PlaceSearchState, selected: Place?, onSelect: (Place) -> Unit, onRetry: () -> Unit) {
+internal fun SearchResults(search: PlaceSearchState, selected: Place?, onSelect: (Place) -> Unit, onRetry: () -> Unit) {
     when (search) {
         PlaceSearchState.Idle, PlaceSearchState.Loading -> LoadingState()
         is PlaceSearchState.Error -> ErrorState(
@@ -268,7 +268,7 @@ private fun SearchResults(search: PlaceSearchState, selected: Place?, onSelect: 
 
 /** 장소 검색창(②). 키워드로 장소·주소를 찾는다. */
 @Composable
-private fun SearchField(
+internal fun SearchField(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -321,7 +321,7 @@ private fun SearchField(
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PlaceRow(
+internal fun PlaceRow(
     icon: ImageVector,
     title: String,
     subtitle: String?,
@@ -373,7 +373,7 @@ private fun PlaceRow(
 
 /** 최근 검색·검색 결과의 둘째 줄: 노선 정보가 있으면 "서울 강남구 | 2호선, 신분당선", 없으면 주소 */
 @Composable
-private fun placeSubtitle(place: Place): String? = when {
+internal fun placeSubtitle(place: Place): String? = when {
     place.transitLines.isNotEmpty() -> stringResource(
         R.string.place_name_address_format,
         place.address.split(" ").take(2).joinToString(" "),

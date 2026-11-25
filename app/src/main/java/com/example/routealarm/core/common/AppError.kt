@@ -29,6 +29,12 @@ sealed interface AppError {
     /** 기관이 구매한 인원을 모두 사용한 단체 이용권 */
     data object GroupPassFull : AppError
 
+    /** 캘린더 읽기 권한이 없음 */
+    data object CalendarPermissionDenied : AppError
+
+    /** 시간표 사진에서 요일·시각을 찾지 못함 */
+    data object TimetableNotRecognized : AppError
+
     /** 결제를 시작하지 못했거나 구독 상태를 검증하지 못함 */
     data object PurchaseFailed : AppError
 

@@ -19,8 +19,16 @@ sealed interface Route {
     /** UI-F-001 설정 */
     @Serializable data object Settings : Route
 
-    /** UI-C-001~006 새 일정 5단계 + 계산 미리보기. editScheduleId 가 있으면 수정 모드 */
-    @Serializable data class CreateSchedule(val editScheduleId: Long? = null) : Route
+    /**
+     * UI-C-001~006 새 일정 5단계 + 계산 미리보기. editScheduleId 가 있으면 수정 모드.
+     * 캘린더 일정에서 만들 때는 도착지 검색어·도착 시각(HH:mm)·날짜(yyyy-MM-dd)를 미리 채운다.
+     */
+    @Serializable data class CreateSchedule(
+        val editScheduleId: Long? = null,
+        val prefillDestination: String? = null,
+        val prefillArrival: String? = null,
+        val prefillDate: String? = null,
+    ) : Route
 
     /** UI-D-002 일정 상세 */
     @Serializable data class ScheduleDetail(val scheduleId: Long) : Route
@@ -33,4 +41,10 @@ sealed interface Route {
 
     /** UI-F-003 구독 관리 */
     @Serializable data object Subscription : Route
+
+    /** 학교 시간표 연동(PRO): 직접 입력·사진·캘린더에서 가져와 요일별 첫 수업 알람 만들기 */
+    @Serializable data object Timetable : Route
+
+    /** 캘린더 연동(PRO): 기기 캘린더 일정에서 알람 만들기 */
+    @Serializable data object CalendarImport : Route
 }

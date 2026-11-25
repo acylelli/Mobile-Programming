@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.example.routealarm.data.local.datastore.DataStorePreferencesRepository
+import com.example.routealarm.data.calendar.DeviceCalendarRepository
 import com.example.routealarm.data.local.db.RouteAlarmDatabase
 import com.example.routealarm.data.location.FusedLocationRepository
 import com.example.routealarm.data.mapper.ScheduleEntityMapper
@@ -15,6 +16,9 @@ import com.example.routealarm.data.repository.DefaultTransitRepository
 import com.example.routealarm.data.repository.RoomAlarmHistoryRepository
 import com.example.routealarm.data.repository.RoomMetricsRepository
 import com.example.routealarm.data.repository.RoomScheduleRepository
+import com.example.routealarm.data.timetable.DataStoreTimetableRepository
+import com.example.routealarm.data.timetable.MlKitTimetableImageRecognizer
+import com.example.routealarm.domain.repository.CalendarRepository
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
 import com.example.routealarm.domain.repository.LocationRepository
 import com.example.routealarm.domain.repository.MetricsRepository
@@ -22,6 +26,8 @@ import com.example.routealarm.domain.repository.PlaceRepository
 import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
 import com.example.routealarm.domain.repository.SubscriptionRepository
+import com.example.routealarm.domain.repository.TimetableImageRecognizer
+import com.example.routealarm.domain.repository.TimetableRepository
 import com.example.routealarm.domain.repository.TransitRepository
 import dagger.Binds
 import dagger.Module
@@ -45,6 +51,9 @@ abstract class RepositoryModule {
     @Binds abstract fun bindMetricsRepository(impl: RoomMetricsRepository): MetricsRepository
     @Binds abstract fun bindLocationRepository(impl: FusedLocationRepository): LocationRepository
     @Binds abstract fun bindSubscriptionRepository(impl: DefaultSubscriptionRepository): SubscriptionRepository
+    @Binds abstract fun bindTimetableRepository(impl: DataStoreTimetableRepository): TimetableRepository
+    @Binds abstract fun bindTimetableImageRecognizer(impl: MlKitTimetableImageRecognizer): TimetableImageRecognizer
+    @Binds abstract fun bindCalendarRepository(impl: DeviceCalendarRepository): CalendarRepository
 }
 
 @Module
