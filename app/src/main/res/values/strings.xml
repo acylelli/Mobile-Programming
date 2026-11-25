@@ -445,6 +445,9 @@
     <string name="settings_gradual_volume_body">작게 시작해서 30초에 걸쳐 정한 크기까지 커져요.</string>
     <string name="settings_preview_play">미리 듣기</string>
     <string name="settings_preview_stop">멈추기</string>
+    <string name="schedule_sound_title">이 일정의 알람음</string>
+    <string name="schedule_sound_follow">설정 따르기</string>
+    <string name="schedule_sound_follow_value">설정 따르기 (%1$s)</string>
     <string name="settings_snooze">다시 울림 간격</string>
     <string name="settings_section_permissions">권한</string>
     <string name="settings_section_tools">테스트 도구</string>

@@ -54,5 +54,15 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+    /** 3 → 4: 일정 전용 알람음·볼륨 열을 추가했다. 기존 일정은 모두 null(설정 따르기)이다. */
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE schedules ADD COLUMN soundType TEXT")
+            db.execSQL("ALTER TABLE schedules ADD COLUMN soundUri TEXT")
+            db.execSQL("ALTER TABLE schedules ADD COLUMN soundTitle TEXT")
+            db.execSQL("ALTER TABLE schedules ADD COLUMN soundVolume INTEGER")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 }

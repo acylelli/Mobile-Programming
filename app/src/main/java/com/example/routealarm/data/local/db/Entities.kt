@@ -62,6 +62,11 @@ data class ScheduleEntity(
     val oneTimeEpochDay: Long?,
     /** 반복 일정이 공휴일에 울리지 않게 한다(버전 3에서 추가, 기존 일정은 켜짐) */
     @ColumnInfo(defaultValue = "1") val skipHolidays: Boolean = true,
+    /** 일정 전용 알람음(버전 4에서 추가). 모두 null 이면 설정을 따른다. */
+    val soundType: String? = null,
+    val soundUri: String? = null,
+    val soundTitle: String? = null,
+    val soundVolume: Int? = null,
     val alarmMode: String,
     val enabled: Boolean,
     val createdAt: Long,

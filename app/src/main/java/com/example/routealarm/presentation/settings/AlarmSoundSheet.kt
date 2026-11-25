@@ -59,6 +59,14 @@ private const val VOLUME_STEP = 5
  * 알람음 시트: 소리 종류(휴대폰 벨소리 고르기 포함), 볼륨, 점점 크게, 미리 듣기.
  * 소리 종류는 고르는 즉시 저장하고, 볼륨은 슬라이더에서 손을 뗄 때 저장한다.
  */
+/** 일정 상세에서 열 때만 쓰는 "설정 따르기" 선택지. active 면 설정의 알람음·볼륨을 그대로 쓰는 중이다. */
+internal data class FollowSettingsOption(val active: Boolean, val summary: String, val onSelect: () -> Unit)
+
+/**
+ * @param prefs 지금 적용되는 값(일정 상세에서는 설정과 일정 알람음을 합친 값)
+ * @param followSettings 일정 상세에서만 넘긴다. 맨 위에 "설정 따르기"를 보여 준다.
+ * @param showGradual 점점 크게는 앱 전체 설정이라 일정 상세에서는 숨긴다.
+ */
 @Composable
 internal fun AlarmSoundSheet(
     prefs: UserPreferences,
@@ -67,6 +75,9 @@ internal fun AlarmSoundSheet(
     onVolume: (Int) -> Unit,
     onGradual: (Boolean) -> Unit,
     onDismiss: () -> Unit,
+    title: String = stringResource(R.string.settings_alarm_sound),
+    followSettings: FollowSettingsOption? = null,
+    showGradual: Boolean = true,
 ) {
     val colors = RouteAlarmTheme.colors
     val context = LocalContext.current
@@ -91,16 +102,24 @@ internal fun AlarmSoundSheet(
 
     AppBottomSheet(onDismiss = { stopPreview(); onDismiss() }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.screen).padding(bottom = 16.dp)) {
-            Text(stringResource(R.string.settings_alarm_sound), style = MaterialTheme.typography.headlineSmall, color = colors.textPrimary)
+            Text(title, style = MaterialTheme.typography.headlineSmall, color = colors.textPrimary)
             Spacer(Modifier.height(8.dp))
 
             Column(Modifier.selectableGroup()) {
+                if (followSettings != null) {
+                    SoundOption(
+                        label = stringResource(R.string.schedule_sound_follow),
+                        detail = followSettings.summary,
+                        selected = followSettings.active,
+                        onClick = { stopPreview(); followSettings.onSelect() },
+                    )
+                }
                 listOf(AlarmSound.DEFAULT_ALARM, AlarmSound.GENTLE, AlarmSound.CUSTOM, AlarmSound.SILENT).forEach { sound ->
                     val isCustom = sound == AlarmSound.CUSTOM
                     SoundOption(
                         label = stringResource(soundLabelRes(sound)),
                         detail = if (isCustom) prefs.customSoundTitle ?: stringResource(R.string.settings_sound_custom_pick) else null,
-                        selected = prefs.alarmSound == sound,
+                        selected = followSettings?.active != true && prefs.alarmSound == sound,
                         onClick = {
                             stopPreview()
                             if (isCustom) {
@@ -135,19 +154,20 @@ internal fun AlarmSoundSheet(
             Spacer(Modifier.height(8.dp))
             Paragraph(stringResource(R.string.settings_volume_body), style = MaterialTheme.typography.bodySmall)
 
-            Spacer(Modifier.height(14.dp))
-            Row(
-                Modifier.fillMaxWidth().clip(Radius.tile).clickable(role = Role.Switch) { onGradual(!prefs.gradualVolume) }.padding(vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.settings_gradual_volume), style = MaterialTheme.typography.bodyLarge, color = colors.textPrimary)
-                    Paragraph(stringResource(R.string.settings_gradual_volume_body), style = MaterialTheme.typography.bodySmall)
+            if (showGradual) {
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    Modifier.fillMaxWidth().clip(Radius.tile).clickable(role = Role.Switch) { onGradual(!prefs.gradualVolume) }.padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_gradual_volume), style = MaterialTheme.typography.bodyLarge, color = colors.textPrimary)
+                        Paragraph(stringResource(R.string.settings_gradual_volume_body), style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    AppSwitch(checked = prefs.gradualVolume, onCheckedChange = onGradual)
                 }
-                Spacer(Modifier.width(12.dp))
-                AppSwitch(checked = prefs.gradualVolume, onCheckedChange = onGradual)
             }
-
             Spacer(Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SecondaryButton(

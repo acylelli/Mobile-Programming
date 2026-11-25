@@ -47,6 +47,8 @@ class SaveScheduleUseCase @Inject constructor(
             repeatDays = draft.repeatDays,
             oneTimeDate = preview.oneTimeDate,
             skipHolidays = draft.skipHolidays,
+            // 알람음은 상세 화면에서 정한다. 일정을 고쳐 저장해도 그대로 둔다.
+            sound = existing?.sound,
             alarmMode = draft.alarmMode,
             enabled = enabled,
             createdAt = existing?.createdAt ?: now,

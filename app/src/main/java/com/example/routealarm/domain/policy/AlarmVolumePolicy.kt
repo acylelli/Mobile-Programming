@@ -1,6 +1,7 @@
 package com.example.routealarm.domain.policy
 
 import com.example.routealarm.domain.model.AlarmSound
+import com.example.routealarm.domain.model.ScheduleSound
 import com.example.routealarm.domain.model.UserPreferences
 import kotlin.math.roundToInt
 
@@ -26,6 +27,26 @@ object AlarmVolumePolicy {
         val progress = (elapsedMillis.toFloat() / RAMP_MILLIS).coerceIn(0f, 1f)
         return RAMP_START_FRACTION + (1f - RAMP_START_FRACTION) * progress
     }
+
+    /** 일정 알람음이 있으면 설정 위에 덮어쓴 값. 점점 크게·진동은 설정을 그대로 쓴다. */
+    fun forSchedule(prefs: UserPreferences, sound: ScheduleSound?): UserPreferences = if (sound == null) {
+        prefs
+    } else {
+        prefs.copy(
+            alarmSound = sound.sound,
+            customSoundUri = sound.customUri,
+            customSoundTitle = sound.customTitle,
+            alarmVolumePercent = sound.volumePercent.coerceIn(UserPreferences.ALARM_VOLUME_RANGE),
+        )
+    }
+
+    /** 설정 값으로 일정 알람음을 처음 만들 때(설정 따르기 → 일정 전용으로 바꿀 때) 쓴다. */
+    fun fromPreferences(prefs: UserPreferences) = ScheduleSound(
+        sound = prefs.alarmSound,
+        customUri = prefs.customSoundUri,
+        customTitle = prefs.customSoundTitle,
+        volumePercent = prefs.alarmVolumePercent,
+    )
 
     /** 실제로 쓸 알람음. 벨소리를 골랐는데 URI 가 없으면 기본 알람음으로 울린다. */
     fun effectiveSound(prefs: UserPreferences): AlarmSound =

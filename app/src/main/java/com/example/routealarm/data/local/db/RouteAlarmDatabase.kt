@@ -11,7 +11,7 @@ import androidx.room.RoomDatabase
         AlarmHistoryEntity::class,
         MetricEventEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class RouteAlarmDatabase : RoomDatabase() {

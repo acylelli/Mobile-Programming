@@ -9,14 +9,17 @@ import com.example.routealarm.domain.model.AlarmEventType
 import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.AlarmMode
 import com.example.routealarm.domain.model.AlarmPlan
+import com.example.routealarm.domain.model.AlarmSound
 import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.PlaceType
 import com.example.routealarm.domain.model.Schedule
-import kotlinx.serialization.json.Json
+import com.example.routealarm.domain.model.ScheduleSound
+import com.example.routealarm.domain.model.UserPreferences
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlinx.serialization.json.Json
 
 fun PlaceEntity.toDomain() = Place(
     id = id,
@@ -74,6 +77,14 @@ class ScheduleEntityMapper(private val json: Json) {
             repeatDays = DayMask.decode(entity.repeatDaysMask),
             oneTimeDate = entity.oneTimeEpochDay?.let(LocalDate::ofEpochDay),
             skipHolidays = entity.skipHolidays,
+            sound = entity.soundType?.let { type ->
+                ScheduleSound(
+                    sound = enumValueOrDefault(type, AlarmSound.DEFAULT_ALARM),
+                    customUri = entity.soundUri,
+                    customTitle = entity.soundTitle,
+                    volumePercent = entity.soundVolume ?: UserPreferences.DEFAULT_ALARM_VOLUME_PERCENT,
+                )
+            },
             alarmMode = enumValueOrDefault(entity.alarmMode, AlarmMode.WAKE_UP_AND_DEPARTURE),
             enabled = entity.enabled,
             createdAt = Instant.ofEpochMilli(entity.createdAt),
@@ -98,6 +109,10 @@ class ScheduleEntityMapper(private val json: Json) {
         repeatDaysMask = DayMask.encode(schedule.repeatDays),
         oneTimeEpochDay = schedule.oneTimeDate?.toEpochDay(),
         skipHolidays = schedule.skipHolidays,
+        soundType = schedule.sound?.sound?.name,
+        soundUri = schedule.sound?.customUri,
+        soundTitle = schedule.sound?.customTitle,
+        soundVolume = schedule.sound?.volumePercent,
         alarmMode = schedule.alarmMode.name,
         enabled = schedule.enabled,
         createdAt = schedule.createdAt.toEpochMilli(),

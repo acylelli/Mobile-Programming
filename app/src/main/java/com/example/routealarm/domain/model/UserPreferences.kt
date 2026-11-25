@@ -10,6 +10,17 @@ enum class ColorTheme { DEFAULT, DAWN, NIGHT }
 /** 알람음 종류. CUSTOM 은 휴대폰 벨소리 목록에서 고른 소리(customSoundUri)다. */
 enum class AlarmSound { DEFAULT_ALARM, GENTLE, CUSTOM, SILENT }
 
+/**
+ * 일정 하나에만 쓰는 알람음·볼륨. 일정의 sound 가 null 이면 설정의 알람음·볼륨을 따른다.
+ * (점점 크게, 진동은 앱 전체 설정을 따른다.)
+ */
+data class ScheduleSound(
+    val sound: AlarmSound,
+    val customUri: String? = null,
+    val customTitle: String? = null,
+    val volumePercent: Int = UserPreferences.DEFAULT_ALARM_VOLUME_PERCENT,
+)
+
 /** DataStore 에 저장되는 작은 사용자 설정 */
 data class UserPreferences(
     val defaultPreparationMinutes: Int = DEFAULT_PREPARATION_MINUTES,

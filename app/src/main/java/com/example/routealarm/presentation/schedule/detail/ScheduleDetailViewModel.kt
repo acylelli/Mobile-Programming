@@ -9,8 +9,11 @@ import com.example.routealarm.core.common.AppError
 import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.Schedule
+import com.example.routealarm.domain.model.ScheduleSound
+import com.example.routealarm.domain.model.UserPreferences
 import com.example.routealarm.domain.policy.WakeUpHabit
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
+import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
 import com.example.routealarm.domain.usecase.ApplyPendingAdjustmentUseCase
 import com.example.routealarm.domain.usecase.ApplyWakeUpHabitUseCase
@@ -21,6 +24,7 @@ import com.example.routealarm.domain.usecase.ObserveWakeUpHabitUseCase
 import com.example.routealarm.domain.usecase.RefreshOutcome
 import com.example.routealarm.domain.usecase.RefreshTransitTimeUseCase
 import com.example.routealarm.domain.usecase.SetScheduleEnabledUseCase
+import com.example.routealarm.domain.usecase.SetScheduleSoundUseCase
 import com.example.routealarm.domain.usecase.SetSkipHolidaysUseCase
 import com.example.routealarm.presentation.common.UndoManager
 import com.example.routealarm.presentation.navigation.Route
@@ -46,6 +50,8 @@ sealed interface ScheduleDetailUiState {
         val deleted: Boolean,
         /** 기상 습관 제안(평소 늦게 일어나면 준비 시간 늘리기). 없으면 null */
         val wakeUpHabit: WakeUpHabit? = null,
+        /** 일정 알람음이 "설정 따르기"일 때 보여 줄 설정 값 */
+        val preferences: UserPreferences = UserPreferences(),
     ) : ScheduleDetailUiState
 }
 
@@ -64,6 +70,8 @@ class ScheduleDetailViewModel @Inject constructor(
     private val dismissWakeUpHabit: DismissWakeUpHabitUseCase,
     private val undoManager: UndoManager,
     private val setSkipHolidaysUseCase: SetSkipHolidaysUseCase,
+    private val setScheduleSound: SetScheduleSoundUseCase,
+    preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
 
     private val scheduleId: Long = savedStateHandle.toRoute<Route.ScheduleDetail>().scheduleId
@@ -79,11 +87,14 @@ class ScheduleDetailViewModel @Inject constructor(
         historyRepository.observeHistory(scheduleId),
         observeWakeUpHabit(scheduleId),
         local,
-    ) { schedule, history, habit, state ->
+        preferencesRepository.preferences,
+    ) { schedule, history, habit, state, prefs ->
         when {
             state.deleted -> ScheduleDetailUiState.Success(schedule ?: return@combine ScheduleDetailUiState.NotFound, history, false, null, deleted = true)
             schedule == null -> ScheduleDetailUiState.NotFound
-            else -> ScheduleDetailUiState.Success(schedule, history, state.refreshing, state.error, deleted = false, wakeUpHabit = habit)
+            else -> ScheduleDetailUiState.Success(
+                schedule, history, state.refreshing, state.error, deleted = false, wakeUpHabit = habit, preferences = prefs,
+            )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ScheduleDetailUiState.Loading)
 
@@ -148,6 +159,14 @@ class ScheduleDetailViewModel @Inject constructor(
     fun setSkipHolidays(skip: Boolean) {
         viewModelScope.launch {
             val result = setSkipHolidaysUseCase(scheduleId, skip)
+            if (result is AppResult.Failure) _message.value = result.error
+        }
+    }
+
+    /** null 이면 설정 따르기 */
+    fun setSound(sound: ScheduleSound?) {
+        viewModelScope.launch {
+            val result = setScheduleSound(scheduleId, sound)
             if (result is AppResult.Failure) _message.value = result.error
         }
     }
