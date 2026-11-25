@@ -10,6 +10,7 @@ import com.example.routealarm.data.remote.dto.GroupPassDto
 import com.example.routealarm.data.remote.dto.PaymentResultDto
 import com.example.routealarm.data.remote.dto.PlaceSearchResponseDto
 import com.example.routealarm.data.remote.dto.RouteResponseDto
+import com.example.routealarm.data.remote.dto.TaxiEstimateDto
 import com.example.routealarm.domain.model.Place
 import retrofit2.HttpException
 import retrofit2.http.Body
@@ -32,6 +33,14 @@ interface RouteAlarmProxyApi {
         @Query("destination_lng") destinationLongitude: Double,
         @Query("depart_at") departAt: String,
     ): RouteResponseDto
+
+    @GET("v1/taxi/estimate")
+    suspend fun estimateTaxi(
+        @Query("origin_lat") originLatitude: Double,
+        @Query("origin_lng") originLongitude: Double,
+        @Query("destination_lat") destinationLatitude: Double,
+        @Query("destination_lng") destinationLongitude: Double,
+    ): TaxiEstimateDto
 
     @GET("v1/places/search")
     suspend fun searchPlaces(@Query("query") query: String): PlaceSearchResponseDto

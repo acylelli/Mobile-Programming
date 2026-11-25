@@ -57,3 +57,11 @@ data class PlaceDto(
     /** 역/정류장을 지나는 노선(예: ["2호선", "신분당선"]). 제공자가 주지 않으면 빈 목록 */
     val lines: List<String> = emptyList(),
 )
+
+@Serializable
+data class TaxiEstimateDto(
+    val minutes: Int,
+    @SerialName("distance_meters") val distanceMeters: Int = 0,
+    @SerialName("fare_won") val fareWon: Int = 0,
+    @SerialName("toll_won") val tollWon: Int = 0,
+)

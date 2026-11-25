@@ -79,6 +79,7 @@ import com.example.routealarm.presentation.common.repeatLabel
 import com.example.routealarm.presentation.common.repeatText
 import com.example.routealarm.presentation.home.PendingAdjustmentCard
 import com.example.routealarm.presentation.navigation.LocalAppSnackbar
+import com.example.routealarm.presentation.taxi.LateRiskCard
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.launch
@@ -260,6 +261,7 @@ private fun DetailContent(
 
         Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (!schedule.enabled) NoticeStrip(text = stringResource(R.string.detail_disabled_hint))
+            LateRiskCard(schedule)
             val refreshError = state.refreshError
             when {
                 refreshError != null -> NoticeStrip(

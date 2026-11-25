@@ -36,6 +36,15 @@
     <string name="common_retry">다시 시도</string>
     <string name="common_cancel">취소</string>
     <string name="common_undo">되돌리기</string>
+    <string name="late_title_traffic">교통이 나빠져 %1$d분 늦을 것 같아요</string>
+    <string name="late_title_overslept">늦게 일어나서 %1$d분 늦을 것 같아요</string>
+    <string name="late_body">%1$s에 출발하면 대중교통 도착 예상 %2$s (목표 %3$s)</string>
+    <string name="late_taxi_loading">택시 예상 시간을 확인하고 있어요…</string>
+    <string name="late_taxi_unavailable">택시 예상 시간을 가져오지 못했어요. 카카오 T 에서 바로 확인해 보세요.</string>
+    <string name="late_taxi_estimate">택시로 가면 %1$s 도착 · 약 %2$d분 · 약 %3$s원</string>
+    <string name="late_taxi_on_time">택시를 타면 늦지 않아요. 요금은 지금 교통 기준 예상이에요.</string>
+    <string name="late_taxi_still_late">택시도 %1$d분쯤 늦어요. 그래도 대중교통보다는 빨라요.</string>
+    <string name="late_call_taxi">카카오 T로 택시 부르기</string>
     <string name="undo_deleted">알람을 삭제했어요.</string>
     <string name="undo_changed">알람 시각을 바꿨어요.</string>
     <string name="common_save">저장</string>

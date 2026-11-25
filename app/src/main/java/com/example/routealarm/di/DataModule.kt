@@ -5,8 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
-import com.example.routealarm.data.local.datastore.DataStorePreferencesRepository
 import com.example.routealarm.data.calendar.DeviceCalendarRepository
+import com.example.routealarm.data.habit.DataStoreHabitRepository
+import com.example.routealarm.data.local.datastore.DataStorePreferencesRepository
 import com.example.routealarm.data.local.db.Migrations
 import com.example.routealarm.data.local.db.RouteAlarmDatabase
 import com.example.routealarm.data.location.FusedLocationRepository
@@ -14,21 +15,22 @@ import com.example.routealarm.data.mapper.ScheduleEntityMapper
 import com.example.routealarm.data.repository.DefaultPlaceRepository
 import com.example.routealarm.data.repository.DefaultSubscriptionRepository
 import com.example.routealarm.data.repository.DefaultTransitRepository
+import com.example.routealarm.data.repository.ProxyTaxiRepository
 import com.example.routealarm.data.repository.RoomAlarmHistoryRepository
 import com.example.routealarm.data.repository.RoomMetricsRepository
 import com.example.routealarm.data.repository.RoomScheduleRepository
 import com.example.routealarm.data.timetable.DataStoreTimetableRepository
-import com.example.routealarm.data.habit.DataStoreHabitRepository
-import com.example.routealarm.domain.repository.HabitRepository
 import com.example.routealarm.data.timetable.MlKitTimetableImageRecognizer
-import com.example.routealarm.domain.repository.CalendarRepository
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
+import com.example.routealarm.domain.repository.CalendarRepository
+import com.example.routealarm.domain.repository.HabitRepository
 import com.example.routealarm.domain.repository.LocationRepository
 import com.example.routealarm.domain.repository.MetricsRepository
 import com.example.routealarm.domain.repository.PlaceRepository
 import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
 import com.example.routealarm.domain.repository.SubscriptionRepository
+import com.example.routealarm.domain.repository.TaxiRepository
 import com.example.routealarm.domain.repository.TimetableImageRecognizer
 import com.example.routealarm.domain.repository.TimetableRepository
 import com.example.routealarm.domain.repository.TransitRepository
@@ -38,8 +40,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.serialization.json.Json
 import javax.inject.Singleton
+import kotlinx.serialization.json.Json
 
 private val Context.preferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
@@ -56,6 +58,7 @@ abstract class RepositoryModule {
     @Binds abstract fun bindSubscriptionRepository(impl: DefaultSubscriptionRepository): SubscriptionRepository
     @Binds abstract fun bindTimetableRepository(impl: DataStoreTimetableRepository): TimetableRepository
     @Binds abstract fun bindHabitRepository(impl: DataStoreHabitRepository): HabitRepository
+    @Binds abstract fun bindTaxiRepository(impl: ProxyTaxiRepository): TaxiRepository
     @Binds abstract fun bindTimetableImageRecognizer(impl: MlKitTimetableImageRecognizer): TimetableImageRecognizer
     @Binds abstract fun bindCalendarRepository(impl: DeviceCalendarRepository): CalendarRepository
 }
