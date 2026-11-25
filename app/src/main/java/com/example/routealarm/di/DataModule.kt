@@ -17,6 +17,8 @@ import com.example.routealarm.data.repository.RoomAlarmHistoryRepository
 import com.example.routealarm.data.repository.RoomMetricsRepository
 import com.example.routealarm.data.repository.RoomScheduleRepository
 import com.example.routealarm.data.timetable.DataStoreTimetableRepository
+import com.example.routealarm.data.habit.DataStoreHabitRepository
+import com.example.routealarm.domain.repository.HabitRepository
 import com.example.routealarm.data.timetable.MlKitTimetableImageRecognizer
 import com.example.routealarm.domain.repository.CalendarRepository
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
@@ -52,6 +54,7 @@ abstract class RepositoryModule {
     @Binds abstract fun bindLocationRepository(impl: FusedLocationRepository): LocationRepository
     @Binds abstract fun bindSubscriptionRepository(impl: DefaultSubscriptionRepository): SubscriptionRepository
     @Binds abstract fun bindTimetableRepository(impl: DataStoreTimetableRepository): TimetableRepository
+    @Binds abstract fun bindHabitRepository(impl: DataStoreHabitRepository): HabitRepository
     @Binds abstract fun bindTimetableImageRecognizer(impl: MlKitTimetableImageRecognizer): TimetableImageRecognizer
     @Binds abstract fun bindCalendarRepository(impl: DeviceCalendarRepository): CalendarRepository
 }

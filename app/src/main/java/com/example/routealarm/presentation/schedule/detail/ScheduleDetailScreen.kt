@@ -46,11 +46,14 @@ import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.routealarm.R
+import com.example.routealarm.core.designsystem.component.AppCard
 import com.example.routealarm.core.designsystem.component.AppSwitch
 import com.example.routealarm.core.designsystem.component.BackHeader
 import com.example.routealarm.core.designsystem.component.ErrorState
+import com.example.routealarm.core.designsystem.component.InlineAction
 import com.example.routealarm.core.designsystem.component.LoadingState
 import com.example.routealarm.core.designsystem.component.NoticeStrip
+import com.example.routealarm.core.designsystem.component.Paragraph
 import com.example.routealarm.core.designsystem.component.RouteTimelineView
 import com.example.routealarm.core.designsystem.component.SecondaryButton
 import com.example.routealarm.core.designsystem.component.SectionLabel
@@ -64,6 +67,7 @@ import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.AlarmMode
 import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.Schedule
+import com.example.routealarm.domain.policy.WakeUpHabit
 import com.example.routealarm.presentation.common.RouteMapLines
 import com.example.routealarm.presentation.common.RouteTimelineBuilder
 import com.example.routealarm.presentation.common.TimeFormat
@@ -108,6 +112,8 @@ fun ScheduleDetailRoute(
         onDelete = viewModel::delete,
         onApplyPending = viewModel::applyPending,
         onDismissPending = viewModel::dismissPending,
+        onApplyHabit = viewModel::applyHabit,
+        onDismissHabit = viewModel::dismissHabit,
         onOpenMap = { destination ->
             if (!context.openInMapApp(destination)) {
                 scope.launch { snackbar.showSnackbar(context.getString(R.string.detail_map_unavailable)) }
@@ -130,6 +136,8 @@ fun ScheduleDetailScreen(
     onDelete: () -> Unit,
     onApplyPending: () -> Unit,
     onDismissPending: () -> Unit,
+    onApplyHabit: (Int) -> Unit,
+    onDismissHabit: () -> Unit,
     onOpenMap: (Place) -> Unit,
 ) {
     val colors = RouteAlarmTheme.colors
@@ -157,6 +165,8 @@ fun ScheduleDetailScreen(
                 onToggle = onToggle,
                 onApplyPending = onApplyPending,
                 onDismissPending = onDismissPending,
+                onApplyHabit = onApplyHabit,
+                onDismissHabit = onDismissHabit,
                 onOpenMap = { onOpenMap(state.schedule.destination) },
                 onDelete = { confirmDelete = true },
             )
@@ -185,6 +195,8 @@ private fun DetailContent(
     onToggle: (Boolean) -> Unit,
     onApplyPending: () -> Unit,
     onDismissPending: () -> Unit,
+    onApplyHabit: (Int) -> Unit,
+    onDismissHabit: () -> Unit,
     onOpenMap: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -267,6 +279,14 @@ private fun DetailContent(
                     onApply = onApplyPending,
                     onDismiss = onDismissPending,
                     basedOnCache = !pending.proposedPlan.isRealtime,
+                )
+            }
+            state.wakeUpHabit?.let { habit ->
+                WakeUpHabitCard(
+                    habit = habit,
+                    preparationMinutes = schedule.preparationMinutes,
+                    onApply = { onApplyHabit(habit.extraPreparationMinutes) },
+                    onDismiss = onDismissHabit,
                 )
             }
         }
@@ -444,3 +464,34 @@ private fun Context.openInMapApp(place: Place): Boolean {
         false
     }
 }
+
+/**
+ * 알람 이력 기반 개인화: 평소 기상 알람을 늦게 끄면 준비 시간을 늘리자고 제안한다.
+ * 적용하면 그만큼 일찍 깨우고, 넘기면 지금까지의 기록으로는 다시 묻지 않는다.
+ */
+@Composable
+private fun WakeUpHabitCard(habit: WakeUpHabit, preparationMinutes: Int, onApply: () -> Unit, onDismiss: () -> Unit) {
+    val colors = RouteAlarmTheme.colors
+    AppCard(modifier = Modifier.fillMaxWidth(), selected = true) {
+        Column(Modifier.padding(start = 18.dp, end = 6.dp, top = 16.dp, bottom = 4.dp)) {
+            Text(stringResource(R.string.habit_title), style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
+            Spacer(Modifier.height(6.dp))
+            Paragraph(
+                stringResource(R.string.habit_body, habit.samples, habit.typicalLateMinutes, habit.extraPreparationMinutes),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(end = 12.dp),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.habit_preparation_change, preparationMinutes, preparationMinutes + habit.extraPreparationMinutes),
+                style = MaterialTheme.typography.labelLarge,
+                color = colors.accentText,
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                InlineAction(stringResource(R.string.habit_dismiss), onClick = onDismiss)
+                InlineAction(stringResource(R.string.habit_apply, habit.extraPreparationMinutes), onClick = onApply, emphasized = true)
+            }
+        }
+    }
+}
+
