@@ -80,6 +80,9 @@ class SettingsViewModel @Inject constructor(
     fun setTrafficNotifications(enabled: Boolean) = launch { preferencesRepository.setTrafficNotifications(enabled) }
     fun setVibration(enabled: Boolean) = launch { preferencesRepository.setVibration(enabled) }
     fun setAlarmSound(sound: AlarmSound) = launch { preferencesRepository.setAlarmSound(sound) }
+    fun setCustomSound(uri: String, title: String?) = launch { preferencesRepository.setCustomSound(uri, title) }
+    fun setAlarmVolume(percent: Int) = launch { preferencesRepository.setAlarmVolume(percent) }
+    fun setGradualVolume(enabled: Boolean) = launch { preferencesRepository.setGradualVolume(enabled) }
     fun setSnoozeMinutes(minutes: Int) = launch { preferencesRepository.setSnoozeMinutes(minutes) }
 
     /** 테스트 도구: 모든 활성 일정의 교통 정보를 지금 다시 확인한다(WorkManager 체크포인트를 기다리지 않음). */

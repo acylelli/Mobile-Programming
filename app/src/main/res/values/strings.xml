@@ -431,6 +431,16 @@
     <string name="settings_sound_default">기본 알람음</string>
     <string name="settings_sound_gentle">부드럽게</string>
     <string name="settings_sound_silent">무음</string>
+    <string name="settings_sound_custom">휴대폰 벨소리</string>
+    <string name="settings_sound_custom_pick">눌러서 벨소리 고르기</string>
+    <string name="settings_sound_value_format">%1$s · %2$d%%</string>
+    <string name="settings_volume">볼륨</string>
+    <string name="settings_volume_format">%d%%</string>
+    <string name="settings_volume_body">휴대폰 알람 볼륨과 관계없이 이 크기로 울려요. 알람이 끝나면 원래 볼륨으로 돌아가요.</string>
+    <string name="settings_gradual_volume">점점 크게 울리기</string>
+    <string name="settings_gradual_volume_body">작게 시작해서 30초에 걸쳐 정한 크기까지 커져요.</string>
+    <string name="settings_preview_play">미리 듣기</string>
+    <string name="settings_preview_stop">멈추기</string>
     <string name="settings_snooze">다시 울림 간격</string>
     <string name="settings_section_permissions">권한</string>
     <string name="settings_section_tools">테스트 도구</string>

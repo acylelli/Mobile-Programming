@@ -199,6 +199,11 @@ class FakePreferencesRepository(initial: UserPreferences = UserPreferences()) : 
     override suspend fun setTrafficNotifications(enabled: Boolean) = state.update { it.copy(trafficNotificationsEnabled = enabled) }
     override suspend fun setVibration(enabled: Boolean) = state.update { it.copy(vibrationEnabled = enabled) }
     override suspend fun setAlarmSound(sound: AlarmSound) = state.update { it.copy(alarmSound = sound) }
+    override suspend fun setCustomSound(uri: String, title: String?) =
+        state.update { it.copy(alarmSound = AlarmSound.CUSTOM, customSoundUri = uri, customSoundTitle = title) }
+    override suspend fun setAlarmVolume(percent: Int) =
+        state.update { it.copy(alarmVolumePercent = percent.coerceIn(UserPreferences.ALARM_VOLUME_RANGE)) }
+    override suspend fun setGradualVolume(enabled: Boolean) = state.update { it.copy(gradualVolume = enabled) }
     override suspend fun setSnoozeMinutes(minutes: Int) = state.update { it.copy(snoozeMinutes = minutes) }
     override suspend fun setColorTheme(theme: ColorTheme) = state.update { it.copy(colorTheme = theme) }
     override suspend fun setLastPaywallPromptDay(epochDay: Long) = state.update { it.copy(lastPaywallPromptEpochDay = epochDay) }

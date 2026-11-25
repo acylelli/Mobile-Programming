@@ -37,6 +37,10 @@ class DataStorePreferencesRepository @Inject constructor(
         val TRAFFIC_NOTIFICATIONS = booleanPreferencesKey("traffic_notifications")
         val VIBRATION = booleanPreferencesKey("vibration")
         val ALARM_SOUND = stringPreferencesKey("alarm_sound")
+        val CUSTOM_SOUND_URI = stringPreferencesKey("custom_sound_uri")
+        val CUSTOM_SOUND_TITLE = stringPreferencesKey("custom_sound_title")
+        val ALARM_VOLUME = intPreferencesKey("alarm_volume_percent")
+        val GRADUAL_VOLUME = booleanPreferencesKey("gradual_volume")
         val SNOOZE = intPreferencesKey("snooze_minutes")
         val COLOR_THEME = stringPreferencesKey("color_theme")
         val PAYWALL_PROMPT_DAY = longPreferencesKey("paywall_prompt_epoch_day")
@@ -56,6 +60,11 @@ class DataStorePreferencesRepository @Inject constructor(
         trafficNotificationsEnabled = this[Keys.TRAFFIC_NOTIFICATIONS] ?: true,
         vibrationEnabled = this[Keys.VIBRATION] ?: true,
         alarmSound = enumValueOrDefault(this[Keys.ALARM_SOUND] ?: "", AlarmSound.DEFAULT_ALARM),
+        customSoundUri = this[Keys.CUSTOM_SOUND_URI],
+        customSoundTitle = this[Keys.CUSTOM_SOUND_TITLE],
+        alarmVolumePercent = (this[Keys.ALARM_VOLUME] ?: UserPreferences.DEFAULT_ALARM_VOLUME_PERCENT)
+            .coerceIn(UserPreferences.ALARM_VOLUME_RANGE),
+        gradualVolume = this[Keys.GRADUAL_VOLUME] ?: false,
         snoozeMinutes = this[Keys.SNOOZE] ?: UserPreferences.DEFAULT_SNOOZE_MINUTES,
         colorTheme = enumValueOrDefault(this[Keys.COLOR_THEME] ?: "", ColorTheme.DEFAULT),
         lastPaywallPromptEpochDay = this[Keys.PAYWALL_PROMPT_DAY],
@@ -72,6 +81,15 @@ class DataStorePreferencesRepository @Inject constructor(
     override suspend fun setTrafficNotifications(enabled: Boolean) = set(Keys.TRAFFIC_NOTIFICATIONS, enabled)
     override suspend fun setVibration(enabled: Boolean) = set(Keys.VIBRATION, enabled)
     override suspend fun setAlarmSound(sound: AlarmSound) = set(Keys.ALARM_SOUND, sound.name)
+    override suspend fun setCustomSound(uri: String, title: String?) {
+        dataStore.edit {
+            it[Keys.ALARM_SOUND] = AlarmSound.CUSTOM.name
+            it[Keys.CUSTOM_SOUND_URI] = uri
+            if (title != null) it[Keys.CUSTOM_SOUND_TITLE] = title else it.remove(Keys.CUSTOM_SOUND_TITLE)
+        }
+    }
+    override suspend fun setAlarmVolume(percent: Int) = set(Keys.ALARM_VOLUME, percent.coerceIn(UserPreferences.ALARM_VOLUME_RANGE))
+    override suspend fun setGradualVolume(enabled: Boolean) = set(Keys.GRADUAL_VOLUME, enabled)
     override suspend fun setSnoozeMinutes(minutes: Int) = set(Keys.SNOOZE, minutes)
     override suspend fun setColorTheme(theme: ColorTheme) = set(Keys.COLOR_THEME, theme.name)
     override suspend fun setLastPaywallPromptDay(epochDay: Long) = set(Keys.PAYWALL_PROMPT_DAY, epochDay)
