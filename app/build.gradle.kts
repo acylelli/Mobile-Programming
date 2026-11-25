@@ -17,6 +17,9 @@ val localProperties = Properties().apply {
     if (file.exists()) file.inputStream().use { load(it) }
 }
 val proxyBaseUrl: String = localProperties.getProperty("routealarm.proxyBaseUrl", "https://routealarm-proxy.onrender.com/")
+// 카카오맵 네이티브 앱 키는 공개 저장소에 올리지 않고 local.properties 의 routealarm.kakaoNativeAppKey 에만 둔다.
+// 비어 있으면 상세 화면에 지도 대신 안내만 보인다(CI 빌드 등).
+val kakaoNativeAppKey: String = localProperties.getProperty("routealarm.kakaoNativeAppKey", "")
 
 // 빌드할 때마다 git 커밋으로 버전을 정한다. 팀원이 받은 APK 가 어느 커밋인지 설정 화면의 버전으로 바로 알 수 있다.
 // versionCode 는 커밋 수라 새 커밋으로 빌드할수록 커지고, versionName 에는 짧은 커밋 해시를 붙인다.
@@ -41,6 +44,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "PROXY_BASE_URL", "\"$proxyBaseUrl\"")
+        buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"$kakaoNativeAppKey\"")
 
         // 글자 인식 모델의 네이티브 라이브러리가 칩 종류마다 들어가 APK 가 커진다.
         // 요즘 휴대폰(arm64)과 Intel 에뮬레이터(x86_64)만 남긴다. 32비트 전용 구형 폰은 설치할 수 없다.
@@ -120,6 +124,7 @@ dependencies {
     // 시간표 사진 글자 인식(기기 안에서 동작, 키·네트워크 불필요). 모델을 APK 에 넣는다.
     // Google Play 서비스가 모델을 따로 받는 방식은 에뮬레이터에서 몇 분이 지나도 받아지지 않아, 처음 쓸 때 바로 동작하는 쪽을 골랐다.
     implementation(libs.mlkit.text.recognition.korean)
+    implementation(libs.kakao.map)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
