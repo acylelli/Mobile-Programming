@@ -30,6 +30,10 @@ val gitCommitCount: Int = git("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 1
 val gitShortHash: String = git("rev-parse", "--short=7", "HEAD") ?: "local"
 
 android {
+    // 마이그레이션 테스트(androidTest)가 내보낸 Room 스키마(app/schemas)를 읽는다.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
     namespace = "com.example.routealarm"
     compileSdk = 36
 
@@ -131,6 +135,7 @@ dependencies {
     testImplementation(libs.turbine)
 
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

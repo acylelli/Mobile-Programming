@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.example.routealarm.data.local.datastore.DataStorePreferencesRepository
 import com.example.routealarm.data.calendar.DeviceCalendarRepository
+import com.example.routealarm.data.local.db.Migrations
 import com.example.routealarm.data.local.db.RouteAlarmDatabase
 import com.example.routealarm.data.location.FusedLocationRepository
 import com.example.routealarm.data.mapper.ScheduleEntityMapper
@@ -63,8 +64,8 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): RouteAlarmDatabase =
         Room.databaseBuilder(context, RouteAlarmDatabase::class.java, RouteAlarmDatabase.NAME)
-            // 포트폴리오 범위에서는 스키마 변경 시 재설치가 허용되지만, 실제 서비스라면 Migration 을 작성한다.
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // 업데이트해도 저장된 알람이 지워지지 않도록 파괴적 마이그레이션 대신 버전별 Migration 을 쓴다.
+            .addMigrations(*Migrations.ALL)
             .build()
 
     @Provides fun providePlaceDao(db: RouteAlarmDatabase) = db.placeDao()
