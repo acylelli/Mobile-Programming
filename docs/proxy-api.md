@@ -13,12 +13,9 @@ Proxy 서버는 환경변수로 실제 API 키를 보관하고, 제공자별 응
 `local.properties`
 
 ```properties
-routealarm.transitProvider=proxy
 # 생략하면 배포 서버 https://routealarm-proxy.onrender.com/ 을 쓴다
 # routealarm.proxyBaseUrl=https://routealarm-proxy.onrender.com/
 ```
-
-`fake` 로 두면 `FakeTransitRemoteDataSource` 가 사용되어 API 키 없이 모든 기능을 시연할 수 있다.
 
 에뮬레이터에서 개발 PC 의 서버(`server/`, `npm run dev`)에 붙을 때는 `routealarm.proxyBaseUrl=http://10.0.2.2:8080/` 을 쓴다. http 는 debug 빌드에서만 허용된다.
 
@@ -56,7 +53,7 @@ routealarm.transitProvider=proxy
 }
 ```
 
-- `total_minutes` = 도보 + 탑승 + 환승 + 대기 (지연 포함). 위 예시는 8 + 31 + 1 + 18 + 7 = 65분으로, 앱의 Fake 데이터와 UI 설계서 홈 화면 예시와 같다.
+- `total_minutes` = 도보 + 탑승 + 환승 + 대기 (지연 포함). 위 예시는 8 + 31 + 1 + 18 + 7 = 65분으로, UI 설계서 홈 화면 예시와 같다.
 - `line_name` 은 홈 노선도의 구간 색을 정하는 데도 쓴다(예: "2호선" → 초록, "8호선" → 분홍). 수도권 지하철 노선명은 "N호선" 형태로 준다.
 - `wait_minutes` 는 첫 탑승까지의 대기. 출발이 30분 이내면 서버가 실시간 도착 정보로 다시 계산하고, 첫 탑승 구간에 `arrival_message`("7분 후 도착")를 붙인다. 실시간 목록 밖의 차를 배차 간격으로 추정한 경우에는 "약 10분 후 도착"처럼 "약"이 붙는다.
 - `delay_minutes` 는 평소 대비 실시간 지연. 앱은 이 값으로 교통 상태 Chip 과 추가 여유시간을 계산한다.
@@ -77,26 +74,45 @@ routealarm.transitProvider=proxy
 
 - `lines` (선택): 역·정류장을 지나는 노선. 검색 결과에 노선 배지로 표시한다. 없으면 생략하거나 빈 배열로 준다.
 
-## 구독·단체 이용권 검증 (INR-003)
+## PRO 결제 — 토스페이먼츠 테스트 결제 (INR-003)
 
-현재 앱은 `FakeSubscriptionRemoteDataSource` 만 연결되어 있어 실제 결제가 일어나지 않는다.
-실제 서비스에서는 `SubscriptionRemoteDataSource` 구현이 Google Play Billing 으로 구매를 진행한 뒤
-서버가 영수증을 검증해 아래 형태로 돌려주어야 한다. 앱은 영수증을 직접 판단하지 않고 서버 결과만 저장한다.
-DTO: `data/remote/dto/SubscriptionDtos.kt`
+앱은 결제 결과를 스스로 판단하지 않는다. 서버가 금액을 확인하고 토스페이먼츠에 승인을 요청한 결과만 저장한다.
+테스트 키(`test_ck_`/`test_sk_`)를 쓰므로 실제로 청구되지 않는다. 기간제 이용권이며 자동 갱신은 없다.
 
-구독 상태
+| 상품 ID | 금액 | 이용 기간 |
+|---|---|---|
+| `routealarm_pro_monthly` | 2,900원 | 30일 |
+| `routealarm_pro_yearly` | 24,000원 | 365일 |
+
+1. 앱이 브라우저로 `GET /pay/checkout?product={상품 ID}` 를 연다. 서버가 주문을 만들고 토스 결제창을 띄우는 페이지를 준다.
+2. 결제하면 토스가 `GET /pay/success?paymentKey&orderId&amount` 로 돌려보낸다. 서버는 금액이 주문과 같은지 확인한 뒤 승인(`POST https://api.tosspayments.com/v1/payments/confirm`)한다. 취소·실패는 `GET /pay/fail` 로 온다.
+3. 결과 페이지가 앱 딥링크 `routealarm://payment?orderId=…&result=…` 로 돌아간다.
+4. 앱은 링크의 result 를 믿지 않고 `GET /v1/payments/{orderId}` 로 서버가 승인한 결과를 조회한다.
 
 ```json
 {
-  "product_id": "routealarm_pro_yearly",
-  "started_at": "2026-11-12T03:42:00Z",
-  "trial_ends_at": "2026-11-19T03:42:00Z",
-  "expires_at": "2026-11-19T03:42:00Z",
-  "auto_renew": true
+  "order_id": "ra_7d635003-f6da-4890-b1ac-8e973cb40101",
+  "status": "PAID",
+  "fail_code": null,
+  "subscription": {
+    "product_id": "routealarm_pro_monthly",
+    "started_at": "2026-11-25T10:00:00.000Z",
+    "expires_at": "2026-12-25T10:00:00.000Z",
+    "auto_renew": false
+  }
 }
 ```
 
-단체 이용권 확인·사용
+- `status`: `READY`(결제 전) | `PAID`(승인됨) | `FAILED`(취소·거절·금액 불일치). `subscription` 은 `PAID` 일 때만 있다.
+- 주문은 서버 메모리에만 있어 재시작하면 진행 중인 주문은 사라진다(테스트 범위).
+- DTO: `data/remote/dto/SubscriptionDtos.kt` 의 `PaymentResultDto`
+
+## 단체 이용권 (SFR-016)
+
+| 엔드포인트 | 설명 |
+|---|---|
+| `GET /v1/group-passes/{code}` | 기관·이용 기간·남은 인원 확인(사용하지 않음). 없는 코드는 404 |
+| `POST /v1/group-passes/{code}/redeem` | 사용 처리(남은 인원 1 감소). 없는 코드 404, 만료·정원 초과 409 |
 
 ```json
 {
@@ -108,8 +124,9 @@ DTO: `data/remote/dto/SubscriptionDtos.kt`
 }
 ```
 
-- 등록되지 않은 코드는 구현체가 `GroupPassNotFoundException` 을 던진다(HTTP 로 구현한다면 404 를 이 예외로 바꾼다). 앱은 형식(`영문·숫자 2~6자-숫자 4자-영문·숫자 4~8자`)이 맞는 코드만 서버에 보낸다.
+- 앱은 형식(`영문·숫자 2~6자-숫자 4자-영문·숫자 4~8자`)이 맞는 코드만 서버에 보낸다. 404 는 "등록되지 않은 코드"로 안내한다.
 - 기간이 지났거나 `remaining_seats` 가 0 이면 앱이 각각 만료·정원 초과로 안내한다.
+- 테스트 코드: `HSU-2026-WAKE7`, `WAKE-2026-TEAM1`, 만료 `HSU-2025-PAST1`, 정원 초과 `HSU-2026-FULL0`. 서버 환경변수 `GROUP_PASSES` 로 바꿀 수 있다.
 - 기관에는 이용 인원만 집계해 제공하고, 개인 위치와 일정 정보는 서버로 보내지 않는다.
 
 ## 오류

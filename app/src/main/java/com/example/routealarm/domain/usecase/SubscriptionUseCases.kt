@@ -58,7 +58,7 @@ class VerifyGroupPassUseCase @Inject constructor(
 
 data class ApplyGroupPassResult(
     val entitlement: Entitlement,
-    /** 개인 구독 중이었다면 자동 갱신 해지를 안내해야 한다(SFR-016 중복 처리). */
+    /** 자동 갱신되는 개인 구독 중이었다면 해지를 안내해야 한다(SFR-016 중복 처리). */
     val hadPersonalSubscription: Boolean,
 )
 
@@ -71,7 +71,8 @@ class ApplyGroupPassUseCase @Inject constructor(
         val code = GroupPassCode.normalize(rawCode)
         if (!GroupPassCode.isComplete(code)) return AppResult.Failure(AppError.GroupPassInvalid)
         val previous = subscriptionRepository.current()
-        val hadPersonal = previous.isPersonalSubscription && previous.isPro(timeProvider.now())
+        // 자동 갱신되는 개인 구독만 해지 안내가 필요하다. 기간제 이용권(테스트 결제)은 기간이 끝나면 저절로 끝난다.
+        val hadPersonal = previous.isPersonalSubscription && previous.autoRenew && previous.isPro(timeProvider.now())
         return when (val result = subscriptionRepository.redeemGroupPass(code)) {
             is AppResult.Success -> {
                 restoreAlarms()

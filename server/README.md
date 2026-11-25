@@ -1,12 +1,16 @@
 # RouteAlarm Proxy 서버
 
-앱이 직접 들고 있으면 안 되는 교통·장소 API 키를 대신 보관하고, 외부 API 응답을 앱 계약([docs/proxy-api.md](../docs/proxy-api.md)) 형식으로 바꿔 주는 서버다.
+앱이 직접 들고 있으면 안 되는 API 키를 대신 보관하고, 외부 API 응답을 앱 계약([docs/proxy-api.md](../docs/proxy-api.md)) 형식으로 바꿔 주는 서버다.
 
 | 앱 엔드포인트 | 사용하는 외부 API |
 |---|---|
 | `GET /v1/transit/routes` | ODsay 대중교통 길찾기 (`searchPubTransPathT`) |
 | `GET /v1/places/search` | Kakao 로컬 키워드 검색 |
+| `GET /pay/checkout`, `/pay/success`, `/pay/fail`, `GET /v1/payments/{orderId}` | 토스페이먼츠 테스트 결제 (`src/payments.ts`) |
+| `GET /v1/group-passes/{code}`, `POST /v1/group-passes/{code}/redeem` | 없음 — 서버가 테스트 코드 관리 (`src/grouppass.ts`) |
 | `GET /healthz` | 상태 확인 (배포 서비스 헬스체크용) |
+
+실시간 도착 정보(서울 지하철·서울/경기 버스)는 경로 조회 안에서 함께 처리한다(아래 "실시간 도착 정보").
 
 ## 실행
 
@@ -20,7 +24,7 @@ npm run dev            # http://localhost:8080
 ```
 
 ```bash
-npm test         # 변환 로직·입력 검증·남용 방지 테스트 (외부 API 를 호출하지 않음)
+npm test         # 변환·입력 검증·남용 방지·결제·단체 이용권 테스트 (외부 API 를 호출하지 않음)
 npm run typecheck
 ```
 
@@ -29,13 +33,12 @@ npm run typecheck
 앱의 `local.properties` (git 에 올라가지 않음):
 
 ```properties
-routealarm.transitProvider=proxy
-# 에뮬레이터에서 개발 PC 의 서버에 접속할 때. 배포한 뒤에는 https 주소로 바꾼다. 끝의 / 는 꼭 붙인다.
+# 에뮬레이터에서 개발 PC 의 서버에 접속할 때. 생략하면 배포 서버를 쓴다. 끝의 / 는 꼭 붙인다.
 routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ```
 
 - http 접속은 debug 빌드에서 `10.0.2.2`, `localhost`, `127.0.0.1` 만 허용된다(`app/src/debug/res/xml/network_security_config.xml`). 실기기나 release 빌드는 https 로 배포한 주소를 쓴다.
-- proxy 로 바꾸면 설정 > 데모의 **가상 교통 지연**, **네트워크 오류 시뮬레이션** 은 동작하지 않는다(fake 전용). 시연할 때는 `fake` 로 돌려 둔다.
+- 로컬 서버로 결제를 시험하면 토스 결제창이 `http://10.0.2.2:8080/pay/success` 로 돌아오므로 에뮬레이터 브라우저에서만 동작한다.
 
 ## 배포 (Render)
 
@@ -47,7 +50,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 |---|---|
 | 서비스 생성 | **New > Web Service > Public Git Repository** 에 저장소 주소를 넣어 만들었다(Root Directory `server`, Build `npm ci`, Start `npm start`, Health Check `/healthz`) |
 | 배포 | **수동**. GitHub 와 연결하지 않은 공개 저장소 방식이라 `main` 에 병합해도 자동으로 배포되지 않는다 |
-| 키 | Render 서비스의 **Environment** 에 `ODSAY_API_KEY`, `KAKAO_REST_API_KEY`, `NODE_VERSION=20` |
+| 키 | Render 서비스의 **Environment** 에 `ODSAY_API_KEY`, `KAKAO_REST_API_KEY`, `SEOUL_SUBWAY_API_KEY`, `DATA_GO_KR_SERVICE_KEY`, `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`, `NODE_VERSION=20` |
 | 잠들기 방지 | [cron-job.org](https://cron-job.org) 가 10분마다 `/healthz` 를 호출한다 |
 
 ### `server/` 를 바꾼 뒤 배포하기

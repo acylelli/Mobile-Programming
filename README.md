@@ -68,7 +68,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 단체 이용권 | 학교·기업이 준 코드를 입력하면 기관·기간을 확인하고 PRO 적용 |
 | 컬러 테마 | 기본(오렌지)·새벽·나이트 3종, 모든 플랜에서 선택 가능 |
 | 재부팅·시간대 대응 | BOOT_COMPLETED / TIMEZONE_CHANGED 수신 후 알람 복구 |
-| 데모 모드 | API 키 없이 Fake 교통 데이터로 전체 흐름 시연, 설정에서 가상 지연·네트워크 오류 주입 |
+| 테스트 도구 | 설정에서 교통 정보 즉시 재확인, 기상 알람 미리 울려보기 |
 | 측정 지표 | API 호출/실패/캐시 적중/재계산/자동 조정 횟수를 Room 에 기록, 설정 화면에서 확인 |
 
 ## 3. 화면과 스크린샷
@@ -89,7 +89,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | UI-F-002 | 테마 선택 | `settings/theme/ThemeScreen.kt` |
 | UI-F-003 | 구독 관리 | `subscription/SubscriptionScreen.kt` |
 
-에뮬레이터(Pixel 10 Pro, Android 17)에서 Fake 교통 데이터로 캡처한 화면이다.
+에뮬레이터(Pixel 10 Pro, Android 17)에서 캡처한 화면이다. (예시 일정·시연용 데이터를 없애기 전 화면이라 일부 화면에 "예시" 배지가 보인다.)
 
 | 온보딩 | 홈 | 일정 만들기 (장소) | 도착 시각 (휠) |
 |---|---|---|---|
@@ -113,9 +113,9 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 
 ## 4. 무료 플랜과 PRO
 
-| | 무료 | PRO (월 2,900원 / 연 24,000원, 7일 무료체험) |
+| | 무료 | PRO (월 2,900원 / 연 24,000원, 기간제 이용권) |
 |---|---|---|
-| 일정 수 | 2개 (예시 일정은 세지 않음) | 무제한 |
+| 일정 수 | 2개 | 무제한 |
 | 교통 재확인 | 기상 30분 전 1회 | 기상 24h / 3h / 1h / 20분 전 |
 | 교통이 바뀌었을 때 | 추천 카드와 알림의 **[변경하기]** 로 직접 반영 | 알람 자동 조정 + 알림 |
 | 컬러 테마 | 3종 모두 | 3종 모두 |
@@ -123,8 +123,8 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 - 플랜 판단은 화면이 아니라 도메인에서 한다: `CheckScheduleQuotaUseCase`(일정 한도), `RefreshCheckpointPolicy`(재확인 시점), `RefreshTransitTimeUseCase`(자동 조정 여부).
 - 일정 한도에 걸리면 하루에 한 번만 페이월을 자동으로 띄우고, 같은 날 다시 누르면 안내 문구만 보여준다.
 - **단체 이용권**: 코드 형식을 확인한 뒤 서버에 조회해 기관과 이용 기간을 보여주고 적용한다. 개인 구독 중에 적용하면 이중 결제가 되지 않도록 자동 갱신 해지를 안내한다.
-- **결제는 시연용이다.** `SubscriptionRemoteDataSource` 에 `FakeSubscriptionRemoteDataSource` 만 연결되어 있어 실제 결제가 일어나지 않으며, 화면에도 그 사실을 표시한다. 구독 관리 화면의 "시연용: 무료 플랜으로 되돌리기"로 언제든 무료 플랜으로 돌아갈 수 있다.
-- 시연용 단체 이용권 코드: `HSU-2026-WAKE7`(한성대학교), `WAKE-2026-TEAM1`, 만료된 코드 `HSU-2025-PAST1`, 인원이 다 찬 코드 `HSU-2026-FULL0`
+- **결제는 토스페이먼츠 테스트 결제다.** 페이월의 "N원 결제하기"를 누르면 브라우저에서 토스 결제창이 열리고, 결제하면 앱으로 돌아와 서버가 승인한 주문만 PRO 로 적용된다. 테스트 키라 실제로 청구되지 않는다. 월간은 30일, 연간은 365일 동안 PRO 이며 자동 갱신은 없다. 구독 관리 화면의 "테스트: 무료 플랜으로 되돌리기"로 다시 시험할 수 있다.
+- 단체 이용권 테스트 코드(서버가 관리): `HSU-2026-WAKE7`(한성대학교), `WAKE-2026-TEAM1`, 만료된 코드 `HSU-2025-PAST1`, 인원이 다 찬 코드 `HSU-2026-FULL0`
 
 ### UI 설계서와 다르게 구현한 부분
 
@@ -133,7 +133,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 컬러 테마 | 5종(기본만 무료, 4종은 PRO 잠금) | 기본·새벽·나이트 3종, 모두 무료 | 모든 사용자가 테마를 쓸 수 있도록 잠금을 풀고, 인디고·모노를 빼서 3종으로 줄였다 |
 | 화면 모드 | 라이트 / 다크 / 시스템 선택 | 선택 메뉴 없음. 기기의 다크 모드 설정을 따르고 나이트 테마는 항상 어두운 화면 | 테마만 고르도록 단순화했다 |
 | "만약 15분 늦어진다면?" | 07:15 → 07:00 | 07:15 → 06:55 | 예시 숫자가 아니라 실제 계산 정책의 결과(이동 +15분, 지연 여유 +5분)를 보여준다 |
-| 결제 | Google Play 결제 | 시연용 구현 | Play Console 상품과 영수증 검증 서버가 필요하다 |
+| 결제 | Google Play 정기 결제, 7일 무료체험 | 토스페이먼츠 테스트 결제(기간제 이용권, 자동 갱신·무료체험 없음) | Play Console 상품과 영수증 검증 서버 없이 실제 결제 흐름을 테스트하기 위함 |
 | 광고 배너, 시간표·캘린더 연동, 택시 안내 | 제공 | 미구현 (연동 메뉴는 "준비 중"으로 표시) | 외부 SDK·API 연동 범위 |
 
 ## 5. 기술 스택
@@ -167,7 +167,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
                                │ 인터페이스 구현
 ┌───────────────────────────── data ───────────────────────────┐
 │ repository 구현 (Offline First)                               │
-│ local: Room DAO, DataStore     remote: Fake / Proxy DataSource│
+│ local: Room DAO, DataStore     remote: Proxy DataSource       │
 │ (교통·장소·구독 각각 RemoteDataSource 인터페이스로 교체 가능) │
 │ mapper: DTO·Entity ↔ Domain                                   │
 └──────────────────────────────────────────────────────────────┘
@@ -256,7 +256,7 @@ app/src/main/java/com/example/routealarm
 ├── data
 │   ├── local/db      Room Entity, DAO, Database
 │   ├── local/datastore  Preferences DataStore
-│   ├── remote        Transit / PlaceSearch / Subscription RemoteDataSource 인터페이스, dto, fake/, proxy/
+│   ├── remote        Transit / PlaceSearch / Subscription / Payment RemoteDataSource, dto, proxy/
 │   ├── mapper        DTO·Entity ↔ Domain
 │   ├── repository    Offline First 구현체
 │   └── location      FusedLocationRepository
@@ -274,7 +274,7 @@ app/src/main/java/com/example/routealarm
 └── di                Hilt 모듈 (App, Data, Network, Alarm)
 
 app/src/test/java/com/example/routealarm
-├── fake              Fake Repository / Scheduler / Notifier
+├── fake              테스트용 Fake Repository / Scheduler / Notifier
 ├── core              휠 선택기 계산 규칙과 움직임 단위 테스트
 ├── domain            계산·정책·갱신·구독 시나리오 단위 테스트
 └── presentation      노선도 화면 모델 단위 테스트
@@ -288,7 +288,7 @@ server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검
 
 1. Android Studio (Ladybug 이상, AGP 8.13 지원) 로 폴더를 연다.
 2. `local.properties.example` 을 `local.properties` 로 복사하고 `sdk.dir` 을 맞춘다. (Android Studio 가 자동으로 만들어 주기도 한다)
-3. 그대로 실행하면 **fake** 제공자로 동작한다. API 키 없이 모든 기능을 사용할 수 있다.
+3. 그대로 실행하면 배포 서버(`https://routealarm-proxy.onrender.com/`)의 실제 교통·장소·결제·단체 이용권 기능을 쓴다. 앱에는 API 키가 필요 없다.
 
 ```bash
 ./gradlew assembleDebug
@@ -296,36 +296,34 @@ server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검
 ```
 
 - minSdk 26 / targetSdk 36 / JDK 17 이상
-- 처음 실행하면 온보딩 3쪽(마지막 쪽에서 권한 안내) → 홈에 "집 → 한성대학교" 예시 일정이 꺼진 상태로 표시된다.
+- 처음 실행하면 온보딩 3쪽(마지막 쪽에서 권한 안내) → 빈 홈 화면에서 **새 일정 만들기**로 시작한다.
+- 이전 버전에서 업데이트하면 DB 구조가 바뀌어(버전 2) 저장된 일정이 초기화된다.
 
-### 데모 시나리오 (API 키 없이)
+### 테스트 시나리오
 
-1. 알람 탭의 **+** 로 일정을 만든다(출발지 "집", 도착지 "학교" 즐겨찾기를 쓰면 설계서 예시와 같은 07:15 기상이 나온다).
-2. 설정 > 데모 > **가상 교통 지연** 을 15분으로 올리고 **지금 교통 정보 다시 확인** 을 누른다.
-3. 무료 플랜: 홈에 "알람 변경을 추천해요 07:15 → 06:55" 카드가 뜨고 **[변경하기]** 를 누르면 알람이 옮겨진다.
-4. 설정 맨 위 PRO 배너 > **7일 무료체험 시작**(시연용, 결제 없음) 후 지연을 바꿔 다시 확인하면 추천 대신 알람이 자동으로 옮겨지고, 알람 목록에 "07:15 → 07:02로 앞당김"처럼 변경 내역이 표시된다.
-5. 설정 > **단체 이용권 코드 입력** 에 `HSU-2026-WAKE7` 을 넣으면 기관·기간이 확인되고 PRO 가 적용된다.
-6. **네트워크 오류 시뮬레이션** 을 켜고 다시 확인하면 홈에 오프라인 안내 띠가 표시되고 알람은 유지된다.
-7. 설정 > 테마에서 컬러 테마를 바꿔 본다. **기상 알람 미리 울려보기** 로 알람 화면도 바로 확인할 수 있다.
+1. 알람 탭의 **+** 로 일정을 만든다. 장소 검색은 Kakao, 경로·소요시간은 ODsay 실제 데이터다.
+2. 출발이 30분 이내인 일정을 만들면 홈 노선도와 출발 알림에 "다산역 8호선 · 약 8분 후 도착" 같은 실시간 도착 안내가 붙는다. 설정 > 테스트 도구 > **지금 교통 정보 다시 확인** 으로 바로 다시 조회할 수 있다.
+3. 설정 맨 위 PRO 배너 > **N원 결제하기** 로 토스페이먼츠 테스트 결제를 한다(실제 청구 없음). 결제가 끝나 앱으로 돌아오면 PRO 가 적용된다.
+4. 설정 > **단체 이용권 코드 입력** 에 `HSU-2026-WAKE7` 을 넣으면 서버에서 기관·기간을 확인하고 PRO 가 적용된다.
+5. 구독 관리 > **테스트: 무료 플랜으로 되돌리기** 로 결제·이용권을 다시 시험할 수 있다.
+6. **기상 알람 미리 울려보기** 로 알람 화면을 바로 확인할 수 있다.
 
 ## 12. API 설정 방법
 
 실제 교통 API 는 **Backend Proxy** 를 통해 사용한다. 앱에는 어떤 Secret 도 들어가지 않는다.
 
 ```properties
-# local.properties (git 에 커밋되지 않음)
-routealarm.transitProvider=proxy
-# 생략하면 배포 서버 https://routealarm-proxy.onrender.com/ 을 쓴다
+# local.properties (git 에 커밋되지 않음). 생략하면 배포 서버 https://routealarm-proxy.onrender.com/ 을 쓴다
+routealarm.proxyBaseUrl=https://routealarm-proxy.onrender.com/
 ```
 
 Proxy 가 구현해야 하는 응답 형식은 [docs/proxy-api.md](docs/proxy-api.md) 에 있다.
 ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형식으로 정규화하면 앱 코드는 바뀌지 않는다.
 
-이 저장소의 [`server/`](server/README.md) 가 그 Proxy 구현이다(ODsay 대중교통 길찾기 + Kakao 로컬 검색).
+이 저장소의 [`server/`](server/README.md) 가 그 Proxy 구현이다(ODsay 경로, Kakao 장소 검색, 실시간 도착, 토스페이먼츠 테스트 결제, 단체 이용권).
 키는 `server/.env` 나 배포 서비스 환경변수에만 두고, 에뮬레이터에서 로컬 서버에 붙을 때는 다음처럼 설정한다.
 
 ```properties
-routealarm.transitProvider=proxy
 routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ```
 
@@ -350,7 +348,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `RefreshCheckpointPolicyTest` | PRO 24h/3h/1h/20분 체크포인트 선택, 무료 플랜 30분 전 1회 |
 | `RefreshTransitTimeUseCaseTest` | 교통 지연 → 자동 조정·알림, 작은 변화 유지, 추천/확인 요청, 추천 승인, 네트워크 실패 폴백, 알람 직전 즉시 울림, 이미 울린 알람은 변경하지 않음, 무료 플랜은 자동 조정 대신 추천 |
 | `SyncScheduleUseCaseTest` | 재부팅 복구, 회차 넘김, 1회 일정 종료, 시간대 변경, 정확한 알람 권한 없음, 스누즈 보존 |
-| `SubscriptionUseCasesTest` | 연간 요금(월 2,000원꼴·31% 할인), 무료 일정 한도(예시 일정 제외), 체험 시작과 재확인 재예약, 구독 종료 후 무료 전환, 단체 이용권 코드 정규화·형식 검사·확인·적용, 개인 구독 중 적용 시 해지 안내, 검증 서버 연결 실패 시 플랜 유지 |
+| `SubscriptionUseCasesTest` | 연간 요금(월 2,000원꼴·31% 할인), 무료 일정 한도, 서버가 승인한 결제만 PRO 적용·기간 만료, PRO 전환 시 재확인 재예약, 구독 종료 후 무료 전환, 단체 이용권 코드 정규화·형식 검사·확인·적용, 자동 갱신 구독 중 적용 시에만 해지 안내, 검증 서버 연결 실패 시 플랜 유지 |
 | `PreviewDelayScenarioUseCaseTest` | "만약 15분 늦어진다면?" 카드: 이동 +15분·지연 여유 +5분, 실제 재계산과 같은 시각, 지연이 없으면 그대로 |
 | `RouteTimelineBuilderTest` | 설계서 예시 경로의 지점·시각·구간, 승차 대기 시간 반영, 걷지 않고 바로 타는 경로, 경로 정보가 없는 계획, 방향 조사(로/으로) |
 | `WheelMathTest` | 고리 휠의 칸 번호, 12시간제 숫자와 오전/오후(11↔12 전환, 자정·정오), 분이 시를 바꾸지 않음, 시간·분 길이 변환, 내가 알린 값과 바깥에서 온 값 구분, 손을 뗀 뒤 멈출 칸과 관성 거리 조정, 원통 모양(칸 위치·크기·진하기)과 누른 칸 찾기 |
@@ -364,7 +362,7 @@ Proxy 서버 테스트는 `cd server && npm test` 로 실행한다(외부 API �
 
 GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main` 푸시와 모든 PR 에서 두 작업을 돌린다.
 
-- **Android**: `assembleDebug`, `testDebugUnitTest`, `lintDebug` (JDK 17, fake 제공자라 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
+- **Android**: `assembleDebug`, `testDebugUnitTest`, `lintDebug` (JDK 17, 외부 API 를 호출하지 않아 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
 - **Proxy 서버**: `npm ci`, 타입 검사, `npm test` (Node 20)
 
 ## 14. 주요 설계 결정
@@ -374,7 +372,6 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 | 결정 | 이유 |
 |---|---|
 | **Schedule 을 중심 개념으로, 알람 시각은 계산 결과(AlarmPlan)** | 나중에 시간표/캘린더 연동 시 Schedule 만 만들면 계산·알람·갱신 파이프라인을 재사용 (`domain/model/Schedule.kt`) |
-| **Fake 를 Repository 가 아니라 RemoteDataSource 레벨에 둠** | 시연 중에도 DTO 매핑·캐시·오프라인 폴백 코드가 실제와 똑같이 동작하고 검증됨 (`data/remote/fake`) |
 | **Instant 기반 계산, 표시만 ZoneId 변환** | DST/시간대 변경 시 벽시계 계산 오차 방지 (`CalculateDepartureTimeUseCase`) |
 | **TimeProvider.zone() 을 매번 읽음** | `Clock.systemDefaultZone()` 은 생성 시점 Zone 을 붙잡아 여행 중 시간대 변경을 놓침 (`core/util/TimeProvider.kt`) |
 | **비대칭 히스테리시스** | 앞당김은 5분, 늦춤은 10분부터 반영. 늦잠 위험 쪽을 더 보수적으로 (`AdjustmentPolicy`) |
@@ -393,7 +390,7 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 | **Dynamic Color 미사용** | 사용자가 고른 컬러 테마가 기기 배경화면에 따라 바뀌면 안 됨 (`core/designsystem/theme/Color.kt`) |
 | **색은 역할 기반 토큰(AppColors)으로만 사용** | 컬러 테마를 바꿀 때 토큰 묶음만 교체하면 앱 전체에 반영됨. 노선색·상태색 같은 정보 색은 테마와 분리해 고정 |
 | **플랜에 따른 차이는 도메인에서 판단** | 화면마다 PRO 여부를 따로 검사하면 빠뜨리기 쉬움. 일정 한도·재확인 시점·자동 조정을 UseCase/Policy 가 결정 (`SubscriptionUseCases.kt`, `RefreshCheckpointPolicy`) |
-| **결제·이용권 검증도 RemoteDataSource 교체 지점으로 분리** | 실제 Play Billing + 영수증 검증 서버를 붙일 때 구현체만 바꾸면 됨. 시연 중임을 `isSimulated` 로 화면에 표시 (`SubscriptionRemoteDataSource`) |
+| **결제 결과는 앱이 아니라 서버가 판단** | 결제창에서 돌아오는 링크 값은 다른 앱도 만들 수 있으므로 믿지 않고, 서버가 금액을 확인해 승인한 주문만 PRO 로 적용한다 (`PaymentRemoteDataSource`, `server/src/payments.ts`) |
 | **휠 선택기는 위치값 하나와 끌기 제스처로 직접 구현** | 고리처럼 끝없이 돌고, 원통 모양으로 그리고, 멈출 칸을 미리 정하려면 스크롤 목록보다 위치(가운데 칸 번호) 하나를 직접 움직이는 편이 단순하다. 끌기를 휠이 모두 가져가므로 스크롤 화면 안에서도 화면이 따라 움직이지 않는다 (`Wheel.kt`) |
 | **시 휠은 24칸 고리, 오전/오후는 거기서 계산** | 12시간제 숫자를 두 번 반복해 보여주면 11↔12 를 지날 때 오전/오후가 저절로 바뀌고, 빠르게 돌려도 숫자와 오전/오후가 어긋날 수 없다 (`WheelMath.kt`) |
 | **휠에서 손을 떼는 순간 멈출 칸을 정해 값을 알림** | 관성으로 도는 동안 다음 단계로 넘어가도 고른 값이 반영된다. 멈출 때까지 기다리면 그 사이의 값을 잃을 수 있다 (`WheelState.targetIndex`) |
@@ -405,7 +402,8 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 - [x] Proxy 서버 https 배포 (Render, 수동 배포)
 - [x] 출발 30분 이내 경로에 실시간 지하철·버스 도착 정보 반영 (`arrival_message`, 대기 시간)
 - [ ] 평소 대비 지연(`delay_minutes`) 계산
-- [ ] Google Play Billing 연동과 영수증 검증 서버, 단체 이용권 발급·관리
+- [x] PRO 결제(토스페이먼츠 테스트 결제)와 서버의 단체 이용권 확인·사용
+- [ ] 실제 출시용 결제(Google Play Billing 또는 토스페이먼츠 실 키·정기결제), 단체 이용권 발급·관리 화면
 - [ ] 무료 플랜 배너 광고, 지각 위험 시 택시·공유 모빌리티 안내
 - [ ] 상세 화면 지도(경로 폴리라인) 표시
 - [ ] 대학교 시간표 / Google Calendar 가져오기 → Schedule 자동 생성 (현재 설정의 연동 메뉴는 "준비 중")

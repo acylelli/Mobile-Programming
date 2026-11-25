@@ -218,13 +218,13 @@ class FakeSubscriptionRepository(
     val paidOrders = mutableMapOf<String, SubscriptionProduct>()
 
     /** 테스트 준비용: 결제를 거치지 않고 PRO 상태로 만든다. */
-    fun grantPro(product: SubscriptionProduct) {
+    fun grantPro(product: SubscriptionProduct, autoRenew: Boolean = false) {
         val now = time?.now() ?: Instant.EPOCH
         state.value = Entitlement(
             plan = if (product == SubscriptionProduct.YEARLY) PlanType.PRO_YEARLY else PlanType.PRO_MONTHLY,
             startedAt = now,
             expiresAt = now.plus(Duration.ofDays(if (product == SubscriptionProduct.YEARLY) 365 else 30)),
-            autoRenew = false,
+            autoRenew = autoRenew,
         )
     }
 
