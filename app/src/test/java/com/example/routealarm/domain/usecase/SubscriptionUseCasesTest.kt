@@ -176,13 +176,23 @@ class SubscriptionUseCasesTest {
     }
 
     @Test
-    fun `개인 구독 중에 단체 이용권을 적용하면 자동 갱신 해지 안내가 필요하다`() = runTest {
+    fun `자동 갱신되는 개인 구독 중에 단체 이용권을 적용하면 해지 안내가 필요하다`() = runTest {
+        subscription.passes["HSU-2026-WAKE7"] = FakeSubscriptionRepository.hansungPass()
+        subscription.grantPro(SubscriptionProduct.MONTHLY, autoRenew = true)
+
+        val result = ApplyGroupPassUseCase(subscription, restore, time)("HSU-2026-WAKE7")
+
+        assertTrue((result as AppResult.Success).data.hadPersonalSubscription)
+    }
+
+    @Test
+    fun `기간제 이용권은 자동 갱신이 없으니 단체 이용권을 적용해도 해지 안내가 필요 없다`() = runTest {
         subscription.passes["HSU-2026-WAKE7"] = FakeSubscriptionRepository.hansungPass()
         subscription.grantPro(SubscriptionProduct.MONTHLY)
 
         val result = ApplyGroupPassUseCase(subscription, restore, time)("HSU-2026-WAKE7")
 
-        assertTrue((result as AppResult.Success).data.hadPersonalSubscription)
+        assertFalse((result as AppResult.Success).data.hadPersonalSubscription)
     }
 
     @Test
