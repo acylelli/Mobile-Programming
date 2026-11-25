@@ -59,7 +59,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 교통 상황 재확인 | PRO: 기상 24h / 3h / 1h / 20분 전에 WorkManager 로 재확인. 무료: 기상 30분 전 1회 |
 | 안전한 자동 조정 | 5분 미만 변화는 무시, 30분 초과 변화는 사용자 확인. PRO 는 자동 조정, 무료 플랜과 자동 조정 OFF 는 변경 추천만 |
 | 기상 알람 + 출발 알림 | 기상 알람(전체 화면, 알람음, 진동, 5·10분 스누즈)과 "10분 뒤 출발" / "지금 출발" 알림 분리 |
-| 알람음·볼륨 | 기본 알람음·부드럽게·휴대폰 벨소리 직접 고르기·무음, 볼륨 10~100%(휴대폰 알람 볼륨과 관계없이 이 크기로 울리고 끝나면 원래 볼륨으로 복원), 30초에 걸쳐 점점 크게 울리기, 미리 듣기 |
+| 알람음·볼륨 | 기본 알람음·부드럽게·휴대폰 벨소리 직접 고르기·무음, 아이폰 설정 같은 볼륨 막대 10~100%(테마 강조색, 휴대폰 알람 볼륨과 관계없이 이 크기로 울리고 끝나면 원래 볼륨으로 복원), 30초에 걸쳐 점점 크게 울리기, 미리 듣기 |
 | Offline First | 네트워크 실패 시 Room 캐시 → 마지막 계산값으로 알람 유지, 화면에 안내 띠 표시 |
 | 일정 만들기 5단계 | 출발지 → 도착지 → 도착 시각·반복 → 준비 시간 → 여유 시간, 저장 전에 계산 미리보기 |
 | 아이폰식 휠 입력 | 도착 시각(오전/오후 · 시 · 분)과 준비 시간(시간 · 분)을 휠을 돌려 고른다. 시 휠이 11과 12 사이를 지나면 오전/오후가 따라 바뀐다 |
@@ -137,9 +137,6 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
     <td align="center" valign="top"><img src="docs/screenshots/settings.png" width="200" alt="설정 (연동 메뉴)"><br><sub>설정 (연동 메뉴)</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/theme.png" width="200" alt="테마 선택"><br><sub>테마 선택</sub></td>
   </tr>
-  <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/alarm-sound.png" width="200" alt="알람음·볼륨·점점 크게"><br><sub>알람음·볼륨·점점 크게</sub></td>
-  </tr>
 </table>
 
 ### 학교 시간표 · 캘린더 연동 (PRO)
@@ -170,6 +167,28 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
     <td align="center" valign="top"><img src="docs/screenshots/auto-adjust.png" width="200" alt="교통 지연 → 자동 조정 (PRO)"><br><sub>교통 지연 → 자동 조정 (PRO)</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/suggestion.png" width="200" alt="교통 지연 → 변경 추천 (무료)"><br><sub>교통 지연 → 변경 추천 (무료)</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/offline.png" width="200" alt="네트워크 실패 → 마지막 계산 기준"><br><sub>네트워크 실패 → 마지막 계산 기준</sub></td>
+  </tr>
+</table>
+
+### 테마별 화면
+
+설정 > 테마에서 기본(오렌지)·새벽·나이트를 고를 수 있다. 강조색이 테마를 따라 바뀌어, 알람음 볼륨 막대도 오렌지 · 남색 · 연두색으로 칠해진다. 지하철 노선색은 테마와 관계없이 공식 색으로 고정된다.
+
+<table>
+  <tr>
+    <th align="center">기본 (오렌지)</th>
+    <th align="center">새벽</th>
+    <th align="center">나이트</th>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/theme-default-home.png" width="200" alt="기본 (오렌지) — 홈"><br><sub>기본 (오렌지) — 홈</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/theme-dawn-home.png" width="200" alt="새벽 — 홈"><br><sub>새벽 — 홈</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/theme-night-home.png" width="200" alt="나이트 — 홈"><br><sub>나이트 — 홈</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/alarm-sound.png" width="200" alt="기본 (오렌지) — 알람음·볼륨"><br><sub>기본 (오렌지) — 알람음·볼륨</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/theme-dawn-sound.png" width="200" alt="새벽 — 알람음·볼륨"><br><sub>새벽 — 알람음·볼륨</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/theme-night-sound.png" width="200" alt="나이트 — 알람음·볼륨"><br><sub>나이트 — 알람음·볼륨</sub></td>
   </tr>
 </table>
 

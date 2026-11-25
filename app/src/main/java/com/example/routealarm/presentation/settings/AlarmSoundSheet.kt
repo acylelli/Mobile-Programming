@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -32,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -49,6 +46,7 @@ import com.example.routealarm.core.designsystem.component.Paragraph
 import com.example.routealarm.core.designsystem.component.PrimaryButton
 import com.example.routealarm.core.designsystem.component.RadioDot
 import com.example.routealarm.core.designsystem.component.SecondaryButton
+import com.example.routealarm.core.designsystem.component.VolumeSlider
 import com.example.routealarm.core.designsystem.theme.Radius
 import com.example.routealarm.core.designsystem.theme.RouteAlarmTheme
 import com.example.routealarm.core.designsystem.theme.Spacing
@@ -121,25 +119,20 @@ internal fun AlarmSoundSheet(
                 Text(stringResource(R.string.settings_volume), style = MaterialTheme.typography.titleMedium, color = colors.textPrimary, modifier = Modifier.weight(1f))
                 Text(stringResource(R.string.settings_volume_format, volume), style = MaterialTheme.typography.titleMedium, color = colors.accentText)
             }
-            Slider(
-                value = volume.toFloat(),
-                onValueChange = {
-                    volume = ((it / VOLUME_STEP).toInt() * VOLUME_STEP).coerceIn(UserPreferences.ALARM_VOLUME_RANGE)
-                    previewPlayer.updateVolume(volume)
+            Spacer(Modifier.height(10.dp))
+            VolumeSlider(
+                value = volume,
+                range = UserPreferences.ALARM_VOLUME_RANGE,
+                onChange = {
+                    volume = it
+                    previewPlayer.updateVolume(it)
                 },
-                onValueChangeFinished = { onVolume(volume) },
-                valueRange = UserPreferences.ALARM_VOLUME_RANGE.first.toFloat()..UserPreferences.ALARM_VOLUME_RANGE.last.toFloat(),
-                steps = (UserPreferences.ALARM_VOLUME_RANGE.last - UserPreferences.ALARM_VOLUME_RANGE.first) / VOLUME_STEP - 1,
+                onChangeFinished = { onVolume(volume) },
+                step = VOLUME_STEP,
                 enabled = !silent,
-                colors = SliderDefaults.colors(
-                    thumbColor = colors.accent,
-                    activeTrackColor = colors.accent,
-                    inactiveTrackColor = colors.dotted,
-                    activeTickColor = Color.Transparent,
-                    inactiveTickColor = Color.Transparent,
-                ),
                 modifier = Modifier.testTag("alarm_volume_slider"),
             )
+            Spacer(Modifier.height(8.dp))
             Paragraph(stringResource(R.string.settings_volume_body), style = MaterialTheme.typography.bodySmall)
 
             Spacer(Modifier.height(14.dp))
