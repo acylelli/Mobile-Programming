@@ -5,3 +5,8 @@ sdk.dir=/Users/<you>/Library/Android/sdk
 # 생략하면 Render 에 배포한 서버(https://routealarm-proxy.onrender.com/)를 쓴다.
 # 에뮬레이터에서 로컬 서버(server/, npm run dev)에 붙을 때는 http://10.0.2.2:8080/ (debug 빌드만 http 허용)
 # routealarm.proxyBaseUrl=http://10.0.2.2:8080/
+
+# 상세 화면 경로 지도(카카오맵) 네이티브 앱 키. 공개 저장소에 올리지 않는다.
+# 카카오 개발자 콘솔의 네이티브 앱 키에 패키지명 com.example.routealarm 과 빌드하는 컴퓨터의 키 해시를 등록해야 지도가 뜬다.
+# 생략하면 지도만 보이지 않고 나머지는 그대로 동작한다.
+# routealarm.kakaoNativeAppKey=

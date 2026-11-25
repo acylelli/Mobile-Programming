@@ -71,6 +71,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 테스트 도구 | 설정에서 교통 정보 즉시 재확인, 기상 알람 미리 울려보기 |
 | 측정 지표 | API 호출/실패/캐시 적중/재계산/자동 조정 횟수를 Room 에 기록, 설정 화면에서 확인 |
 | 학교 시간표 연동 (PRO) | 시간표 캡처 사진 인식(ML Kit 한국어, 기기 안에서 처리)·캘린더 반복 일정 가져오기·직접 입력 → 요일별 첫 수업에 맞춘 반복 알람 생성. 인식이 틀린 수업은 눌러서 수정·삭제, 학기가 바뀌어 다시 만들면 예전 시간표 알람을 새 알람으로 교체 |
+| 경로 지도 | 일정 상세 화면에 카카오맵으로 경로 표시(탑승 구간은 노선색, 도보는 회색, 출발·도착 점). 네이티브 앱 키는 `local.properties` 에만 두고, 키가 없거나 인증에 실패하면 지도만 숨긴다 |
 | 캘린더 연동 (PRO) | 기기 캘린더(Google·삼성 등)의 앞으로 2주 일정을 읽어, 한 번뿐인 일정은 도착지·시각을 채운 새 일정으로, 매주 반복 일정은 시간표로 가져오기 |
 
 ## 3. 화면과 스크린샷
@@ -321,7 +322,11 @@ server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검
 ```properties
 # local.properties (git 에 커밋되지 않음). 생략하면 배포 서버 https://routealarm-proxy.onrender.com/ 을 쓴다
 routealarm.proxyBaseUrl=https://routealarm-proxy.onrender.com/
+# 상세 화면 경로 지도(카카오맵) 네이티브 앱 키. 없으면 지도만 숨긴다.
+routealarm.kakaoNativeAppKey=<카카오 네이티브 앱 키>
 ```
+
+카카오맵은 콘솔의 네이티브 앱 키에 패키지명 `com.example.routealarm` 과 빌드하는 컴퓨터의 키 해시를 등록해야 인증된다(디버그 키 해시: `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android | openssl sha1 -binary | openssl base64`).
 
 Proxy 가 구현해야 하는 응답 형식은 [docs/proxy-api.md](docs/proxy-api.md) 에 있다.
 ODsay·TMAP·공공데이터 등 어떤 제공자를 쓰든 Proxy 에서 이 형식으로 정규화하면 앱 코드는 바뀌지 않는다.
@@ -343,7 +348,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ./gradlew testDebugUnitTest
 ```
 
-도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 139개 테스트:
+도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 141개 테스트:
 
 | 테스트 | 검증 내용 |
 |---|---|
@@ -357,6 +362,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `SubscriptionUseCasesTest` | 연간 요금(월 2,000원꼴·31% 할인), 무료 일정 한도, 서버가 승인한 결제만 PRO 적용·기간 만료, PRO 전환 시 재확인 재예약, 구독 종료 후 무료 전환, 단체 이용권 코드 정규화·형식 검사·확인·적용, 자동 갱신 구독 중 적용 시에만 해지 안내, 검증 서버 연결 실패 시 플랜 유지 |
 | `PreviewDelayScenarioUseCaseTest` | "만약 15분 늦어진다면?" 카드: 이동 +15분·지연 여유 +5분, 실제 재계산과 같은 시각, 지연이 없으면 그대로 |
 | `RouteTimelineBuilderTest` | 설계서 예시 경로의 지점·시각·구간, 승차 대기 시간 반영, 걷지 않고 바로 타는 경로, 경로 정보가 없는 계획, 방향 조사(로/으로) |
+| `RouteMapLinesTest` | 지도 경로선: 출발지·환승역·도착지를 잇는 도보선과 정류장 좌표대로의 탑승 구간, 좌표 없는 예전 경로는 지도 없음 |
 | `TimetableTest` | 실제 에브리타임 시간표 캡처의 글자 위치와 ML Kit 실제 인식 결과(요일·시각 일부 누락, 글자 붙음)에서 같은 수업 8개 읽기, 12시간제 시각 변환, 요일별 첫 수업 알람 제안과 같은 시각 요일 묶기, 다시 만들 때 예전 알람 교체(일부 실패 시 남김) |
 | `WheelMathTest` | 고리 휠의 칸 번호, 12시간제 숫자와 오전/오후(11↔12 전환, 자정·정오), 분이 시를 바꾸지 않음, 시간·분 길이 변환, 내가 알린 값과 바깥에서 온 값 구분, 손을 뗀 뒤 멈출 칸과 관성 거리 조정, 원통 모양(칸 위치·크기·진하기)과 누른 칸 찾기 |
 | `WheelStateTest` | 휠의 움직임을 프레임 단위로 검증: 끌기 방향과 끝 저항, 튕긴 뒤 미리 정한 칸에 정확히 멈춤, 도는 휠을 잡아 멈추기, 잡고 있는 휠은 옮기지 않음, 바깥 값이 관성보다 우선, 취소된 움직임이 칸 사이에 남는 경우, 도는 도중의 오전/오후 전환 |
@@ -412,7 +418,7 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 - [x] PRO 결제(토스페이먼츠 테스트 결제)와 서버의 단체 이용권 확인·사용
 - [ ] 실제 출시용 결제(Google Play Billing 또는 토스페이먼츠 실 키·정기결제), 단체 이용권 발급·관리 화면
 - [ ] 무료 플랜 배너 광고, 지각 위험 시 택시·공유 모빌리티 안내
-- [ ] 상세 화면 지도(경로 폴리라인) 표시
+- [x] 상세 화면 지도(카카오맵, 노선색 경로선)
 - [x] 학교 시간표(사진 인식·캘린더·직접 입력) / 기기 캘린더 가져오기 → Schedule 자동 생성
 - [ ] 알람 이력 기반 개인화 (요일·시간대별 평균 이동시간, 사용자의 실제 출발 지연 학습)
 - [ ] 서버 기반 실시간 모니터링 + FCM 푸시로 WorkManager 체크포인트 사이의 급격한 변화 대응
