@@ -133,6 +133,9 @@ fun SettingsRoute(
         onTrafficNotifications = viewModel::setTrafficNotifications,
         onVibration = viewModel::setVibration,
         onSound = viewModel::setAlarmSound,
+        onCustomSound = viewModel::setCustomSound,
+        onVolume = viewModel::setAlarmVolume,
+        onGradual = viewModel::setGradualVolume,
         onSnooze = viewModel::setSnoozeMinutes,
         onRefreshAll = viewModel::refreshAllNow,
         onRingAlarm = viewModel::ringAlarmNow,
@@ -158,6 +161,9 @@ fun SettingsScreen(
     onVibration: (Boolean) -> Unit,
     onSound: (AlarmSound) -> Unit,
     onSnooze: (Int) -> Unit,
+    onCustomSound: (String, String?) -> Unit = { _, _ -> },
+    onVolume: (Int) -> Unit = {},
+    onGradual: (Boolean) -> Unit = {},
     onRefreshAll: () -> Unit,
     onRingAlarm: () -> Unit,
 ) {
@@ -245,7 +251,7 @@ fun SettingsScreen(
                 }
                 RowDivider()
                 SettingsRow(Icons.AutoMirrored.Outlined.VolumeUp, stringResource(R.string.settings_alarm_sound), onClick = { sheet = SettingsSheet.SOUND }) {
-                    RowValue(soundName(prefs.alarmSound))
+                    RowValue(soundValue(prefs))
                 }
                 RowDivider()
                 SettingsRow(Icons.Outlined.Snooze, stringResource(R.string.settings_snooze), onClick = { sheet = SettingsSheet.SNOOZE }) {
@@ -312,11 +318,12 @@ fun SettingsScreen(
             onConfirm = { onBuffer(it); sheet = null },
             onDismiss = { sheet = null },
         )
-        SettingsSheet.SOUND -> ChoiceSheet(
-            title = stringResource(R.string.settings_alarm_sound),
-            options = AlarmSound.entries.map { it to soundName(it) },
-            selected = prefs.alarmSound,
-            onSelect = { onSound(it); sheet = null },
+        SettingsSheet.SOUND -> AlarmSoundSheet(
+            prefs = prefs,
+            onSound = onSound,
+            onCustomSound = onCustomSound,
+            onVolume = onVolume,
+            onGradual = onGradual,
             onDismiss = { sheet = null },
         )
         SettingsSheet.SNOOZE -> ChoiceSheet(
@@ -477,14 +484,15 @@ internal fun planName(entitlement: Entitlement, isPro: Boolean): String = string
     },
 )
 
+/** 설정 행에 보이는 값: 소리 이름과 볼륨(예: 기본 알람음 · 80%). 무음이면 이름만 */
 @Composable
-private fun soundName(sound: AlarmSound): String = stringResource(
-    when (sound) {
-        AlarmSound.DEFAULT_ALARM -> R.string.settings_sound_default
-        AlarmSound.GENTLE -> R.string.settings_sound_gentle
-        AlarmSound.SILENT -> R.string.settings_sound_silent
-    },
-)
+private fun soundValue(prefs: UserPreferences): String {
+    val name = when (prefs.alarmSound) {
+        AlarmSound.CUSTOM -> prefs.customSoundTitle ?: stringResource(R.string.settings_sound_custom)
+        else -> stringResource(soundLabelRes(prefs.alarmSound))
+    }
+    return if (prefs.alarmSound == AlarmSound.SILENT) name else stringResource(R.string.settings_sound_value_format, name, prefs.alarmVolumePercent)
+}
 
 private fun Context.openAppSettings() {
     startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))

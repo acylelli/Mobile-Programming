@@ -7,7 +7,8 @@ package com.example.routealarm.domain.model
  */
 enum class ColorTheme { DEFAULT, DAWN, NIGHT }
 
-enum class AlarmSound { DEFAULT_ALARM, GENTLE, SILENT }
+/** 알람음 종류. CUSTOM 은 휴대폰 벨소리 목록에서 고른 소리(customSoundUri)다. */
+enum class AlarmSound { DEFAULT_ALARM, GENTLE, CUSTOM, SILENT }
 
 /** DataStore 에 저장되는 작은 사용자 설정 */
 data class UserPreferences(
@@ -17,6 +18,13 @@ data class UserPreferences(
     val trafficNotificationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val alarmSound: AlarmSound = AlarmSound.DEFAULT_ALARM,
+    /** 휴대폰 벨소리에서 고른 소리의 URI 와 이름. alarmSound 가 CUSTOM 일 때 쓴다. */
+    val customSoundUri: String? = null,
+    val customSoundTitle: String? = null,
+    /** 알람이 울리는 크기(%). 휴대폰 알람 볼륨과 관계없이 이 크기로 울린다. */
+    val alarmVolumePercent: Int = DEFAULT_ALARM_VOLUME_PERCENT,
+    /** 작게 시작해 정한 크기까지 점점 커지게 울린다. */
+    val gradualVolume: Boolean = false,
     val snoozeMinutes: Int = DEFAULT_SNOOZE_MINUTES,
     val colorTheme: ColorTheme = ColorTheme.DEFAULT,
     /** 일정 한도 때문에 페이월을 자동으로 띄운 마지막 날(epoch day). 같은 날 반복 노출하지 않기 위함 */
@@ -32,6 +40,8 @@ data class UserPreferences(
         const val DEFAULT_BUFFER_MINUTES = 10
         const val DEFAULT_SNOOZE_MINUTES = 5
         val SNOOZE_OPTIONS = listOf(5, 10, 15)
+        const val DEFAULT_ALARM_VOLUME_PERCENT = 80
+        val ALARM_VOLUME_RANGE = 10..100
     }
 }
 

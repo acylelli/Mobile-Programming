@@ -5,9 +5,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
 import android.os.VibrationEffect
@@ -16,7 +13,7 @@ import android.os.VibratorManager
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.example.routealarm.alarm.notification.AlarmNotifications
-import com.example.routealarm.domain.model.AlarmSound
+import com.example.routealarm.alarm.sound.AlarmSoundPlayer
 import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
 import com.example.routealarm.domain.usecase.HandleAlarmEventUseCase
@@ -46,7 +43,7 @@ class AlarmService : Service() {
     @Inject lateinit var handleAlarmEvent: HandleAlarmEventUseCase
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var player: MediaPlayer? = null
+    private val soundPlayer by lazy { AlarmSoundPlayer(this) }
     private var vibrator: Vibrator? = null
     private var scheduleId: Long = -1
 
@@ -77,34 +74,13 @@ class AlarmService : Service() {
         ServiceCompat.startForeground(this, AlarmNotifications.NOTIFICATION_RINGING_ID, notification, type)
         ringingScheduleId.value = id
 
-        if (prefs.alarmSound != AlarmSound.SILENT) playSound(prefs.alarmSound)
+        soundPlayer.play(prefs, scope)
         if (prefs.vibrationEnabled) vibrate()
 
         // 안전장치: 아무 조작이 없어도 영원히 울리지 않는다.
         scope.launch {
             kotlinx.coroutines.delay(AUTO_SILENCE_MILLIS)
             if (ringingScheduleId.value == id) snooze(id)
-        }
-    }
-
-    private fun playSound(sound: AlarmSound) {
-        val uri = when (sound) {
-            AlarmSound.GENTLE -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            else -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        } ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE) ?: return
-        runCatching {
-            player = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build(),
-                )
-                setDataSource(this@AlarmService, uri)
-                isLooping = true
-                prepare()
-                start()
-            }
         }
     }
 
@@ -141,9 +117,7 @@ class AlarmService : Service() {
     }
 
     override fun onDestroy() {
-        player?.runCatching { stop() }
-        player?.release()
-        player = null
+        soundPlayer.stop()
         vibrator?.cancel()
         ringingScheduleId.value = null
         scope.cancel()
