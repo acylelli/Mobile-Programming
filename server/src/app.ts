@@ -149,7 +149,8 @@ export function createApp(config: AppConfig) {
 
 /** 출발 30분 이내 경로의 첫 탑승 구간에 실시간 도착 정보를 반영한다. */
 function createRealtime(keys: RealtimeKeys, dailyLimit: number, clock: Clock, fetchImpl?: typeof fetch) {
-  const cache = new TtlCache<Arrival[] | null>(REALTIME_CACHE_TTL_MS, 500, clock);
+  // 조회 시각을 함께 저장해 두고, 캐시에서 꺼낼 때 그동안 지난 시간만큼 남은 시간을 줄인다.
+  const cache = new TtlCache<{ list: Arrival[] | null; at: number }>(REALTIME_CACHE_TTL_MS, 500, clock);
   const quotas = {
     subway: new DailyQuota(dailyLimit, clock),
     seoul: new DailyQuota(dailyLimit, clock),
@@ -158,18 +159,21 @@ function createRealtime(keys: RealtimeKeys, dailyLimit: number, clock: Clock, fe
   const enabled = Boolean(keys.seoulSubwayKey || keys.dataGoKrKey);
 
   async function arrivals(target: RideTarget): Promise<Arrival[] | null> {
-    const cacheKey = JSON.stringify(target);
+    const cacheKey = JSON.stringify({ kind: target.kind, query: target.query });
     const hit = cache.get(cacheKey);
-    if (hit !== undefined) return hit;
+    if (hit !== undefined) {
+      const elapsed = (clock() - hit.at) / 1000;
+      return hit.list?.map((a) => ({ ...a, seconds: a.seconds - elapsed })) ?? null;
+    }
     let result: Arrival[] | null = null;
     if (target.kind === "subway") {
       if (!keys.seoulSubwayKey || !quotas.subway.take()) return null;
-      result = await fetchSubwayArrivals(keys.seoulSubwayKey, target.query, fetchImpl);
+      result = await fetchSubwayArrivals(keys.seoulSubwayKey, target.query, fetchImpl, clock());
     } else {
       if (!keys.dataGoKrKey || !quotas[target.query.region].take()) return null;
       result = await fetchBusArrivals(keys.dataGoKrKey, target.query, fetchImpl);
     }
-    cache.set(cacheKey, result);
+    cache.set(cacheKey, { list: result, at: clock() });
     return result;
   }
 
@@ -193,7 +197,7 @@ function createRealtime(keys: RealtimeKeys, dailyLimit: number, clock: Clock, fe
           // 첫 도보까지 마친 뒤 정류장에 닿는 시각
           const walkBefore = route.segments[0]?.mode === "WALK" ? route.segments[0].minutes : 0;
           const atStop = secondsUntilDeparture + walkBefore * 60;
-          const catchable = firstCatchable(list, atStop);
+          const catchable = firstCatchable(list, atStop, target.headwayMinutes);
           return catchable ? applyArrival(route, atStop, catchable) : route;
         }),
       );

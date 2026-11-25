@@ -194,3 +194,46 @@ test("도착 목록이 없는 응답은 오류 코드·메시지를 요약한다
   assert.equal(describeUnreadable({ error: "Unauthorized", message: "유효하지 않은 서비스키입니다", status: 401 }), "Unauthorized 유효하지 않은 서비스키입니다");
   assert.equal(describeUnreadable({ response: { msgHeader: { resultCode: 4, resultMessage: "결과가 존재하지 않습니다." } } }), "4 결과가 존재하지 않습니다.");
 });
+
+// ---- 수신 시각 보정, 목록 밖 열차 추정 ----
+
+test("지하철: 수신 시각이 지난 만큼 남은 시간을 줄이고, 이미 떠난 열차는 음수로 둔다", () => {
+  const now = Date.parse("2026-11-25T18:28:05+09:00");
+  const body = {
+    realtimeArrivalList: [
+      { subwayId: "1008", trainLineNm: "별내행 - 별내방면", barvlDt: "0", arvlMsg2: "다산 출발", recptnDt: "2026-11-25 18:25:26" },
+      { subwayId: "1008", trainLineNm: "별내행 - 별내방면", barvlDt: "300", arvlMsg2: "5분 후", recptnDt: "2026-11-25 18:27:05" },
+    ],
+  };
+  // 출발 -30초 - 159초 경과, 300초 - 60초 경과
+  assert.deepEqual(parseSubwayArrivals(body, { station: "다산", nextStation: "별내", odsayLineCode: 8 }, now), [
+    { seconds: -189 },
+    { seconds: 240 },
+  ]);
+});
+
+test("목록에 탈 수 있는 차가 없으면 마지막 차에 배차 간격을 더해 추정한다", () => {
+  // 오후 6:28 다산역 상황: 별내방면은 이미 떠난 열차와 2분 뒤 열차뿐, 역까지 5분
+  const list = [{ seconds: -30 }, { seconds: 120 }];
+  assert.deepEqual(firstCatchable(list, 300, 6), { seconds: 480, estimated: true });
+  // 실시간 목록에 탈 수 있는 차가 있으면 그것을 쓴다
+  assert.deepEqual(firstCatchable([{ seconds: 120 }, { seconds: 420 }], 300, 6), { seconds: 420 });
+  // 배차 간격을 모르거나, 목록이 비었거나, 너무 멀면 추정하지 않는다
+  assert.equal(firstCatchable(list, 300), null);
+  assert.equal(firstCatchable([], 300, 6), null);
+  assert.equal(firstCatchable(list, 120 + 4 * 360 + 1, 6), null);
+});
+
+test("추정한 차는 안내에 '약'을 붙인다", () => {
+  const adjusted = applyArrival(route, 300, { seconds: 480, estimated: true });
+  assert.equal(adjusted.segments[1]!.arrival_message, "약 8분 후 도착");
+  assert.equal(adjusted.wait_minutes, 3);
+});
+
+test("ODsay 배차 간격을 조회 대상에 함께 넘긴다", () => {
+  const path: OdsayPath = {
+    info: { totalTime: 30 },
+    subPath: [walk, { trafficType: 1, sectionTime: 20, intervalTime: 6, startName: "다산", lane: [{ name: "수도권 8호선", subwayCode: 8 }], passStopList: { stations: [{ stationName: "다산" }, { stationName: "별내" }] } }],
+  };
+  assert.equal(firstRideTarget(path)?.headwayMinutes, 6);
+});

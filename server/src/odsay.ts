@@ -29,6 +29,8 @@ export interface OdsaySubPath {
   startName?: string;
   endName?: string;
   lane?: Array<{ name?: string; busNo?: string; busLocalBlID?: string; busCityCode?: number; subwayCode?: number }>;
+  /** 배차 간격(분) */
+  intervalTime?: number;
   /** 서울 버스 정류장 고유번호(예: "08718") */
   startArsID?: string;
   /** 지역 버스 정보 시스템의 정류장 ID(경기: 9자리) */
@@ -103,15 +105,25 @@ export function toRoutesWithPaths(body: OdsayResponse, departAt: Date): Array<{ 
     .slice(0, MAX_ROUTES);
 }
 
-export type RideTarget =
+export type RideTarget = (
   | { kind: "subway"; query: SubwayQuery }
-  | { kind: "bus"; query: BusQuery };
+  | { kind: "bus"; query: BusQuery }
+) & {
+  /** ODsay 배차 간격(분). 실시간 목록 밖의 차를 추정할 때 쓴다. */
+  headwayMinutes?: number;
+};
 
 /** 첫 탑승 구간의 실시간 조회 대상. 조회할 수 없는 지역·노선이면 null */
 export function firstRideTarget(path: OdsayPath): RideTarget | null {
   const ride = path.subPath.find((s) => s.trafficType !== WALK);
   const lane = ride?.lane?.[0];
   if (!ride || !lane) return null;
+  const headwayMinutes = ride.intervalTime && ride.intervalTime > 0 ? ride.intervalTime : undefined;
+  const target = rideTarget(ride, lane);
+  return target ? { ...target, ...(headwayMinutes ? { headwayMinutes } : {}) } : null;
+}
+
+function rideTarget(ride: OdsaySubPath, lane: NonNullable<OdsaySubPath["lane"]>[number]): RideTarget | null {
   if (ride.trafficType === SUBWAY) {
     const station = ride.startName;
     const nextStation = ride.passStopList?.stations?.[1]?.stationName;
