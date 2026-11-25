@@ -41,6 +41,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "PROXY_BASE_URL", "\"$proxyBaseUrl\"")
+
+        // 글자 인식 모델의 네이티브 라이브러리가 칩 종류마다 들어가 APK 가 커진다.
+        // 요즘 휴대폰(arm64)과 Intel 에뮬레이터(x86_64)만 남긴다. 32비트 전용 구형 폰은 설치할 수 없다.
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
     buildTypes {
@@ -113,6 +117,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.play.services.location)
+    // 시간표 사진 글자 인식(기기 안에서 동작, 키·네트워크 불필요). 모델을 APK 에 넣는다.
+    // Google Play 서비스가 모델을 따로 받는 방식은 에뮬레이터에서 몇 분이 지나도 받아지지 않아, 처음 쓸 때 바로 동작하는 쪽을 골랐다.
+    implementation(libs.mlkit.text.recognition.korean)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

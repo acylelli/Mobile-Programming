@@ -22,6 +22,8 @@ fun AppError.messageRes(): Int = when (this) {
     AppError.GroupPassExpired -> R.string.error_group_pass_expired
     AppError.GroupPassFull -> R.string.error_group_pass_full
     AppError.PurchaseFailed -> R.string.error_purchase_failed
+    AppError.CalendarPermissionDenied -> R.string.error_calendar_permission
+    AppError.TimetableNotRecognized -> R.string.error_timetable_not_recognized
     is AppError.InvalidInput -> when (reason) {
         InvalidInputReason.MISSING_ORIGIN -> R.string.error_missing_origin
         InvalidInputReason.MISSING_DESTINATION -> R.string.error_missing_destination

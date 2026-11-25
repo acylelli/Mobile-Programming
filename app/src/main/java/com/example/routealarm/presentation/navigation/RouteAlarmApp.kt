@@ -59,7 +59,9 @@ import com.example.routealarm.presentation.home.HomeRoute
 import com.example.routealarm.presentation.onboarding.OnboardingScreen
 import com.example.routealarm.presentation.schedule.create.CreateScheduleRoute
 import com.example.routealarm.presentation.schedule.detail.ScheduleDetailRoute
+import com.example.routealarm.presentation.calendar.CalendarImportRoute
 import com.example.routealarm.presentation.settings.SettingsRoute
+import com.example.routealarm.presentation.timetable.TimetableRoute
 import com.example.routealarm.presentation.settings.theme.ThemeRoute
 import com.example.routealarm.presentation.subscription.GroupPassRoute
 import com.example.routealarm.presentation.subscription.PaywallSheet
@@ -173,9 +175,39 @@ fun RouteAlarmApp(
                         onOpenTheme = { navController.navigate(Route.ThemeSelect) },
                         onOpenGroupPass = { navController.navigate(Route.GroupPass) },
                         onOpenSubscription = { navController.navigate(Route.Subscription) },
+                        onOpenTimetable = { navController.navigate(Route.Timetable) },
+                        onOpenCalendar = { navController.navigate(Route.CalendarImport) },
                     )
                 }
 
+                composable<Route.Timetable> {
+                    TimetableRoute(
+                        onBack = { navController.popBackStack() },
+                        onOpenCalendar = { navController.navigate(Route.CalendarImport) },
+                        // 알람을 만들면 알람 목록에서 결과를 보여 준다.
+                        onAlarmsCreated = { openTab(Route.AlarmList, keepState = false) },
+                    )
+                }
+                composable<Route.CalendarImport> {
+                    CalendarImportRoute(
+                        onBack = { navController.popBackStack() },
+                        onCreateFromEvent = { prefill ->
+                            navController.navigate(
+                                Route.CreateSchedule(
+                                    prefillDestination = prefill.destinationQuery,
+                                    prefillArrival = prefill.arrival,
+                                    prefillDate = prefill.date,
+                                ),
+                            )
+                        },
+                        // 시간표 화면에서 왔으면 그 화면으로 돌아가고, 아니면 시간표를 연다.
+                        onOpenTimetable = {
+                            if (!navController.popBackStack<Route.Timetable>(inclusive = false)) {
+                                navController.navigate(Route.Timetable) { popUpTo<Route.CalendarImport> { inclusive = true } }
+                            }
+                        },
+                    )
+                }
                 composable<Route.CreateSchedule> {
                     CreateScheduleRoute(
                         // 저장하면 알람 목록으로 이동한다(UI-C-006 ⑥). 화면이 바뀐 뒤에도 안내가 보이도록 앱 범위에서 띄운다.

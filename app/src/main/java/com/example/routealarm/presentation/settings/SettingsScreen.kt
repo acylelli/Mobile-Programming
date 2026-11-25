@@ -97,6 +97,8 @@ fun SettingsRoute(
     onOpenTheme: () -> Unit,
     onOpenGroupPass: () -> Unit,
     onOpenSubscription: () -> Unit,
+    onOpenTimetable: () -> Unit,
+    onOpenCalendar: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -123,6 +125,8 @@ fun SettingsRoute(
         onOpenTheme = onOpenTheme,
         onOpenGroupPass = onOpenGroupPass,
         onOpenSubscription = onOpenSubscription,
+        onOpenTimetable = onOpenTimetable,
+        onOpenCalendar = onOpenCalendar,
         onPreparation = viewModel::setDefaultPreparation,
         onBuffer = viewModel::setDefaultBuffer,
         onAutoAdjust = viewModel::setAutoAdjustment,
@@ -145,6 +149,8 @@ fun SettingsScreen(
     onOpenTheme: () -> Unit,
     onOpenGroupPass: () -> Unit,
     onOpenSubscription: () -> Unit,
+    onOpenTimetable: () -> Unit,
+    onOpenCalendar: () -> Unit,
     onPreparation: (Int) -> Unit,
     onBuffer: (Int) -> Unit,
     onAutoAdjust: (Boolean) -> Unit,
@@ -162,7 +168,6 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val permissions = rememberPermissionStatus()
     var sheet by remember { mutableStateOf<SettingsSheet?>(null) }
-    val comingSoon = stringResource(R.string.settings_coming_soon)
 
     Column(Modifier.fillMaxSize().background(colors.background).verticalScroll(rememberScrollState())) {
         ScreenHeader(stringResource(R.string.settings_title))
@@ -201,20 +206,13 @@ fun SettingsScreen(
 
             // 연동
             SettingsGroup(stringResource(R.string.settings_section_integration)) {
-                // 시간표·캘린더 연동은 PRO 기능이다. 무료 플랜에서는 페이월, PRO 에서는 준비 중 안내를 보여준다.
-                val onIntegration: () -> Unit = {
-                    if (state.isPro) {
-                        scope.launch { snackbar.showSnackbar(comingSoon) }
-                    } else {
-                        onShowPaywall()
-                    }
-                }
-                SettingsRow(Icons.AutoMirrored.Outlined.MenuBook, stringResource(R.string.settings_timetable), onClick = onIntegration) {
-                    if (state.isPro) RowValue(stringResource(R.string.settings_coming_soon_short)) else RowLock()
+                // 시간표·캘린더 연동은 PRO 기능이다. 무료 플랜에서는 페이월을 띄운다.
+                SettingsRow(Icons.AutoMirrored.Outlined.MenuBook, stringResource(R.string.settings_timetable), onClick = if (state.isPro) onOpenTimetable else onShowPaywall) {
+                    if (state.isPro) RowChevron() else RowLock()
                 }
                 RowDivider()
-                SettingsRow(Icons.Outlined.CalendarToday, stringResource(R.string.settings_calendar), onClick = onIntegration) {
-                    if (state.isPro) RowValue(stringResource(R.string.settings_coming_soon_short)) else RowLock()
+                SettingsRow(Icons.Outlined.CalendarToday, stringResource(R.string.settings_calendar), onClick = if (state.isPro) onOpenCalendar else onShowPaywall) {
+                    if (state.isPro) RowChevron() else RowLock()
                 }
             }
 
