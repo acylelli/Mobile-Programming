@@ -3,6 +3,7 @@ import type { PlaceSearchResponseDto } from "./contract.ts";
 import { UpstreamError } from "./contract.ts";
 import { type Clock, clientIp, DailyQuota, RateLimiter, TtlCache } from "./guard.ts";
 import { fetchKakaoPlaces } from "./kakao.ts";
+import { fetchTaxiEstimate, type TaxiEstimateDto } from "./taxi.ts";
 import { createGroupPassRouter, DEFAULT_GROUP_PASSES, type GroupPassConfig } from "./grouppass.ts";
 import { createPaymentsRouter, type TossKeys } from "./payments.ts";
 import { attachLaneGeometry, fetchOdsayRaw, firstRideTarget, type OdsayResponse, type RideTarget, toRouteResponse, toRoutesWithPaths } from "./odsay.ts";
@@ -53,6 +54,7 @@ const ROUTE_CACHE_TTL_MS = 60_000;
 const GEOMETRY_CACHE_TTL_MS = 24 * 60 * 60_000;
 /** 장소 검색 결과는 자주 바뀌지 않으므로 10분 동안 재사용한다. */
 const SEARCH_CACHE_TTL_MS = 10 * 60_000;
+const TAXI_CACHE_TTL_MS = 5 * 60_000;
 /**
  * 실시간 도착 정보는 출발이 이만큼 가까울 때만 쓴다. 그보다 먼 출발에 "지금 3분 후 도착"을 붙이면
  * 사용자가 실제로 탈 차가 아니라서 오히려 틀린 안내가 된다.
@@ -74,6 +76,7 @@ export function createApp(config: AppConfig) {
   // 경로는 1분만 캐시하지만(배차·실시간 반영), 노선 모양은 바뀌지 않아 하루 둔다. 같은 경로를 다시 조회할 때 ODsay 호출이 1번으로 줄어든다.
   const geometryCache = new TtlCache<Array<Array<[number, number]>>>(GEOMETRY_CACHE_TTL_MS, 2_000, clock);
   const searchCache = new TtlCache<PlaceSearchResponseDto>(SEARCH_CACHE_TTL_MS, 1_000, clock);
+  const taxiCache = new TtlCache<TaxiEstimateDto | null>(TAXI_CACHE_TTL_MS, 1_000, clock);
   const realtime = createRealtime(config.realtimeKeys ?? {}, limits.realtimeDailyLimit, clock, config.fetchImpl);
 
   const app = express();
@@ -144,6 +147,31 @@ export function createApp(config: AppConfig) {
     const body = await fetchKakaoPlaces(config.kakaoRestApiKey, query, config.fetchImpl);
     searchCache.set(key, body);
     res.json(body);
+  });
+
+  // 지각 위험일 때 앱이 보여 줄 택시 예상 시간·요금. 같은 출발·도착은 5분 동안 캐시한다.
+  app.get("/v1/taxi/estimate", async (req, res) => {
+    if (rejectIfLimited(req, res, searchLimiter)) return;
+    const originLat = latitude(req.query.origin_lat);
+    const originLng = longitude(req.query.origin_lng);
+    const destinationLat = latitude(req.query.destination_lat);
+    const destinationLng = longitude(req.query.destination_lng);
+    if (originLat === null || originLng === null || destinationLat === null || destinationLng === null) {
+      res.status(400).json({ error: "origin_lat, origin_lng, destination_lat, destination_lng 가 올바른 좌표여야 합니다." });
+      return;
+    }
+    const key = [originLat, originLng, destinationLat, destinationLng].map((v) => v.toFixed(4)).join(",");
+    const cached = taxiCache.get(key);
+    if (cached !== undefined) {
+      if (cached) res.json(cached);
+      else res.status(404).json({ error: "no route" });
+      return;
+    }
+    if (rejectIfQuotaExceeded(res, kakaoQuota, "Kakao")) return;
+    const estimate = await fetchTaxiEstimate(config.kakaoRestApiKey, { originLat, originLng, destinationLat, destinationLng }, config.fetchImpl);
+    taxiCache.set(key, estimate);
+    if (estimate) res.json(estimate);
+    else res.status(404).json({ error: "no route" });
   });
 
   app.use(createPaymentsRouter(config.tossKeys ?? {}, clock, config.fetchImpl));

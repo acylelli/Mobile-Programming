@@ -7,6 +7,9 @@ const calls: string[] = [];
 const fakeFetch: typeof fetch = async (input) => {
   const url = String(input);
   calls.push(url);
+  if (url.startsWith("https://apis-navi.kakaomobility.com/")) {
+    return Response.json({ routes: [{ result_code: 0, summary: { duration: 1401, distance: 16757, fare: { taxi: 24000, toll: 0 } } }] });
+  }
   if (url.startsWith("https://api.odsay.com/")) {
     return Response.json({ error: [{ code: "500", message: "[ApiKeyAuthFailed] ApiKey authentication failed." }] });
   }
@@ -96,4 +99,21 @@ test("같은 검색어는 캐시로 응답하고, 하루 상한을 넘으면 외
   } finally {
     quotaApp.close();
   }
+});
+
+test("택시 예상 시간·요금은 분 단위로 올려 계약 형식으로 주고, 같은 출발·도착은 캐시한다", async () => {
+  const query = "origin_lat=37.6243&origin_lng=127.1544&destination_lat=37.5826&destination_lng=127.0105";
+  const before = calls.filter((u) => u.includes("kakaomobility")).length;
+  const first = await fetch(`${base}/v1/taxi/estimate?${query}`);
+  assert.equal(first.status, 200);
+  assert.deepEqual(await first.json(), { minutes: 24, distance_meters: 16757, fare_won: 24000, toll_won: 0 });
+  await fetch(`${base}/v1/taxi/estimate?${query}`);
+  assert.equal(calls.filter((u) => u.includes("kakaomobility")).length, before + 1);
+  // 키는 헤더로만 보내고 주소에는 싣지 않는다
+  assert.ok(!calls.some((u) => u.includes("kakaomobility") && u.includes("test-kakao")));
+});
+
+test("택시 예상은 좌표가 잘못되면 400", async () => {
+  const res = await fetch(`${base}/v1/taxi/estimate?origin_lat=999&origin_lng=127&destination_lat=37&destination_lng=127`);
+  assert.equal(res.status, 400);
 });
