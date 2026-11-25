@@ -314,7 +314,7 @@ server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검
 ```properties
 # local.properties (git 에 커밋되지 않음)
 routealarm.transitProvider=proxy
-routealarm.proxyBaseUrl=https://your-proxy.example.com/
+# 생략하면 배포 서버 https://routealarm-proxy.onrender.com/ 을 쓴다
 ```
 
 Proxy 가 구현해야 하는 응답 형식은 [docs/proxy-api.md](docs/proxy-api.md) 에 있다.
@@ -328,7 +328,7 @@ routealarm.transitProvider=proxy
 routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ```
 
-https 배포는 Render 무료 인스턴스를 쓴다([`render.yaml`](render.yaml)). 절차는 [server/README.md 배포](server/README.md#배포-render) 에 있다.
+배포 서버: **https://routealarm-proxy.onrender.com** (Render 무료 인스턴스, 싱가포르). 배포 절차는 [server/README.md 배포](server/README.md#배포-render) 에 있다.
 
 제공자를 앱 안에서 직접 구현하고 싶다면 `TransitRemoteDataSource` 를 구현하고 `di/NetworkModule.kt` 에서 바인딩만 바꾸면 된다.
 
