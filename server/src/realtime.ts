@@ -14,7 +14,10 @@ import { type RouteDto, toKstIso } from "./contract.ts";
 
 /** 앞으로 들어올 차량 하나. seconds 는 지금부터 도착까지 남은 초 */
 export interface Arrival {
+  /** 지금부터 도착까지 남은 초. 이미 떠난 차는 음수 */
   seconds: number;
+  /** 실시간 목록에 없어서 배차 간격으로 추정한 차 */
+  estimated?: boolean;
 }
 
 export interface RealtimeKeys {
@@ -55,14 +58,19 @@ const SUBWAY_IDS: Record<number, string> = {
   116: "1075", // 수인분당선
 };
 
-export async function fetchSubwayArrivals(key: string, query: SubwayQuery, fetchImpl: typeof fetch = fetch): Promise<Arrival[] | null> {
+export async function fetchSubwayArrivals(
+  key: string,
+  query: SubwayQuery,
+  fetchImpl: typeof fetch = fetch,
+  now: number = Date.now(),
+): Promise<Arrival[] | null> {
   // 이 API 는 http 만 제공한다. 키 외에 개인 정보는 보내지 않는다.
   const url = `http://swopenapi.seoul.go.kr/api/subway/${encodeURIComponent(key)}/json/realtimeStationArrival/0/30/${encodeURIComponent(query.station)}`;
   const body = await getJson(url, fetchImpl);
-  return body ? logIfUnreadable(parseSubwayArrivals(body, query), body, "subway") : null;
+  return body ? logIfUnreadable(parseSubwayArrivals(body, query, now), body, "subway") : null;
 }
 
-export function parseSubwayArrivals(body: unknown, query: SubwayQuery): Arrival[] | null {
+export function parseSubwayArrivals(body: unknown, query: SubwayQuery, now: number = Date.now()): Arrival[] | null {
   const list = (body as { realtimeArrivalList?: unknown }).realtimeArrivalList;
   if (!Array.isArray(list)) return null;
   const subwayId = query.odsayLineCode === undefined ? undefined : SUBWAY_IDS[query.odsayLineCode];
@@ -72,7 +80,7 @@ export function parseSubwayArrivals(body: unknown, query: SubwayQuery): Arrival[
     // "별내행 - 별내방면" 처럼 다음 역 이름으로 방향을 가린다.
     if (!String(item.trainLineNm ?? "").includes(`${query.nextStation}방면`)) continue;
     const seconds = subwaySeconds(item);
-    if (seconds !== null) arrivals.push({ seconds });
+    if (seconds !== null) arrivals.push({ seconds: seconds - secondsSince(item.recptnDt, now) });
   }
   return sortArrivals(arrivals);
 }
@@ -85,6 +93,8 @@ function subwaySeconds(item: Record<string, unknown>): number | null {
   const match = message.match(/(\d+)\s*분(?:\s*(\d+)\s*초)?/);
   if (match) return Number(match[1]) * 60 + Number(match[2] ?? 0);
   if (/당역 (도착|진입)|진입|도착/.test(message) && !message.includes("전역")) return 0;
+  // "다산 출발" — 이미 떠난 열차. 탈 수는 없지만 다음 열차를 추정하는 기준이 된다.
+  if (message.includes("출발") && !message.includes("전역")) return -30;
   if (message.includes("전역 도착") || message.includes("전역 진입") || message.includes("전역 출발")) return 120;
   // "[3]번째 전역 (구리)" — 역 사이를 2분으로 어림한다.
   const stations = message.match(/\[(\d+)\]번째 전역/);
@@ -160,6 +170,18 @@ function logIfUnreadable(result: Arrival[] | null, body: unknown, source: string
   return result;
 }
 
+/**
+ * 지하철 도착 정보는 수신 시각(recptnDt, 한국 시간)을 함께 준다. 몇 분 지난 정보가 오기도 해서
+ * 그만큼 남은 시간을 줄인다. 형식이 이상하거나 시계가 어긋나 미래 시각이면 보정하지 않는다.
+ */
+function secondsSince(recptnDt: unknown, now: number): number {
+  const match = String(recptnDt ?? "").match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+  if (!match) return 0;
+  const received = Date.parse(`${match[1]}T${match[2]}+09:00`);
+  if (!Number.isFinite(received)) return 0;
+  return Math.min(Math.max(0, (now - received) / 1000), 600);
+}
+
 function sortArrivals(arrivals: Arrival[]): Arrival[] {
   return arrivals.sort((a, b) => a.seconds - b.seconds);
 }
@@ -185,9 +207,23 @@ async function getJson(url: string, fetchImpl: typeof fetch): Promise<unknown | 
   }
 }
 
-/** 사용자가 정류장에 닿는 시각 이후 처음 오는 차량 */
-export function firstCatchable(arrivals: Arrival[], secondsUntilAtStop: number): Arrival | null {
-  return arrivals.find((a) => a.seconds >= secondsUntilAtStop) ?? null;
+/** 목록에 탈 수 있는 차가 없을 때 배차 간격으로 몇 대 뒤까지 추정할지. 그보다 멀면 추정이 부정확하다. */
+const MAX_ESTIMATED_STEPS = 3;
+
+/**
+ * 사용자가 정류장에 닿는 시각 이후 처음 오는 차량.
+ * 실시간 API 는 방향마다 다음 차 2대 정도만 알려 준다. 그 안에 탈 수 있는 차가 없으면
+ * 목록의 마지막 차에 배차 간격(headwayMinutes)을 더해 추정한다.
+ */
+export function firstCatchable(arrivals: Arrival[], secondsUntilAtStop: number, headwayMinutes?: number): Arrival | null {
+  const known = arrivals.find((a) => a.seconds >= secondsUntilAtStop);
+  if (known) return known;
+  if (!headwayMinutes || headwayMinutes <= 0 || arrivals.length === 0) return null;
+  const step = headwayMinutes * 60;
+  const last = Math.max(...arrivals.map((a) => a.seconds));
+  const steps = Math.max(1, Math.ceil((secondsUntilAtStop - last) / step));
+  if (steps > MAX_ESTIMATED_STEPS) return null;
+  return { seconds: last + steps * step, estimated: true };
 }
 
 /**
@@ -204,7 +240,7 @@ export function applyArrival(route: RouteDto, secondsUntilAtStop: number, arriva
   const departure = Date.parse(route.departure_time);
   const minutesFromNow = Math.ceil(arrival.seconds / 60);
   const segments = route.segments.map((s, i) =>
-    i === firstRide ? { ...s, arrival_message: minutesFromNow <= 1 ? "곧 도착" : `${minutesFromNow}분 후 도착` } : s,
+    i === firstRide ? { ...s, arrival_message: arrivalMessage(minutesFromNow, arrival.estimated === true) } : s,
   );
   return {
     ...route,
@@ -213,4 +249,10 @@ export function applyArrival(route: RouteDto, secondsUntilAtStop: number, arriva
     arrival_time: toKstIso(new Date(departure + totalMinutes * 60_000)),
     segments,
   };
+}
+
+/** 실시간으로 확인한 차는 "7분 후 도착", 배차 간격으로 추정한 차는 "약 7분 후 도착" */
+function arrivalMessage(minutesFromNow: number, estimated: boolean): string {
+  if (estimated) return `약 ${Math.max(1, minutesFromNow)}분 후 도착`;
+  return minutesFromNow <= 1 ? "곧 도착" : `${minutesFromNow}분 후 도착`;
 }
