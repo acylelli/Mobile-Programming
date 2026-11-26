@@ -7,7 +7,6 @@ struct RingingView: View {
     @EnvironmentObject private var store: AlarmStore
     let alarmId: UUID
     @State private var now = Date()
-    @State private var sound: Timer?
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var alarm: Alarm? { store.alarms.first { $0.id == alarmId } }
@@ -70,21 +69,13 @@ struct RingingView: View {
 
     private func isDark(_ theme: ColorTheme) -> Bool { theme == .dawn }
 
-    /// 앱이 켜져 있는 동안 알람 소리를 2초마다 되풀이하고, 진동을 켰으면 함께 울린다.
+    /// 일정(또는 설정)의 알람음을 정한 크기로 되풀이하고, 진동을 켰으면 함께 울린다.
     private func startSound() {
-        stopSound()
-        let vibrate = Prefs.bool(Prefs.vibration)
-        let play = {
-            AudioServicesPlayAlertSound(SystemSoundID(1005))
-            if vibrate { AudioServicesPlaySystemSound(kSystemSoundID_Vibrate) }
-        }
-        play()
-        sound = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in play() }
+        AlarmSoundPlayer.shared.start(alarm?.effectiveSound ?? .preferences, vibrate: Prefs.bool(Prefs.vibration))
     }
 
     private func stopSound() {
-        sound?.invalidate()
-        sound = nil
+        AlarmSoundPlayer.shared.stop()
     }
 }
 

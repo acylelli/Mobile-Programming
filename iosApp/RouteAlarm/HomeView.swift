@@ -64,6 +64,8 @@ struct HomeView: View {
                     NoticeStrip(text: "실시간 교통 정보를 가져오지 못했어요. 마지막 계산 결과를 기준으로 알람을 유지합니다.", icon: "icloud.slash")
                 }
                 if let weather = plan?.weather { WeatherStrip(weather: weather) }
+                LateRiskCard(alarm: alarm)
+                PendingAdjustmentCard(alarm: alarm)
                 if !alarm.enabled {
                     NoticeStrip(text: "알람이 꺼져 있어요. 알람 탭에서 켜면 교통 정보를 다시 확인해요.")
                 }
@@ -178,12 +180,13 @@ struct ProStrip: View {
 struct EmptyStateView: View {
     let title: String
     let message: String
+    var icon = "alarm"
     var actionTitle: String? = nil
     var action: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
-            Image(systemName: "alarm").font(.system(size: 28.dp)).foregroundStyle(AppColor.textPrimary)
+            Image(systemName: icon).font(.system(size: 28.dp)).foregroundStyle(AppColor.textPrimary)
                 .frame(width: 72.dp, height: 72.dp).background(Circle().fill(AppColor.surface))
             Spacer().frame(height: Space.md)
             Text(title).font(AppFont.titleLarge).foregroundStyle(AppColor.textPrimary).multilineTextAlignment(.center)

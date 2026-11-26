@@ -55,3 +55,11 @@ data class WeatherDto(
     val probability: Int = 0,
     val temperature: Int? = null,
 )
+
+@Serializable
+data class TaxiEstimateDto(
+    val minutes: Int,
+    @SerialName("distance_meters") val distanceMeters: Int = 0,
+    @SerialName("fare_won") val fareWon: Int = 0,
+    @SerialName("toll_won") val tollWon: Int = 0,
+)
