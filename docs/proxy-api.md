@@ -89,6 +89,23 @@ Proxy 서버는 환경변수로 실제 API 키를 보관하고, 제공자별 응
 - 같은 출발·도착은 5분 동안 캐시하고, 카카오 하루 상한을 장소 검색과 함께 쓴다.
 - 길을 찾지 못하면 404. 앱은 택시 예상 없이 지각 경고와 카카오 T 호출 버튼만 보여 준다.
 
+## GET /v1/usage
+
+오늘(한국 시간) 외부 API 사용량. 운영 확인용이며 키·요청 내용은 싣지 않는다.
+
+```json
+{
+  "saver_mode": false,
+  "resets_in_seconds": 43200,
+  "odsay": { "used": 312, "limit": 1000 },
+  "kakao": { "used": 40, "limit": 10000 },
+  "realtime": { "subway": { "used": 12, "limit": 900 }, "seoul": { "used": 3, "limit": 900 }, "gyeonggi": { "used": 5, "limit": 900 }, "tagoStop": { "used": 1, "limit": 900 }, "tago": { "used": 2, "limit": 900 } }
+}
+```
+
+- `saver_mode` 가 `true` 면 ODsay 사용량이 상한의 80%를 넘어, 한 번 받은 경로는 12시간 예비 캐시로 답하고 노선 모양 호출을 멈춘 상태다.
+- 경로 조회가 예비 캐시로 답하면 `realtime: false` 다.
+
 ## PRO 결제 — 토스페이먼츠 테스트 결제 (INR-003)
 
 앱은 결제 결과를 스스로 판단하지 않는다. 서버가 금액을 확인하고 토스페이먼츠에 승인을 요청한 결과만 저장한다.

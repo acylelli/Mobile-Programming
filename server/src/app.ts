@@ -60,8 +60,18 @@ export interface AppConfig {
 
 const MAX_QUERY_LENGTH = 100;
 const MINUTE_MS = 60_000;
-/** 같은 출발·도착(약 10m 단위) 경로는 1분 동안 다시 묻지 않는다. 알람 계산에는 충분히 신선하다. */
-const ROUTE_CACHE_TTL_MS = 60_000;
+/**
+ * 같은 출발·도착(약 10m 단위) 경로는 20분 동안 다시 묻지 않는다.
+ * ODsay 경로 검색은 출발 시각을 받지 않아 결과가 시각과 상관없고, 시각·실시간 도착은 요청마다 새로 계산한다.
+ */
+const ROUTE_CACHE_TTL_MS = 20 * 60_000;
+/**
+ * 예비 경로 캐시. 하루 상한이 가까울 때(절약 모드), 다 찼을 때, ODsay 가 오류(자체 한도 초과 등)일 때
+ * 이 값으로 답해 앱이 경로를 아예 못 받는 일을 막는다. 이때 realtime=false 로 알려 앱이 여유를 더 둔다.
+ */
+const STALE_ROUTE_TTL_MS = 12 * 60 * 60_000;
+/** 하루 상한의 이 비율을 넘으면 새 경로만 ODsay 에 묻고, 노선 모양(loadLane) 호출은 멈춘다. */
+const SAVER_MODE_RATIO = 0.8;
 const GEOMETRY_CACHE_TTL_MS = 24 * 60 * 60_000;
 /** 장소 검색 결과는 자주 바뀌지 않으므로 10분 동안 재사용한다. */
 const SEARCH_CACHE_TTL_MS = 10 * 60_000;
@@ -85,6 +95,18 @@ export function createApp(config: AppConfig) {
   const odsayQuota = new DailyQuota(limits.odsayDailyLimit, clock);
   const kakaoQuota = new DailyQuota(limits.kakaoDailyLimit, clock);
   const routeCache = new TtlCache<OdsayResponse>(ROUTE_CACHE_TTL_MS, 1_000, clock);
+  const staleRoutes = new TtlCache<OdsayResponse>(STALE_ROUTE_TTL_MS, 2_000, clock);
+  let saverLogged = -1;
+  /** 절약 모드: 오늘 ODsay 사용량이 상한의 80% 이상 */
+  function saverMode(): boolean {
+    const on = odsayQuota.nearLimit(SAVER_MODE_RATIO);
+    const day = Math.floor((clock() + 9 * 3_600_000) / 86_400_000);
+    if (on && saverLogged !== day) {
+      saverLogged = day;
+      console.error(`[proxy] ODsay 절약 모드: 오늘 ${odsayQuota.usedToday()}/${odsayQuota.limit} 사용`);
+    }
+    return on;
+  }
   // 경로는 1분만 캐시하지만(배차·실시간 반영), 노선 모양은 바뀌지 않아 하루 둔다. 같은 경로를 다시 조회할 때 ODsay 호출이 1번으로 줄어든다.
   const geometryCache = new TtlCache<Array<Array<[number, number]>>>(GEOMETRY_CACHE_TTL_MS, 2_000, clock);
   const searchCache = new TtlCache<PlaceSearchResponseDto>(SEARCH_CACHE_TTL_MS, 1_000, clock);
@@ -120,25 +142,57 @@ export function createApp(config: AppConfig) {
     const coords = { originLat, originLng, destinationLat, destinationLng };
     const key = [originLat, originLng, destinationLat, destinationLng].map((v) => v.toFixed(4)).join(",");
     let raw = routeCache.get(key);
+    let stale = false;
     if (!raw) {
-      if (rejectIfQuotaExceeded(res, odsayQuota, "ODsay")) return;
-      raw = await fetchOdsayRaw(config.odsayApiKey, coords, config.fetchImpl);
-      // 지도용 실제 노선 모양. 같은 하루 상한을 나눠 쓰고, 경로와 함께 캐시되므로 같은 경로는 다시 부르지 않는다.
-      if (raw.error === undefined) {
-        await attachLaneGeometry(config.odsayApiKey, raw, () => odsayQuota.take(), config.fetchImpl, geometryCache);
+      const saved = staleRoutes.get(key);
+      const useSaved = (reason: string) => {
+        console.error(`[proxy] 예비 경로 캐시로 응답: ${reason}`);
+        raw = saved;
+        stale = true;
+      };
+      if (saved && saverMode()) {
+        useSaved("절약 모드");
+      } else if (!odsayQuota.take()) {
+        if (!saved) {
+          console.error(`[proxy] 429 ODsay 하루 호출 상한(${odsayQuota.limit}) 도달`);
+          res.set("Retry-After", String(odsayQuota.secondsUntilReset())).status(429).json({ error: "daily limit reached" });
+          return;
+        }
+        useSaved("하루 상한 도달");
+      } else {
+        try {
+          const fetched = await fetchOdsayRaw(config.odsayApiKey, coords, config.fetchImpl);
+          // 오류 응답(키 오류·ODsay 자체 한도 초과 등)이면 여기서 예외가 나므로 캐시에는 정상 응답만 들어간다.
+          toRouteResponse(fetched, departAt);
+          // 지도용 실제 노선 모양. 같은 하루 상한을 나눠 쓰고, 절약 모드에서는 부르지 않는다(지도는 정류장 좌표로 그린다).
+          if (fetched.error === undefined) {
+            await attachLaneGeometry(config.odsayApiKey, fetched, () => !saverMode() && odsayQuota.take(), config.fetchImpl, geometryCache);
+          }
+          routeCache.set(key, fetched);
+          staleRoutes.set(key, fetched);
+          raw = fetched;
+        } catch (e) {
+          if (!saved) throw e;
+          useSaved((e as Error).message);
+        }
       }
-      // 오류 응답이면 여기서 예외가 나므로 캐시에는 정상 응답만 들어간다.
-      const body = toRouteResponse(raw, departAt);
-      routeCache.set(key, raw);
-      if (!realtime.applies(departAt)) {
-        res.json(body);
-        return;
-      }
-    } else if (!realtime.applies(departAt)) {
-      res.json(toRouteResponse(raw, departAt));
-      return;
     }
-    res.json(await realtime.adjust(raw, departAt));
+    const route = raw as OdsayResponse;
+    const body = realtime.applies(departAt) ? await realtime.adjust(route, departAt) : toRouteResponse(route, departAt);
+    res.json(stale ? { ...body, realtime: false } : body);
+  });
+
+  // 오늘(한국 시간) 외부 API 사용량. 키·요청 내용은 싣지 않는다.
+  app.get("/v1/usage", (req, res) => {
+    if (rejectIfLimited(req, res, searchLimiter)) return;
+    const count = (q: DailyQuota) => ({ used: q.usedToday(), limit: q.limit });
+    res.json({
+      saver_mode: saverMode(),
+      resets_in_seconds: odsayQuota.secondsUntilReset(),
+      odsay: count(odsayQuota),
+      kakao: count(kakaoQuota),
+      realtime: Object.fromEntries(Object.entries(realtime.quotas).map(([name, q]) => [name, count(q)])),
+    });
   });
 
   app.get("/v1/places/search", async (req, res) => {
@@ -255,6 +309,8 @@ function createRealtime(keys: RealtimeKeys, dailyLimit: number, clock: Clock, fe
   }
 
   return {
+    quotas,
+
     applies(departAt: Date): boolean {
       const untilDeparture = departAt.getTime() - clock();
       // 1분 정도 지난 출발 시각까지는 "지금 출발"로 본다.
