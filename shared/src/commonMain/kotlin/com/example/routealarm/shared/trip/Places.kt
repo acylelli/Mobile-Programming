@@ -13,7 +13,7 @@ class PlaceSearch(private val client: ProxyClient = ProxyClient()) {
         if (trimmed.isEmpty()) return PlaceSearchResult(emptyList(), null)
         return try {
             PlaceSearchResult(
-                client.searchPlaces(trimmed).map { TripPlace(it.name, it.address, it.latitude, it.longitude) },
+                client.searchPlaces(trimmed).map { TripPlace(it.name, it.address, it.latitude, it.longitude, it.lines) },
                 null,
             )
         } catch (e: CancellationException) {

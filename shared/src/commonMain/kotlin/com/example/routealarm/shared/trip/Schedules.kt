@@ -2,9 +2,14 @@ package com.example.routealarm.shared.trip
 
 import com.example.routealarm.shared.KoreanHolidays
 import com.example.routealarm.shared.OccurrenceEngine
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
@@ -41,14 +46,45 @@ object Schedules {
     fun holidayName(millis: Long): String? =
         KoreanHolidays.name(Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault()).date)
 
-    /** "평일", "매일", "월 수 금", "한 번" */
+    /** 안드로이드 repeatText 와 같은 규칙: "평일", "매일", "주말", "화, 목", "한 번" */
     fun repeatLabel(repeatMask: Int): String = when (repeatMask and EVERYDAY) {
         0 -> "한 번"
         EVERYDAY -> "매일"
         WEEKDAYS -> "평일"
         0b1100000 -> "주말"
-        else -> days(repeatMask).sortedBy { it.ordinal }.joinToString(" ") { LABELS[it.ordinal] }
+        else -> days(repeatMask).sortedBy { it.ordinal }.joinToString(", ") { LABELS[it.ordinal] }
     }
+
+    /** 알람 머리말: "평일 반복", "화, 목 반복", 1회면 "11월 27일 한 번" */
+    fun repeatHeader(repeatMask: Int, targetMillis: Long?): String {
+        if (repeatMask and EVERYDAY == 0) {
+            val date = targetMillis?.let { Instant.fromEpochMilliseconds(it).toLocalDateTime(TimeZone.currentSystemDefault()).date }
+            return if (date == null) "한 번" else "${date.month.number}월 ${date.day}일 한 번"
+        }
+        return "${repeatLabel(repeatMask)} 반복"
+    }
+
+    /**
+     * 공휴일 건너뛰기가 켜진 반복 일정에서 오늘부터 31일 안에 반복 요일과 겹치는 첫 공휴일(안드로이드 HolidaySkipPolicy).
+     * 오늘 목표 시각이 지났으면 오늘은 보지 않는다. 결과 예: "12월 25일 (금) 성탄절"
+     */
+    fun nextSkippedHoliday(hour: Int, minute: Int, repeatMask: Int, skipHolidays: Boolean, nowMillis: Long): String? {
+        val days = days(repeatMask)
+        if (days.isEmpty() || !skipHolidays) return null
+        val zone = TimeZone.currentSystemDefault()
+        val now = Instant.fromEpochMilliseconds(nowMillis)
+        val today = now.toLocalDateTime(zone).date
+        val targetPassedToday = LocalDateTime(today, LocalTime(hour, minute)).toInstant(zone) <= now
+        return (0..LOOKAHEAD_DAYS).asSequence()
+            .map { today.plus(DatePeriod(days = it)) }
+            .filterNot { it == today && targetPassedToday }
+            .filter { it.dayOfWeek in days }
+            .firstNotNullOfOrNull { date ->
+                KoreanHolidays.name(date)?.let { "${date.month.number}월 ${date.day}일 (${LABELS[date.dayOfWeek.ordinal]}) $it" }
+            }
+    }
+
+    private const val LOOKAHEAD_DAYS = 31
 
     private fun days(mask: Int): Set<DayOfWeek> =
         DayOfWeek.entries.filter { mask and (1 shl it.ordinal) != 0 }.toSet()

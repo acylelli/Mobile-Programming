@@ -72,6 +72,21 @@ class RouteLineTest {
     }
 
     @Test
+    fun 지도선은_탑승_구간과_도보_직선() {
+        val segments = listOf(
+            TripSegment("WALK", null, "집", "정류장", 4, null),
+            TripSegment("BUS", "76번", "정류장", "역", 21, null, listOf(37.60, 127.10, 37.61, 127.08)),
+            TripSegment("SUBWAY", "6호선", "역", "창신역", 16, null, listOf(37.61, 127.08, 37.58, 127.01)),
+            TripSegment("WALK", null, "창신역", "학교", 9, null),
+        )
+        val lines = com.example.routealarm.shared.routeline.RouteMapLines.build(37.59, 127.12, 37.58, 127.00, segments)
+        // 집 → 정류장 도보, 76번, 6호선, 창신역 → 학교 도보
+        assertEquals(listOf(true, false, false, true), lines.map { it.isWalk })
+        assertEquals(0xFFCD7C2F, lines[2].colorArgb)
+        assertEquals(emptyList(), com.example.routealarm.shared.routeline.RouteMapLines.build(0.0, 0.0, 1.0, 1.0, segments.filter { it.mode == "WALK" }))
+    }
+
+    @Test
     fun 노선색과_조사() {
         assertEquals(0xFF00A84D, LineColors.argb("SUBWAY", "수도권 2호선"))
         assertEquals(0xFF53B332, LineColors.argb("BUS", "지선 3216"))
