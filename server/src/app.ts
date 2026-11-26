@@ -7,7 +7,18 @@ import { fetchTaxiEstimate, type TaxiEstimateDto } from "./taxi.ts";
 import { createGroupPassRouter, DEFAULT_GROUP_PASSES, type GroupPassConfig } from "./grouppass.ts";
 import { createPaymentsRouter, type TossKeys } from "./payments.ts";
 import { attachLaneGeometry, fetchOdsayRaw, firstRideTarget, type OdsayResponse, type RideTarget, toRouteResponse, toRoutesWithPaths } from "./odsay.ts";
-import { type Arrival, applyArrival, fetchBusArrivals, fetchSubwayArrivals, firstCatchable, type RealtimeKeys } from "./realtime.ts";
+import {
+  type Arrival,
+  applyArrival,
+  fetchBusArrivals,
+  fetchSubwayArrivals,
+  fetchTagoArrivals,
+  findTagoNode,
+  firstCatchable,
+  type RealtimeKeys,
+  type TagoBusQuery,
+  type TagoNode,
+} from "./realtime.ts";
 
 /** 남용 방지 한도. 환경변수로 바꿀 수 있다(src/index.ts). */
 export interface GuardLimits {
@@ -62,6 +73,7 @@ const TAXI_CACHE_TTL_MS = 5 * 60_000;
 const REALTIME_WINDOW_MS = 30 * 60_000;
 /** 실시간 조회는 짧게만 재사용한다. */
 const REALTIME_CACHE_TTL_MS = 30_000;
+const TAGO_NODE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 /** 경로마다 첫 탑승 구간 하나씩, 상위 몇 개 경로까지만 조회한다(외부 호출 수 제한). */
 const REALTIME_MAX_ROUTES = 3;
 
@@ -199,7 +211,23 @@ function createRealtime(keys: RealtimeKeys, dailyLimit: number, clock: Clock, fe
     subway: new DailyQuota(dailyLimit, clock),
     seoul: new DailyQuota(dailyLimit, clock),
     gyeonggi: new DailyQuota(dailyLimit, clock),
+    // TAGO 는 정류소 찾기·도착 조회 두 API 가 따로 한도를 갖는다.
+    tagoStop: new DailyQuota(dailyLimit, clock),
+    tago: new DailyQuota(dailyLimit, clock),
   };
+  // 정류장 좌표 → TAGO 정류소. 정류소는 거의 바뀌지 않아 하루 동안 기억한다(찾지 못한 경우도).
+  const tagoNodes = new TtlCache<{ node: TagoNode | null }>(TAGO_NODE_CACHE_TTL_MS, 2000, clock);
+
+  async function tagoNode(key: string, query: TagoBusQuery): Promise<TagoNode | null> {
+    const cacheKey = `${query.lat.toFixed(5)},${query.lng.toFixed(5)},${query.stopName}`;
+    const hit = tagoNodes.get(cacheKey);
+    if (hit) return hit.node;
+    if (!quotas.tagoStop.take()) return null;
+    const node = await findTagoNode(key, query, fetchImpl);
+    // 응답을 읽지 못한 경우(undefined)는 기억하지 않고 다음에 다시 찾는다.
+    if (node !== undefined) tagoNodes.set(cacheKey, { node });
+    return node ?? null;
+  }
   const enabled = Boolean(keys.seoulSubwayKey || keys.dataGoKrKey);
 
   async function arrivals(target: RideTarget): Promise<Arrival[] | null> {
@@ -213,6 +241,11 @@ function createRealtime(keys: RealtimeKeys, dailyLimit: number, clock: Clock, fe
     if (target.kind === "subway") {
       if (!keys.seoulSubwayKey || !quotas.subway.take()) return null;
       result = await fetchSubwayArrivals(keys.seoulSubwayKey, target.query, fetchImpl, clock());
+    } else if (target.query.region === "tago") {
+      if (!keys.dataGoKrKey) return null;
+      const node = await tagoNode(keys.dataGoKrKey, target.query);
+      if (!node || !quotas.tago.take()) return null;
+      result = await fetchTagoArrivals(keys.dataGoKrKey, node, target.query.routeNo, fetchImpl);
     } else {
       if (!keys.dataGoKrKey || !quotas[target.query.region].take()) return null;
       result = await fetchBusArrivals(keys.dataGoKrKey, target.query, fetchImpl);

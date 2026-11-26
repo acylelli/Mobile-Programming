@@ -7,6 +7,8 @@ import { type RouteDto, toKstIso } from "./contract.ts";
  * - 지하철: 서울 열린데이터광장 실시간 지하철 도착정보(역 이름으로 조회, 수도권 전 노선)
  * - 서울 버스: 공공데이터포털 서울특별시_버스도착정보조회(노선 ID 로 노선 전체 도착 정보를 받아 정류장 고유번호 arsId 로 고름)
  * - 경기 버스: 공공데이터포털 경기도_버스도착정보 조회(정류소 ID)
+ * - 그 밖의 지역 버스(부산·대구·인천·광주·대전·세종 등): 국토교통부 TAGO 버스정류소정보로 승차 정류장 좌표 근처의
+ *   정류소(도시코드·정류소 ID)를 찾고, TAGO 버스도착정보에서 같은 노선 번호의 도착 예정 시간을 읽는다.
  *
  * ODsay 경로 응답에 각 API 가 요구하는 역 이름·정류장 ID·노선 ID 가 들어 있어서 그대로 이어 붙인다.
  * 모든 조회는 실패해도 예외를 던지지 않고 null 을 돌려준다. 실시간 정보가 없어도 경로 조회는 성공해야 한다.
@@ -36,12 +38,34 @@ export interface SubwayQuery {
   odsayLineCode?: number;
 }
 
-export interface BusQuery {
+export interface CapitalBusQuery {
   region: "seoul" | "gyeonggi";
   /** 서울: 정류장 고유번호(arsId), 경기: 정류소 ID */
   stationKey: string;
   /** 서울·경기 노선 ID (ODsay busLocalBlID) */
   routeId: string;
+}
+
+/** 서울·경기 밖 버스. ODsay 승차 정류장 좌표로 TAGO 정류소를 찾고 노선 번호로 고른다. */
+export interface TagoBusQuery {
+  region: "tago";
+  lat: number;
+  lng: number;
+  /** ODsay 승차 정류장 이름. 길 양쪽 정류장이 같은 이름이라 거리와 함께 쓴다. */
+  stopName: string;
+  /** 노선 번호(ODsay busNo, 예: "10", "급행1") */
+  routeNo: string;
+}
+
+export type BusQuery = CapitalBusQuery | TagoBusQuery;
+
+/** TAGO 정류소 하나(도시코드 + 정류소 ID) */
+export interface TagoNode {
+  cityCode: string;
+  nodeId: string;
+  name: string;
+  lat: number;
+  lng: number;
 }
 
 const TIMEOUT_MS = 4_000;
@@ -102,7 +126,7 @@ function subwaySeconds(item: Record<string, unknown>): number | null {
   return null;
 }
 
-export async function fetchBusArrivals(key: string, query: BusQuery, fetchImpl: typeof fetch = fetch): Promise<Arrival[] | null> {
+export async function fetchBusArrivals(key: string, query: CapitalBusQuery, fetchImpl: typeof fetch = fetch): Promise<Arrival[] | null> {
   if (query.region === "seoul") {
     // 정류소 기준 조회(stationinfo/getStationByUid)는 "정류소정보조회"라는 별도 API 라 이 키로는 쓸 수 없다.
     // 신청한 "버스도착정보조회" API 의 노선 전체 조회로 받은 뒤 우리 정류장만 고른다.
@@ -147,6 +171,99 @@ export function parseGyeonggiBusArrivals(body: unknown, routeId: string): Arriva
   return sortArrivals(arrivals);
 }
 
+const TAGO_BASE = "https://apis.data.go.kr/1613000";
+/** ODsay 정류장 좌표와 TAGO 정류소 좌표가 이보다 멀면 다른 정류장으로 본다. */
+const TAGO_MAX_DISTANCE_M = 120;
+
+/** 승차 정류장 좌표 근처의 TAGO 정류소. 찾지 못하면 null, 응답을 읽을 수 없으면 undefined */
+export async function findTagoNode(key: string, query: TagoBusQuery, fetchImpl: typeof fetch = fetch): Promise<TagoNode | null | undefined> {
+  const params = new URLSearchParams({
+    serviceKey: key, gpsLati: String(query.lat), gpsLong: String(query.lng), _type: "json", numOfRows: "30", pageNo: "1",
+  });
+  const body = await getJson(`${TAGO_BASE}/BusSttnInfoInqireService/getCrdntPrxmtSttnList?${params}`, fetchImpl);
+  if (!body) return undefined;
+  const nodes = parseTagoNodes(body);
+  if (nodes === null) {
+    logIfUnreadable(null, body, "tago-stop");
+    return undefined;
+  }
+  return chooseTagoNode(nodes, query);
+}
+
+export async function fetchTagoArrivals(key: string, node: TagoNode, routeNo: string, fetchImpl: typeof fetch = fetch): Promise<Arrival[] | null> {
+  const params = new URLSearchParams({ serviceKey: key, cityCode: node.cityCode, nodeId: node.nodeId, _type: "json", numOfRows: "100", pageNo: "1" });
+  const body = await getJson(`${TAGO_BASE}/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList?${params}`, fetchImpl);
+  return body ? logIfUnreadable(parseTagoArrivals(body, routeNo), body, "tago-bus") : null;
+}
+
+/** TAGO 공통 응답에서 item 목록. 결과 코드가 정상이 아니면 null, 결과가 없으면 빈 목록 */
+function tagoItems(body: unknown): Array<Record<string, unknown>> | null {
+  const response = (body as { response?: { header?: { resultCode?: unknown }; body?: { items?: unknown } } }).response;
+  if (!response || String(response.header?.resultCode ?? "") !== "00") return null;
+  const items = response.body?.items;
+  // 결과가 없으면 items 가 빈 문자열로 온다.
+  if (!items || typeof items !== "object") return [];
+  return asArray((items as { item?: unknown }).item) ?? [];
+}
+
+export function parseTagoNodes(body: unknown): TagoNode[] | null {
+  const items = tagoItems(body);
+  if (!items) return null;
+  return items
+    .map((i) => ({
+      cityCode: String(i.citycode ?? ""),
+      nodeId: String(i.nodeid ?? ""),
+      name: String(i.nodenm ?? ""),
+      lat: Number(i.gpslati),
+      lng: Number(i.gpslong),
+    }))
+    .filter((n) => n.cityCode && n.nodeId && Number.isFinite(n.lat) && Number.isFinite(n.lng));
+}
+
+/**
+ * 가장 가까운 정류소를 고른다. 이름이 같은 정류소(길 건너편 포함)가 있으면 그중 가장 가까운 것.
+ * ODsay 좌표는 정류장마다 따로라서 길 건너편(보통 20m 이상)보다 우리 쪽이 더 가깝다.
+ */
+export function chooseTagoNode(nodes: TagoNode[], query: Pick<TagoBusQuery, "lat" | "lng" | "stopName">): TagoNode | null {
+  const name = normalizeStopName(query.stopName);
+  const near = nodes
+    .map((node) => ({ node, distance: distanceMeters(query.lat, query.lng, node.lat, node.lng) }))
+    .filter((c) => c.distance <= TAGO_MAX_DISTANCE_M)
+    .sort((a, b) => a.distance - b.distance);
+  const sameName = near.find((c) => normalizeStopName(c.node.name) === name);
+  return (sameName ?? near[0])?.node ?? null;
+}
+
+/** 정류소 도착 예정 목록에서 노선 번호가 같은 버스. arrtime 은 남은 초 */
+export function parseTagoArrivals(body: unknown, routeNo: string): Arrival[] | null {
+  const items = tagoItems(body);
+  if (!items) return null;
+  const wanted = normalizeRouteNo(routeNo);
+  const arrivals: Arrival[] = [];
+  for (const item of items) {
+    if (normalizeRouteNo(String(item.routeno ?? "")) !== wanted) continue;
+    const seconds = Number(item.arrtime);
+    if (Number.isFinite(seconds) && seconds >= 0) arrivals.push({ seconds });
+  }
+  return sortArrivals(arrivals);
+}
+
+function normalizeStopName(name: string): string {
+  return name.replace(/\s+/g, "").replace(/\(.*?\)/g, "").replace(/(정류장|정류소)$/, "");
+}
+
+function normalizeRouteNo(no: string): string {
+  return no.replace(/\s+/g, "").replace(/번$/, "");
+}
+
+function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6_371_000 * Math.asin(Math.sqrt(a));
+}
+
 /**
  * 응답은 왔지만 도착 목록이 없을 때(인증키 오류, 해외 IP 차단, 호출 한도 등) 원인을 로그에 남긴다.
  * 각 API 의 오류 코드·메시지 필드만 골라 쓰고, 요청 주소(키 포함)는 남기지 않는다.
@@ -158,11 +275,13 @@ export function describeUnreadable(body: unknown): string {
     b, // 서울 지하철·data.go.kr 게이트웨이 오류 {code, message} / {error, message}
     b.msgHeader, // 서울 버스
     b.response?.msgHeader, // 경기 버스
+    b.response?.header, // TAGO
+    b.OpenAPI_ServiceResponse?.cmmMsgHeader, // data.go.kr 서비스키 오류(TAGO 미신청 등)
   ];
   for (const c of candidates) {
     if (!c || typeof c !== "object") continue;
-    const code = c.code ?? c.headerCd ?? c.resultCode ?? c.error ?? c.status;
-    const message = c.message ?? c.headerMsg ?? c.resultMessage;
+    const code = c.code ?? c.headerCd ?? c.resultCode ?? c.returnReasonCode ?? c.error ?? c.status;
+    const message = c.message ?? c.headerMsg ?? c.resultMessage ?? c.resultMsg ?? c.errMsg;
     if (code !== undefined || message !== undefined) return `${String(code ?? "")} ${String(message ?? "")}`.trim().slice(0, 200);
   }
   return JSON.stringify(body).slice(0, 200);
