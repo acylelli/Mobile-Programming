@@ -21,6 +21,7 @@ mlkitTextKorean = "16.0.1"
 kakaoMap = "2.15.2"
 glance = "1.2.0"
 kotlinxDatetime = "0.8.0"
+ktor = "3.3.3"
 playServicesLocation = "21.4.0"
 junit = "4.13.2"
 turbine = "1.2.1"
@@ -78,6 +79,13 @@ turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 androidx-work-testing = { group = "androidx.work", name = "work-testing", version.ref = "work" }
+
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-darwin = { group = "io.ktor", name = "ktor-client-darwin", version.ref = "ktor" }
+ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
