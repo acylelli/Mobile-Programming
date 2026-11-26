@@ -62,6 +62,8 @@ data class AlarmPlan(
     val isRealtime: Boolean,
     val lastUpdatedAt: Instant,
     val route: TransitRoute? = null,
+    /** 계산에 반영한 출발 시각 날씨. 날씨를 모르거나 반영하지 않으면 null */
+    val weather: PlanWeather? = null,
 ) {
     /** 목표 도착시간보다 얼마나 일찍 도착하는지 (여유시간) */
     val slackMinutes: Long get() = Duration.between(estimatedArrival, targetArrival).toMinutes()

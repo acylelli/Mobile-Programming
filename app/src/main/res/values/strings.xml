@@ -293,6 +293,15 @@
     <string name="detail_history_empty">아직 기록이 없어요</string>
     <string name="detail_section_settings">일정 정보</string>
     <string name="detail_repeat_label">반복</string>
+    <string name="weather_rain">비</string>
+    <string name="weather_shower">소나기</string>
+    <string name="weather_snow">눈</string>
+    <string name="weather_rain_snow">비·눈</string>
+    <string name="weather_chance">비 소식</string>
+    <string name="weather_strip_extra">%1$s 예보 %2$d%% · 여유 %3$d분 더 뒀어요 · 우산 챙기세요</string>
+    <string name="weather_umbrella_line">%1$s 예보 %2$d%% · 우산 챙기세요</string>
+    <string name="settings_weather">날씨 반영</string>
+    <string name="settings_weather_body">출발 시각에 비 오면 5분, 눈 오면 10분 여유를 더하고 우산을 챙기라고 알려 줘요</string>
     <string name="travel_pattern_title">요일별 이동시간</string>
     <string name="travel_pattern_slow">%1$s요일은 평소보다 %2$d분 더 걸려요</string>
     <string name="travel_pattern_even">요일마다 비슷하게 약 %1$d분 걸려요</string>

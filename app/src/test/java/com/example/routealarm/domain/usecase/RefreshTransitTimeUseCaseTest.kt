@@ -3,8 +3,11 @@ package com.example.routealarm.domain.usecase
 import com.example.routealarm.core.common.AppError
 import com.example.routealarm.domain.model.AdjustmentKind
 import com.example.routealarm.domain.model.AlarmType
+import com.example.routealarm.domain.model.PlanWeather
+import com.example.routealarm.domain.model.Precipitation
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.model.UserPreferences
+import com.example.routealarm.domain.model.WeatherForecast
 import com.example.routealarm.domain.policy.AdjustmentPolicy
 import com.example.routealarm.domain.policy.TravelObservation
 import com.example.routealarm.fake.FakeAlarmHistoryRepository
@@ -18,8 +21,10 @@ import com.example.routealarm.fake.FakeScheduleRepository
 import com.example.routealarm.fake.FakeSubscriptionRepository
 import com.example.routealarm.fake.FakeTimeProvider
 import com.example.routealarm.fake.FakeTransitRepository
+import com.example.routealarm.fake.FakeWeatherRepository
 import com.example.routealarm.fake.TestData
 import com.example.routealarm.fake.TestData.seoul
+import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,7 +32,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * 교통 상황 변화 → 알람 조정 시나리오를 Fake 저장소만으로 끝까지 검증한다.
@@ -51,11 +55,14 @@ class RefreshTransitTimeUseCaseTest {
     private val scheduleAlarm = ScheduleAlarmUseCase(alarmScheduler, refreshScheduler, subscription, time)
     private val sync = SyncScheduleUseCase(schedules, resolve, buildPlan, scheduleAlarm, time)
 
+    private val weather = FakeWeatherRepository()
+
     private val refresh = RefreshTransitTimeUseCase(
         scheduleRepository = schedules,
         preferencesRepository = preferences,
         subscriptionRepository = subscription,
         transitRepository = transit,
+        weatherRepository = weather,
         locationRepository = FakeLocationRepository(),
         historyRepository = history,
         metricsRepository = FakeMetricsRepository(),
@@ -120,6 +127,41 @@ class RefreshTransitTimeUseCaseTest {
         refresh(id)
 
         assertEquals(seoul(day, 7, 20), schedule(id).plan!!.wakeUp)
+    }
+
+    @Test
+    fun `출발 시각에 비 예보가 있으면 여유를 5분 더해 더 일찍 깨우고 날씨를 계획에 남긴다`() = runTest {
+        weather.forecast = WeatherForecast(time.instant, Precipitation.RAIN, 70, 8)
+        val id = (schedules.upsert(TestData.schedule(oneTimeDate = day)) as com.example.routealarm.core.common.AppResult.Success).data
+
+        refresh(id)
+
+        val plan = schedule(id).plan!!
+        assertEquals(seoul(day, 7, 15), plan.wakeUp)
+        assertEquals(PlanWeather(Precipitation.RAIN, 70, 5), plan.weather)
+        assertEquals(15, plan.safetyBufferMinutes)
+    }
+
+    @Test
+    fun `눈 예보면 10분 더하고, 설정에서 끄거나 예보를 못 받으면 그대로 계산한다`() = runTest {
+        weather.forecast = WeatherForecast(time.instant, Precipitation.SNOW, 90, -3)
+        val snowId = (schedules.upsert(TestData.schedule(oneTimeDate = day)) as com.example.routealarm.core.common.AppResult.Success).data
+        refresh(snowId)
+        assertEquals(seoul(day, 7, 10), schedule(snowId).plan!!.wakeUp)
+
+        weather.forecast = null
+        val failedId = (schedules.upsert(TestData.schedule(oneTimeDate = day)) as com.example.routealarm.core.common.AppResult.Success).data
+        refresh(failedId)
+        assertEquals(seoul(day, 7, 20), schedule(failedId).plan!!.wakeUp)
+        assertNull(schedule(failedId).plan!!.weather)
+
+        preferences.setWeatherAdjustment(false)
+        weather.forecast = WeatherForecast(time.instant, Precipitation.SNOW, 90, -3)
+        val callsBefore = weather.calls
+        val offId = (schedules.upsert(TestData.schedule(oneTimeDate = day)) as com.example.routealarm.core.common.AppResult.Success).data
+        refresh(offId)
+        assertEquals(seoul(day, 7, 20), schedule(offId).plan!!.wakeUp)
+        assertEquals(callsBefore, weather.calls)
     }
 
     @Test

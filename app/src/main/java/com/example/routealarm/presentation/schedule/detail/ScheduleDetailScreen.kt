@@ -84,6 +84,7 @@ import com.example.routealarm.domain.policy.WakeUpHabit
 import com.example.routealarm.presentation.common.RouteMapLines
 import com.example.routealarm.presentation.common.RouteTimelineBuilder
 import com.example.routealarm.presentation.common.TimeFormat
+import com.example.routealarm.presentation.common.WeatherStrip
 import com.example.routealarm.presentation.common.messageRes
 import com.example.routealarm.presentation.common.minutesText
 import com.example.routealarm.presentation.common.relativeUpdateText
@@ -289,6 +290,7 @@ private fun DetailContent(
 
         Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (!schedule.enabled) NoticeStrip(text = stringResource(R.string.detail_disabled_hint))
+            WeatherStrip(plan?.weather)
             LateRiskCard(schedule)
             val refreshError = state.refreshError
             when {

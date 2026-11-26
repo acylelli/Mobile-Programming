@@ -55,6 +55,9 @@ data class StoredPlan(
     val isRealtime: Boolean,
     val lastUpdatedAt: Long,
     val route: StoredRoute? = null,
+    val weatherPrecipitation: String? = null,
+    val weatherProbability: Int? = null,
+    val weatherExtraMinutes: Int? = null,
 )
 
 @Serializable
@@ -126,6 +129,9 @@ fun AlarmPlan.toStored() = StoredPlan(
     isRealtime = isRealtime,
     lastUpdatedAt = lastUpdatedAt.toEpochMilli(),
     route = route?.toStored(),
+    weatherPrecipitation = weather?.precipitation?.name,
+    weatherProbability = weather?.probability,
+    weatherExtraMinutes = weather?.extraMinutes,
 )
 
 fun StoredPlan.toDomain() = AlarmPlan(
@@ -140,6 +146,13 @@ fun StoredPlan.toDomain() = AlarmPlan(
     isRealtime = isRealtime,
     lastUpdatedAt = Instant.ofEpochMilli(lastUpdatedAt),
     route = route?.toDomain(),
+    weather = weatherPrecipitation?.let {
+        com.example.routealarm.domain.model.PlanWeather(
+            enumValueOrDefault(it, com.example.routealarm.domain.model.Precipitation.NONE),
+            weatherProbability ?: 0,
+            weatherExtraMinutes ?: 0,
+        )
+    },
 )
 
 fun PendingAdjustment.toStored() = StoredPendingAdjustment(

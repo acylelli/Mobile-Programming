@@ -10,12 +10,14 @@ import com.example.routealarm.domain.model.AlarmPlan
 import com.example.routealarm.domain.model.MetricType
 import com.example.routealarm.domain.model.PendingAdjustment
 import com.example.routealarm.domain.model.Place
+import com.example.routealarm.domain.model.PlanWeather
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.policy.AdjustmentDecision
 import com.example.routealarm.domain.policy.AdjustmentPolicy
 import com.example.routealarm.domain.policy.TravelEstimatePolicy
 import com.example.routealarm.domain.policy.TravelObservation
 import com.example.routealarm.domain.policy.TravelPatternPolicy
+import com.example.routealarm.domain.policy.WeatherPolicy
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
 import com.example.routealarm.domain.repository.AlarmNotifier
 import com.example.routealarm.domain.repository.LocationRepository
@@ -24,6 +26,7 @@ import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
 import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.repository.TransitRepository
+import com.example.routealarm.domain.repository.WeatherRepository
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -61,6 +64,7 @@ class RefreshTransitTimeUseCase @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val transitRepository: TransitRepository,
+    private val weatherRepository: WeatherRepository,
     private val locationRepository: LocationRepository,
     private val historyRepository: AlarmHistoryRepository,
     private val metricsRepository: MetricsRepository,
@@ -112,6 +116,7 @@ class RefreshTransitTimeUseCase @Inject constructor(
         val recentTravel = slotTravel.ifEmpty {
             historyRepository.recentTravelDurations(scheduleId, TravelEstimatePolicy.HISTORY_SAMPLE_SIZE)
         }
+        val weather = forecastWeather(origin, departureGuess)
         val input = PlanInput(
             targetArrival = target,
             currentTravel = route.totalDuration,
@@ -123,6 +128,7 @@ class RefreshTransitTimeUseCase @Inject constructor(
             fetchedAt = query.fetchedAt,
             route = route,
             previousTravelMinutes = schedule.plan?.travelMinutes,
+            weather = weather,
         )
         val newPlan = when (val result = buildAlarmPlan(input, now)) {
             is AppResult.Success -> result.data.plan
@@ -267,6 +273,15 @@ class RefreshTransitTimeUseCase @Inject constructor(
     }
 
     /** 알람/출발 시각은 그대로 두고 예상 이동·도착 정보만 최신값으로 바꾼다. */
+    /** 출발지·출발 예상 시각의 날씨. 설정에서 껐거나 예보를 못 받으면 null(여유를 더하지 않는다). */
+    private suspend fun forecastWeather(origin: Place, departure: Instant): PlanWeather? {
+        if (!preferencesRepository.current().weatherAdjustment) return null
+        return when (val result = weatherRepository.forecast(origin.latitude, origin.longitude, departure)) {
+            is AppResult.Success -> WeatherPolicy.toPlanWeather(result.data)
+            is AppResult.Failure -> null
+        }
+    }
+
     private fun keepAlarmWithFreshEstimate(old: AlarmPlan, new: AlarmPlan): AlarmPlan = old.copy(
         estimatedArrival = old.departure.plusSeconds(new.travelMinutes * SECONDS_PER_MINUTE),
         travelMinutes = new.travelMinutes,
@@ -275,6 +290,7 @@ class RefreshTransitTimeUseCase @Inject constructor(
         isRealtime = new.isRealtime,
         lastUpdatedAt = new.lastUpdatedAt,
         route = new.route,
+        weather = new.weather,
     )
 
     /**

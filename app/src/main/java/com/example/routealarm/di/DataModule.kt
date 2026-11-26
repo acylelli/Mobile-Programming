@@ -16,6 +16,7 @@ import com.example.routealarm.data.repository.DefaultPlaceRepository
 import com.example.routealarm.data.repository.DefaultSubscriptionRepository
 import com.example.routealarm.data.repository.DefaultTransitRepository
 import com.example.routealarm.data.repository.ProxyTaxiRepository
+import com.example.routealarm.data.repository.ProxyWeatherRepository
 import com.example.routealarm.data.repository.RoomAlarmHistoryRepository
 import com.example.routealarm.data.repository.RoomMetricsRepository
 import com.example.routealarm.data.repository.RoomScheduleRepository
@@ -31,6 +32,7 @@ import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
 import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.repository.TaxiRepository
+import com.example.routealarm.domain.repository.WeatherRepository
 import com.example.routealarm.domain.repository.TimetableImageRecognizer
 import com.example.routealarm.domain.repository.TimetableRepository
 import com.example.routealarm.domain.repository.TransitRepository
@@ -59,6 +61,7 @@ abstract class RepositoryModule {
     @Binds abstract fun bindTimetableRepository(impl: DataStoreTimetableRepository): TimetableRepository
     @Binds abstract fun bindHabitRepository(impl: DataStoreHabitRepository): HabitRepository
     @Binds abstract fun bindTaxiRepository(impl: ProxyTaxiRepository): TaxiRepository
+    @Binds abstract fun bindWeatherRepository(impl: ProxyWeatherRepository): WeatherRepository
     @Binds abstract fun bindTimetableImageRecognizer(impl: MlKitTimetableImageRecognizer): TimetableImageRecognizer
     @Binds abstract fun bindCalendarRepository(impl: DeviceCalendarRepository): CalendarRepository
 }

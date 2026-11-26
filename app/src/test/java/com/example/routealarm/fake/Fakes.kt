@@ -15,6 +15,7 @@ import com.example.routealarm.domain.model.MetricType
 import com.example.routealarm.domain.model.MetricsSummary
 import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.PlanType
+import com.example.routealarm.domain.model.Precipitation
 import com.example.routealarm.domain.model.RouteQueryResult
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.model.SegmentType
@@ -22,6 +23,7 @@ import com.example.routealarm.domain.model.SubscriptionProduct
 import com.example.routealarm.domain.model.TransitRoute
 import com.example.routealarm.domain.model.TransitSegment
 import com.example.routealarm.domain.model.UserPreferences
+import com.example.routealarm.domain.model.WeatherForecast
 import com.example.routealarm.domain.policy.TravelObservation
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
 import com.example.routealarm.domain.repository.AlarmNotifier
@@ -33,6 +35,7 @@ import com.example.routealarm.domain.repository.ScheduleRepository
 import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.repository.TransitRefreshScheduler
 import com.example.routealarm.domain.repository.TransitRepository
+import com.example.routealarm.domain.repository.WeatherRepository
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -218,6 +221,7 @@ class FakePreferencesRepository(initial: UserPreferences = UserPreferences()) : 
     override suspend fun setAlarmVolume(percent: Int) =
         state.update { it.copy(alarmVolumePercent = percent.coerceIn(UserPreferences.ALARM_VOLUME_RANGE)) }
     override suspend fun setGradualVolume(enabled: Boolean) = state.update { it.copy(gradualVolume = enabled) }
+    override suspend fun setWeatherAdjustment(enabled: Boolean) = state.update { it.copy(weatherAdjustment = enabled) }
     override suspend fun setSnoozeMinutes(minutes: Int) = state.update { it.copy(snoozeMinutes = minutes) }
     override suspend fun setColorTheme(theme: ColorTheme) = state.update { it.copy(colorTheme = theme) }
     override suspend fun setLastPaywallPromptDay(epochDay: Long) = state.update { it.copy(lastPaywallPromptEpochDay = epochDay) }
@@ -299,5 +303,16 @@ class FakeSubscriptionRepository(
 
         fun hansungPass(until: LocalDate = LocalDate.of(2027, 2, 28)) =
             GroupPass("HSU-2026-WAKE7", "한성대학교", LocalDate.of(2026, 3, 1), until, remainingSeats = 128)
+    }
+}
+
+/** 날씨 예보. 기본은 맑음, forecast 를 바꾸면 그 날씨를, null 이면 실패를 돌려준다. */
+class FakeWeatherRepository(
+    var forecast: WeatherForecast? = WeatherForecast(Instant.EPOCH, Precipitation.NONE, 0, 10),
+) : WeatherRepository {
+    var calls = 0
+    override suspend fun forecast(latitude: Double, longitude: Double, at: Instant): AppResult<WeatherForecast> {
+        calls += 1
+        return forecast?.let { AppResult.Success(it.copy(forecastAt = at)) } ?: AppResult.Failure(AppError.Network)
     }
 }

@@ -44,6 +44,10 @@ data class PlanColumns(
     val previousTravelMinutes: Int?,
     val isRealtime: Boolean,
     val lastUpdatedAt: Long,
+    /** 계산에 반영한 날씨(버전 6에서 추가). 모르면 null */
+    val weatherPrecipitation: String? = null,
+    val weatherProbability: Int? = null,
+    val weatherExtraMinutes: Int? = null,
 )
 
 @Entity(tableName = "schedules", indices = [Index("enabled")])

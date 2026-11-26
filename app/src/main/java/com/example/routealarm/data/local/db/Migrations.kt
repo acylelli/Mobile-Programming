@@ -80,5 +80,14 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+    /** 5 → 6: 계산에 반영한 날씨(강수형태·강수확률·추가 여유) 열을 plan 에 추가했다. 기존 계획은 null(날씨 모름). */
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE schedules ADD COLUMN plan_weatherPrecipitation TEXT")
+            db.execSQL("ALTER TABLE schedules ADD COLUMN plan_weatherProbability INTEGER")
+            db.execSQL("ALTER TABLE schedules ADD COLUMN plan_weatherExtraMinutes INTEGER")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 }
