@@ -13,9 +13,14 @@ struct CreateFlowView: View {
     @State private var step: Step = .origin
     private let inputSteps = 5
 
-    init(original: Alarm) {
+    /// 캘린더 일정에서 왔으면 도착지 검색어(장소)를 미리 채우고 2단계부터 시작한다.
+    let destinationQuery: String
+
+    init(original: Alarm, destinationQuery: String = "") {
         self.original = original
+        self.destinationQuery = destinationQuery
         _draft = State(initialValue: original)
+        _step = State(initialValue: destinationQuery.isEmpty ? .origin : .destination)
     }
 
     private var isEditing: Bool { store.alarms.contains { $0.id == original.id } }
@@ -39,7 +44,7 @@ struct CreateFlowView: View {
             Group {
                 switch step {
                 case .origin: PlaceStep(isOrigin: true, draft: $draft)
-                case .destination: PlaceStep(isOrigin: false, draft: $draft)
+                case .destination: PlaceStep(isOrigin: false, draft: $draft, initialQuery: destinationQuery)
                 case .time: TimeStep(draft: $draft)
                 case .preparation: PreparationStep(draft: $draft)
                 case .buffer: BufferStep(draft: $draft)
@@ -111,6 +116,7 @@ private struct StepTitle: View {
 private struct PlaceStep: View {
     let isOrigin: Bool
     @Binding var draft: Alarm
+    var initialQuery = ""
     @StateObject private var book = PlaceBook.shared
     @State private var query = ""
     @State private var results: [Place]?
@@ -131,7 +137,7 @@ private struct PlaceStep: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 StepTitle(title: isOrigin ? "어디에서 출발하나요?" : "어디까지 가나요?")
-                SearchField(prompt: registering.map { "\($0.label) 장소 검색" } ?? "장소, 주소 검색", text: $query, autoFocus: selected == nil && !usingCurrentLocation)
+                SearchField(prompt: registering.map { "\($0.label) 장소 검색" } ?? "장소, 주소 검색", text: $query, autoFocus: selected == nil && !usingCurrentLocation && initialQuery.isEmpty)
                 if let registering {
                     Spacer().frame(height: 8.dp)
                     NoticeStrip(text: "고른 장소가 즐겨찾기 ‘\(registering.label)’에 저장돼요.", actionTitle: "취소") { self.registering = nil }
@@ -148,6 +154,7 @@ private struct PlaceStep: View {
             .padding(.horizontal, Space.screen)
         }
         .scrollDismissesKeyboard(.interactively)
+        .onAppear { if query.isEmpty && !initialQuery.isEmpty && selected == nil { query = initialQuery } }
         .task(id: query) {
             try? await Task.sleep(for: .milliseconds(400))
             if !Task.isCancelled { await run() }
@@ -259,7 +266,7 @@ private struct PlaceStep: View {
 }
 
 /// 장소 한 줄(안드로이드 PlaceRow): 선택되면 강조색 테두리·옅은 강조 배경·강조색 아이콘 타일
-private struct PlaceRow: View {
+struct PlaceRow: View {
     let icon: String
     let title: String
     let subtitle: String?

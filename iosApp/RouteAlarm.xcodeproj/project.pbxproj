@@ -238,6 +238,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = RouteAlarm;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "일정의 시각과 장소로 알람을 만들 때만 캘린더를 읽어요.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "출발지를 현재 위치로 지정할 때만 1회 사용해요.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -271,6 +272,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = RouteAlarm;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "일정의 시각과 장소로 알람을 만들 때만 캘린더를 읽어요.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "출발지를 현재 위치로 지정할 때만 1회 사용해요.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -39,9 +39,9 @@ struct SettingsView: View {
                             toggleRow("arrow.triangle.2.circlepath", "실시간 자동 조정", body: "교통이 바뀌면 알람을 자동으로 옮겨요", isOn: $autoAdjust)
                         }
                         group("연동") {
-                            link("book.fill", "학교 시간표 연동") { PendingFeatureView(title: "학교 시간표") }
+                            link("book.fill", "학교 시간표 연동") { TimetableView() }
                             divider
-                            link("calendar", "캘린더 연동") { PendingFeatureView(title: "캘린더 연동") }
+                            link("calendar", "캘린더 연동") { CalendarImportView() }
                         }
                         group("기록") {
                             link("chart.bar.fill", "기록·통계", body: "최근 30일 제시간 기상률과 알람 조정 기록") { StatsView() }

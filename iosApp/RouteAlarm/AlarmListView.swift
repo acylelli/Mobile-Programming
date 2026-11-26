@@ -125,6 +125,9 @@ enum TimeText {
     /// "11월 27일 (금)"
     static func day(_ date: Date) -> String { formatter("M월 d일 (E)").string(from: date) }
 
+    /// "11/29 (일) 09:20"(캘린더 다가오는 일정)
+    static func dateTimeShort(_ date: Date) -> String { formatter("M/d (E) HH:mm").string(from: date) }
+
     /// "11월 26일 08:54"
     static func dateTime(_ date: Date) -> String { formatter("M월 d일 HH:mm").string(from: date) }
 
