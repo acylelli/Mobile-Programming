@@ -126,7 +126,10 @@ struct SettingsView: View {
             case .snooze:
                 ChoiceSheet(title: "다시 울림 간격", options: Prefs.snoozeOptions.map { ($0, "\($0)분") }, selected: snooze) { snooze = $0 }
             case .widget:
-                ChoiceSheet(title: "위젯 배경", options: ColorTheme.allCases.map { ($0.rawValue, $0.longLabel) }, selected: widgetTheme) { widgetTheme = $0 }
+                ChoiceSheet(title: "위젯 배경", options: ColorTheme.allCases.map { ($0.rawValue, $0.longLabel) }, selected: widgetTheme) {
+                    widgetTheme = $0
+                    WidgetBridge.update(store.alarms)
+                }
             }
         }
     }

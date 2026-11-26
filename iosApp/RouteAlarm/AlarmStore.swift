@@ -358,5 +358,6 @@ final class AlarmStore: ObservableObject {
 
     private func persist() {
         if let data = try? JSONEncoder().encode(alarms) { UserDefaults.standard.set(data, forKey: key) }
+        WidgetBridge.update(alarms)
     }
 }
