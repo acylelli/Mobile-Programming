@@ -62,6 +62,15 @@ class AlarmStatsPolicyTest {
     }
 
     @Test
+    fun summarize_dropsDismissalsBeforePlannedWakeUp() {
+        // 예정 07:00 보다 앞선 06:40 에 끈 기록(예전 시험 울림 등)은 '제시간'으로 세지 않는다.
+        val early = dismissed(1, 0).copy(occurredAt = at(today.minusDays(1), 6, 40))
+        val stats = AlarmStatsPolicy.summarize(listOf(early, dismissed(2, 3)), now, zone)
+        assertEquals(1, stats.mornings)
+        assertEquals(100, stats.onTimeRate)
+    }
+
+    @Test
     fun days_coverLastTwoWeeksWithLatestMorningPerDay() {
         val events = listOf(dismissed(0, 3, scheduleId = 1), dismissed(0, 9, scheduleId = 2), dismissed(5, 0), snoozed(5))
         val days = AlarmStatsPolicy.summarize(events, now, zone).days

@@ -115,7 +115,8 @@ fun SettingsRoute(
                 SettingsEvent.NoScheduleToRing -> snackbar.showSnackbar(context.getString(R.string.settings_demo_ring_empty))
                 is SettingsEvent.RingAlarm -> {
                     // 실제 알람과 같은 경로: 서비스가 소리·진동을 맡고 화면은 그 상태를 보여준다.
-                    AlarmService.start(context, event.scheduleId)
+                    // 시험 울림이라 끄기·다시 울림을 알람 기록에 남기지 않는다.
+                    AlarmService.start(context, event.scheduleId, demo = true)
                     context.startActivity(AlarmRingingActivity.createIntent(context, event.scheduleId))
                 }
             }
