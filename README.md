@@ -340,6 +340,69 @@ iPhone 17 Pro 시뮬레이터(iOS 27)에서 안드로이드와 같은 다산역 
 
 ## 6. 아키텍처
 
+### 왜 Kotlin Multiplatform 인가
+
+수업 요구사항인 크로스 플랫폼(Android · iOS)을 만족시키는 방법은 크게 세 가지다. 화면까지 한 벌로 만드는 **Flutter**·**React Native**, 그리고 로직만 한 벌로 두고 화면은 각 플랫폼의 기본 UI 로 만드는 **Kotlin Multiplatform(KMP)** 이다. RouteAlarm 은 KMP 를 골랐다.
+
+| | Flutter | React Native | Kotlin Multiplatform (선택) |
+|---|---|---|---|
+| 공유 범위 | 화면 + 로직 전부(Dart) | 화면 + 로직 대부분(JS/TS) | 로직만(Kotlin). 화면은 Compose · SwiftUI |
+| 기존 안드로이드 코드 | 다시 작성 | 다시 작성 | 그대로 사용, 계산만 `shared` 로 이동 |
+| 알람·위젯·캘린더 같은 OS 기능 | 플랫폼 채널/플러그인으로 결국 각 OS 코드 필요 | 네이티브 모듈로 결국 각 OS 코드 필요 | 처음부터 각 OS 의 공식 API 를 직접 사용 |
+| 화면 모양 | 엔진이 직접 그림(OS 기본 컨트롤과 다름) | OS 컨트롤을 JS 로 조합 | OS 기본 UI(Compose · SwiftUI) |
+| 화면 작성 비용 | 1번 | 1번 | 2번 |
+
+#### 1. 이미 완성된 안드로이드 앱이 있었다
+
+크로스 플랫폼 요구사항이 생겼을 때 안드로이드 앱은 이미 Kotlin · Jetpack Compose · Clean Architecture 로 완성되어 있었고, 계산·정책·갱신을 검증하는 JVM 단위 테스트가 갖춰져 있었다(현재 187개). Flutter 나 React Native 로 가면 이 코드를 Dart/JS 로 **처음부터 다시 작성**하고 테스트도 다시 만들어야 한다. KMP 는 같은 Kotlin 이라 플랫폼과 무관한 규칙(기상 시각 계산, 알람 조정, 공휴일, 노선도 문구 등)을 `shared` 모듈로 **옮기기만** 하면 됐다. 안드로이드 앱의 UseCase 는 이름과 사용법을 그대로 두고 계산만 `shared` 에 맡겨서, 기존 테스트가 옮긴 코드를 그대로 다시 검증했다.
+
+#### 2. 이 앱의 핵심은 OS 기능이다
+
+RouteAlarm 이 하는 일의 절반은 플랫폼 기능이다.
+
+| 기능 | Android | iOS |
+|---|---|---|
+| 정확한 시각에 깨우기 | AlarmManager `setAlarmClock` + Foreground Service | UNUserNotificationCenter |
+| 교통 재확인 | WorkManager | 앱을 열 때·알림 시각에 재계산 |
+| 홈 화면 위젯 | Jetpack Glance | WidgetKit + App Group |
+| 시간표 사진 글자 인식 | ML Kit | Vision |
+| 캘린더 읽기 | CalendarContract | EventKit |
+| 지도 | 카카오맵 SDK | MapKit |
+| 재부팅 후 알람 복구 | BOOT_COMPLETED | (OS 가 예약된 알림을 유지) |
+
+Flutter·React Native 를 써도 이 부분은 플러그인이나 플랫폼 채널로 각 OS 코드를 따로 짜야 하고, 알람처럼 OS 마다 동작 규칙이 크게 다른 기능은 공용 플러그인이 맞지 않는 경우가 많다. KMP 는 처음부터 "**공통은 shared, OS 기능은 각 플랫폼의 공식 API**"로 나누므로 이 구조와 자연스럽게 맞는다.
+
+#### 3. 틀리면 안 되는 계산을 한 번만 작성한다
+
+알람 앱에서 가장 위험한 버그는 "두 앱이 서로 다른 시각에 깨우는 것"이다. 그래서 결과가 같아야 하는 규칙은 전부 `shared` 에 한 번만 작성했다.
+
+- 기상 시각 계산과 여유 시간(`AlarmEngine`), 알람을 바꿀지 판단(`AdjustmentEngine`), 다음 회차·공휴일(`OccurrenceEngine`, `KoreanHolidays`)
+- 날씨 여유(`WeatherRules`), 요일별 이동시간 학습(`TravelPatternRules`)
+- 노선도 지점·문구·노선색(`RouteLineBuilder`, `LineColors`), 지도 경로선(`RouteMapLines`)
+- 기록·통계·기상 습관·지각 위험(`AlarmHistoryRules`)
+- 시간표 사진 해석과 첫 수업 알람 제안(`TimetableImageParser`, `Timetables`) — 안드로이드 ML Kit 과 iOS Vision 이 읽은 글자 위치를 같은 해석기에 넘긴다
+- 요금·무료 한도·단체 이용권 코드 규칙과 결제·이용권 확인(`SubscriptionService`)
+- 서버 통신(`ProxyClient`, Ktor)과 경로 조회 → 날씨 → 계산(`TripPlanner`)
+
+`shared/src/commonTest` 의 테스트 38개는 **JVM(안드로이드)과 iOS 시뮬레이터(Kotlin/Native)에서 똑같이** 돌고, CI 가 두 곳 모두에서 매번 실행한다. 한 플랫폼에서만 고치고 다른 플랫폼을 잊는 일이 구조적으로 생기지 않는다.
+
+#### 4. 각 OS 다운 화면을 유지한다
+
+화면은 안드로이드 Compose, iOS SwiftUI 로 각각 만들어 OS 의 기본 동작(뒤로 가기 제스처, 시트, 휠, 키보드, 접근성 읽어주기)을 그대로 쓴다. 대신 두 앱이 같아 보이도록 색 토큰·글꼴(Roboto + Noto Sans KR)·크기·모서리를 안드로이드 값 그대로 옮기고, iOS 는 모든 크기를 화면 폭 비율(`Dp.scale` = 화면 폭 ÷ 426.7dp)로 환산했다. 같은 일정으로 두 앱을 캡처해 나란히 놓고 dp 단위로 비교하며 맞췄다([3장 iOS 화면](#ios-앱-swiftui--kotlin-multiplatform)).
+
+#### 5. 들인 비용과 대응
+
+KMP 가 공짜는 아니었다. 겪은 문제와 대응은 다음과 같다.
+
+| 비용 | 대응 |
+|---|---|
+| 화면을 두 번 만들어야 한다 (iOS Swift 약 6,200줄) | 계산·문구·판단은 `shared` 가 돌려주므로 iOS 화면 코드는 그리기와 플랫폼 기능만 담당한다 |
+| Swift 에서 Kotlin 타입이 불편하다 (`Long` → `Int64`, `Duration`·`TimeZone`, 기본 인자 없음, 예외 전달) | Swift 용으로 밀리초 기반 함수와 인자를 줄인 생성자를 따로 두고, 결과를 `GroupPassOutcome.Verified` 같은 봉인 클래스로 돌려줘 Swift 에서 예외 없이 분기한다 |
+| iOS 빌드 때 Kotlin/Native 프레임워크를 만드는 시간 | Xcode 빌드 단계에서 `embedAndSignAppleFrameworkForXcode` 로 자동화하고, CI 는 macOS 러너에서 따로 돌린다 |
+| 네트워크 라이브러리가 다르다 | 안드로이드는 검증된 Retrofit·OkHttp(오프라인 캐시·재시도)를 그대로 두고, iOS 만 `shared` 의 Ktor(Darwin 엔진)를 쓴다. 두 앱 모두 같은 Proxy 서버 응답 계약을 따른다 |
+
+결과적으로 **안드로이드 앱은 거의 그대로 둔 채**, 공용 모듈 약 1,900줄과 iOS 화면을 더해 같은 기능의 iOS 앱을 만들었다. 처음부터 새로 만들면서 화면 한 벌로 빠르게 두 앱을 내는 것이 목표였다면 Flutter 가 좋은 선택이었겠지만, 완성된 네이티브 앱에 iOS 를 더하고 OS 기능 비중이 큰 이 프로젝트에는 KMP 가 맞았다.
+
 ### 크로스 플랫폼 구조 (Kotlin Multiplatform)
 
 알람 시각을 정하는 계산은 플랫폼과 상관없는 순수 Kotlin 이라 `shared` 모듈(commonMain)로 옮겼다. 안드로이드 앱과 iOS 앱이 **같은 코드·같은 테스트**로 기상 시각을 계산한다.
