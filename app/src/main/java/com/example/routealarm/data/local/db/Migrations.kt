@@ -64,5 +64,21 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+    /** 4 → 5: 회차별 실제 이동시간 표(travel_observations)를 추가했다. */
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `travel_observations` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`scheduleId` INTEGER NOT NULL, `occurrenceTarget` INTEGER NOT NULL, `departureAt` INTEGER NOT NULL, " +
+                    "`travelMinutes` INTEGER NOT NULL, `observedAt` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`scheduleId`) REFERENCES `schedules`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_travel_observations_scheduleId_occurrenceTarget` " +
+                    "ON `travel_observations` (`scheduleId`, `occurrenceTarget`)",
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 }

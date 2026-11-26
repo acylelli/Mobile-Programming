@@ -5,18 +5,21 @@ import com.example.routealarm.core.util.TimeProvider
 import com.example.routealarm.data.local.db.AlarmHistoryDao
 import com.example.routealarm.data.local.db.MetricDao
 import com.example.routealarm.data.local.db.MetricEventEntity
+import com.example.routealarm.data.local.db.TravelObservationEntity
 import com.example.routealarm.data.mapper.toDomain
 import com.example.routealarm.data.mapper.toEntity
 import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.MetricType
 import com.example.routealarm.domain.model.MetricsSummary
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
+import com.example.routealarm.domain.policy.TravelObservation
 import com.example.routealarm.domain.repository.MetricsRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,6 +52,35 @@ class RoomAlarmHistoryRepository @Inject constructor(
             runCatching { dao.recentTravelMinutes(scheduleId, limit) }.getOrDefault(emptyList())
                 .map { Duration.ofMinutes(it.toLong()) }
         }
+
+    override suspend fun recordTravel(scheduleId: Long, observation: TravelObservation) = withContext(ioDispatcher) {
+        runCatching {
+            dao.upsertTravel(
+                TravelObservationEntity(
+                    scheduleId = scheduleId,
+                    occurrenceTarget = observation.occurrenceTarget.toEpochMilli(),
+                    departureAt = observation.departure.toEpochMilli(),
+                    travelMinutes = observation.travelMinutes,
+                    observedAt = timeProvider.now().toEpochMilli(),
+                ),
+            )
+            dao.deleteTravelOlderThan(timeProvider.now().minus(RETENTION).toEpochMilli())
+        }
+        Unit
+    }
+
+    override suspend fun travelObservations(scheduleId: Long): List<TravelObservation> = withContext(ioDispatcher) {
+        runCatching { dao.travelObservations(scheduleId) }.getOrDefault(emptyList()).map { it.toDomain() }
+    }
+
+    override fun observeTravelObservations(scheduleId: Long): Flow<List<TravelObservation>> =
+        dao.observeTravelObservations(scheduleId).map { list -> list.map { it.toDomain() } }
+
+    private fun TravelObservationEntity.toDomain() = TravelObservation(
+        occurrenceTarget = Instant.ofEpochMilli(occurrenceTarget),
+        departure = Instant.ofEpochMilli(departureAt),
+        travelMinutes = travelMinutes,
+    )
 
     private companion object {
         /** 개인정보 최소화: 오래된 이력은 자동 삭제 */

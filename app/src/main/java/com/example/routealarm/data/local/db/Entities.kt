@@ -111,6 +111,28 @@ data class AlarmHistoryEntity(
     val isRealtime: Boolean?,
 )
 
+/** 회차별 실제 이동시간(버전 5에서 추가). 일정·회차마다 한 줄이고, 다시 확인하면 덮어쓴다. */
+@Entity(
+    tableName = "travel_observations",
+    foreignKeys = [
+        ForeignKey(
+            entity = ScheduleEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["scheduleId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["scheduleId", "occurrenceTarget"], unique = true)],
+)
+data class TravelObservationEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val scheduleId: Long,
+    val occurrenceTarget: Long,
+    val departureAt: Long,
+    val travelMinutes: Int,
+    val observedAt: Long,
+)
+
 @Entity(tableName = "metric_events", indices = [Index("type")])
 data class MetricEventEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

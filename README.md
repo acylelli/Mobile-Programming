@@ -74,6 +74,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 측정 지표 | API 호출/실패/캐시 적중/재계산/자동 조정 횟수를 Room 에 기록, 설정 화면에서 확인 |
 | 학교 시간표 연동 (PRO) | 시간표 캡처 사진 인식(ML Kit 한국어, 기기 안에서 처리)·캘린더 반복 일정 가져오기·직접 입력 → 요일별 첫 수업에 맞춘 반복 알람 생성. 인식이 틀린 수업은 눌러서 수정·삭제, 학기가 바뀌어 다시 만들면 예전 시간표 알람을 새 알람으로 교체 |
 | 경로 지도 | 일정 상세 화면에 카카오맵으로 경로 표시(탑승 구간은 노선색, 도보는 회색, 출발·도착 점). 상위 2개 경로는 ODsay 노선 그래픽으로 실제 도로·선로 모양대로 그린다. 네이티브 앱 키는 `local.properties` 에만 두고, 키가 없거나 인증에 실패하면 지도만 숨긴다 |
+| 요일·시간대별 이동시간 학습 | 회차마다 출발 직전에 확인한 실시간 이동시간을 기록하고(같은 회차는 덮어써 마지막 값만 남김), 같은 요일·출발 시각 ±1시간 기록이 최근 8주에 3번 이상이면 다음 계산의 안정화 입력으로 쓴다. 월요일 아침만 늘 막히면 월요일 회차만 조금 더 일찍 깨운다(현재 ETA 보다 짧게 잡지는 않음). 상세 화면에 요일별 이동시간 막대와 "월요일은 평소보다 13분 더 걸려요" 안내 |
 | 기상 습관 개인화 | 기상 알람을 끈 시각과 예정 시각의 차이(다시 울림 포함)를 최근 30일 모아, 평소 5분 이상 늦게 일어나면 "준비 시간 N분 늘리기"를 제안. 적용하면 출발 시각은 그대로 두고 기상 알람만 앞당긴다 |
 | 홈 화면 위젯 | 다음 기상 알람 시각, 도착·출발 시각, 교통 상태(Jetpack Glance). 알람을 끄거나 다시 계산하면 바로 바뀐다 |
 | 지각 위험 택시 안내 | 교통이 나빠졌거나 기상 알람을 늦게 꺼서 대중교통으로는 늦을 때 홈·상세 화면에 경고. 택시로 가면 몇 시 도착인지와 예상 요금(카카오모빌리티)을 보여 주고 카카오 T 를 출발·도착이 채워진 채로 연다 |
@@ -123,7 +124,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 
 ### 알람 상세 · 위젯
 
-경로 지도는 실제 도로·선로 모양대로 그린 경로선이다. 기상 습관 카드와 택시 안내는 에뮬레이터 DB 에 시험용 기상 기록(알람을 늦게 끈 기록)을 넣어 캡처했고, 택시 시간·요금은 카카오모빌리티 실제 값이다.
+경로 지도는 실제 도로·선로 모양대로 그린 경로선이다. 요일별 이동시간 카드는 에뮬레이터 DB 에 4주치 시험용 이동시간 기록을 넣어 캡처했다. 기상 습관 카드와 택시 안내는 에뮬레이터 DB 에 시험용 기상 기록(알람을 늦게 끈 기록)을 넣어 캡처했고, 택시 시간·요금은 카카오모빌리티 실제 값이다.
 
 <table>
   <tr>
@@ -135,6 +136,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
   <tr>
     <td align="center" valign="top"><img src="docs/screenshots/holiday.png" width="200" alt="공휴일 건너뛰기"><br><sub>공휴일 건너뛰기</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/schedule-sound.png" width="200" alt="일정별 알람음·볼륨"><br><sub>일정별 알람음·볼륨</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/travel-pattern.png" width="200" alt="요일별 이동시간 학습"><br><sub>요일별 이동시간 학습</sub></td>
   </tr>
   <tr>
     <td align="center" valign="top"><img src="docs/screenshots/ringing.png" width="200" alt="기상 알람"><br><sub>기상 알람</sub></td>
@@ -438,7 +440,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ./gradlew testDebugUnitTest
 ```
 
-도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 172개 테스트:
+도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 180개 테스트:
 
 | 테스트 | 검증 내용 |
 |---|---|
@@ -447,7 +449,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `EvaluateAlarmAdjustmentUseCaseTest` | 5분 미만 유지, 5분 이상 자동, 늦춤 10분 기준, 30분 초과 확인, 자동 조정 OFF, 알람 직전 예외 |
 | `ResolveNextOccurrenceUseCaseTest` | 반복 요일의 다음 회차, 1회 일정 날짜 결정 |
 | `RefreshCheckpointPolicyTest` | PRO 24h/3h/1h/20분 체크포인트 선택, 무료 플랜 30분 전 1회 |
-| `RefreshTransitTimeUseCaseTest` | 교통 지연 → 자동 조정·알림, 작은 변화 유지, 추천/확인 요청, 추천 승인, 네트워크 실패 폴백, 알람 직전 즉시 울림, 이미 울린 알람은 변경하지 않음, 무료 플랜은 자동 조정 대신 추천 |
+| `RefreshTransitTimeUseCaseTest` | 교통 지연 → 자동 조정·알림, 작은 변화 유지, 추천/확인 요청, 추천 승인, 네트워크 실패 폴백, 알람 직전 즉시 울림, 이미 울린 알람은 변경하지 않음, 무료 플랜은 자동 조정 대신 추천, 실시간 재계산 때 회차별 실제 이동시간 기록(같은 회차는 덮어씀), 같은 요일 기록 3번이면 60분 → 66분으로 섞어 더 일찍 깨움, 다른 요일 기록은 쓰지 않음 |
 | `SyncScheduleUseCaseTest` | 재부팅 복구, 회차 넘김, 1회 일정 종료, 시간대 변경, 정확한 알람 권한 없음, 스누즈 보존, 공휴일 건너뛰기를 끄고 켤 때 대체공휴일 회차 다시 맞춤 |
 | `SubscriptionUseCasesTest` | 연간 요금(월 2,000원꼴·31% 할인), 무료 일정 한도, 서버가 승인한 결제만 PRO 적용·기간 만료, PRO 전환 시 재확인 재예약, 구독 종료 후 무료 전환, 단체 이용권 코드 정규화·형식 검사·확인·적용, 자동 갱신 구독 중 적용 시에만 해지 안내, 검증 서버 연결 실패 시 플랜 유지 |
 | `PreviewDelayScenarioUseCaseTest` | "만약 15분 늦어진다면?" 카드: 이동 +15분·지연 여유 +5분, 실제 재계산과 같은 시각, 지연이 없으면 그대로 |
@@ -459,6 +461,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `RestoreScheduleUseCaseTest` | 되돌리기: 지운 일정이 같은 id·같은 계획으로 돌아오고 기상 알람 재등록, 바꾼 알람은 이전 기상 시각으로 복구 |
 | `AlarmVolumePolicyTest` | 알람 볼륨: 비율 → 알람 볼륨 단계 변환(무음·기기 최소값 아래로 내려가지 않음), 점점 크게 10% → 30초 뒤 100%, 고른 벨소리가 없으면 기본 알람음, 일정 알람음이 설정의 소리·볼륨을 덮어쓰고 점점 크게는 설정을 따름 |
 | `HolidayTest` | 공휴일 표(대체공휴일·선거일), 평일 알람이 성탄절·설 연휴(대체공휴일 포함)를 건너뛰고 다음 평일로, 매주 금요일 알람이 공휴일 두 번을 건너뜀, 끄면 공휴일에도 울림, 곧 건너뛸 공휴일 안내 |
+| `TravelPatternPolicyTest` | 같은 요일·출발 ±1시간 기록만 같은 시간대로 봄, 저녁 출발·3번 미만·8주 지난 기록 제외, 요일별 중앙값과 평소보다 오래 걸리는 요일 찾기 |
 | `NextAlarmTest` | 위젯의 다음 알람: 켜져 있고 출발 전인 일정 중 기상 알람이 가장 이른 것 |
 | `MigrationCoverageTest` | 내보낸 Room 스키마(`app/schemas`)의 버전이 1부터 빠짐없이 이어지고, 이웃한 모든 버전 사이에 Migration 이 있음 |
 | `TimetableTest` | 실제 에브리타임 시간표 캡처의 글자 위치와 ML Kit 실제 인식 결과(요일·시각 일부 누락, 글자 붙음)에서 같은 수업 8개 읽기, 12시간제 시각 변환, 요일별 첫 수업 알람 제안과 같은 시각 요일 묶기, 다시 만들 때 예전 알람 교체(일부 실패 시 남김) |
@@ -467,7 +470,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 
 리포트: `app/build/reports/tests/testDebugUnitTest/index.html`
 
-DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에서 계측 테스트로 확인한다(CI 는 에뮬레이터가 없어 실행하지 않고, 테스트 코드가 컴파일되는지만 확인한다). 현재 20개:
+DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에서 계측 테스트로 확인한다(CI 는 에뮬레이터가 없어 실행하지 않고, 테스트 코드가 컴파일되는지만 확인한다). 현재 21개:
 
 ```bash
 ./gradlew connectedDebugAndroidTest
@@ -475,7 +478,7 @@ DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에�
 
 | 계측 테스트 | 검증 내용 |
 |---|---|
-| `RouteAlarmMigrationTest` | 버전 1 DB 를 만들어 마이그레이션한 뒤 Room 스키마 검증, 2→3 공휴일 건너뛰기 열이 켜진 상태로 추가됨, 3→4 일정 알람음 열이 비어 있는(설정 따르기) 상태로 추가됨, 사용자 장소·일정·알람 기록 유지와 예시 데이터 삭제, 앱과 같은 설정으로 Room 이 열려 일정을 읽음 |
+| `RouteAlarmMigrationTest` | 버전 1 DB 를 만들어 마이그레이션한 뒤 Room 스키마 검증, 2→3 공휴일 건너뛰기 열이 켜진 상태로 추가됨, 3→4 일정 알람음 열이 비어 있는(설정 따르기) 상태로 추가됨, 4→5 회차별 이동시간 표 추가(같은 회차는 덮어씀), 사용자 장소·일정·알람 기록 유지와 예시 데이터 삭제, 앱과 같은 설정으로 Room 이 열려 일정을 읽음 |
 | `RouteAlarmDaoTest` | 메모리 SQLite: 일정·계획·경로 좌표가 Entity 를 거쳐 그대로 돌아옴, 켜진 일정만 조회, 일정 삭제 시 알람 기록 함께 삭제, 실시간 이동시간만 안정화 입력, 일정별 최근 조정, 기상 알람 끈 기록, 오래된 기록 정리 |
 | `TransitRefreshWorkerTest` | `TestListenableWorkerBuilder` 로 Worker 실행: 재계산 후 기상 알람 등록·지표 기록, 네트워크 실패 시 재시도 후 포기, 일정 id 없으면 실패 |
 | `ScreenUiTest` | Compose UI: 시간표 빈 화면·요일별 수업·알람 만들기·수업 수정, 모두 지우기 확인 창, 캘린더 권한 요청·반복 일정 추가·일정 선택, 알람 변경 추천 카드 |
@@ -535,11 +538,12 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 - [x] 상세 화면 지도(카카오맵, 노선색 경로선, ODsay 노선 그래픽으로 실제 도로·선로 모양)
 - [x] 학교 시간표(사진 인식·캘린더·직접 입력) / 기기 캘린더 가져오기 → Schedule 자동 생성
 - [x] 알람 이력 기반 개인화: 기상 습관(알람을 늦게 끄는 시간) 학습 → 준비 시간 늘리기 제안
-- [ ] 요일·시간대별 실제 이동시간 학습
+- [x] 요일·시간대별 실제 이동시간 학습(회차별 출발 직전 실시간 값 → 같은 요일·시간대 기록으로 보정)
 - [ ] 서버 기반 실시간 모니터링 + FCM 푸시로 WorkManager 체크포인트 사이의 급격한 변화 대응
 - [x] Compose UI 테스트, Room DAO 계측 테스트, WorkManager `TestListenableWorkerBuilder` 테스트
 - [x] Room Migration(버전별 Migration, 누락 검사 단위 테스트, 마이그레이션 계측 테스트)
 - [x] 알람 변경 되돌리기, 홈 화면 위젯
+- [x] 알람음 고르기·볼륨·점점 크게, 일정별 알람음, 반복 알람 공휴일 건너뛰기
 - [ ] Wear OS 전용 앱(타일·컴플리케이션). 지금은 휴대폰 기상 알람 알림이 워치로 전달되어 워치에서 끄기·다시 울림만 가능
 
 ---

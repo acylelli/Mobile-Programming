@@ -8,9 +8,11 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -75,6 +78,8 @@ import com.example.routealarm.domain.model.ScheduleSound
 import com.example.routealarm.domain.model.UserPreferences
 import com.example.routealarm.domain.policy.AlarmVolumePolicy
 import com.example.routealarm.domain.policy.HolidaySkipPolicy
+import com.example.routealarm.domain.policy.TravelPattern
+import com.example.routealarm.domain.policy.TravelPatternPolicy
 import com.example.routealarm.domain.policy.WakeUpHabit
 import com.example.routealarm.presentation.common.RouteMapLines
 import com.example.routealarm.presentation.common.RouteTimelineBuilder
@@ -91,9 +96,12 @@ import com.example.routealarm.presentation.settings.AlarmSoundSheet
 import com.example.routealarm.presentation.settings.FollowSettingsOption
 import com.example.routealarm.presentation.settings.soundLabelRes
 import com.example.routealarm.presentation.taxi.LateRiskCard
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
+import java.time.format.TextStyle
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 @Composable
@@ -377,6 +385,13 @@ private fun DetailContent(
             }
         }
 
+        state.travelPattern?.let { pattern ->
+            Spacer(Modifier.height(Spacing.lg))
+            SectionLabel(stringResource(R.string.travel_pattern_title))
+            Spacer(Modifier.height(10.dp))
+            TravelPatternCard(pattern)
+        }
+
         Spacer(Modifier.height(Spacing.lg))
         SectionLabel(stringResource(R.string.detail_section_settings))
         Spacer(Modifier.height(10.dp))
@@ -598,3 +613,48 @@ private fun soundSummary(prefs: UserPreferences): String {
     }
     return if (prefs.alarmSound == AlarmSound.SILENT) name else stringResource(R.string.settings_sound_value_format, name, prefs.alarmVolumePercent)
 }
+
+/**
+ * 요일별 실제 이동시간(출발 직전 확인 값의 중앙값). 막대 길이는 가장 오래 걸린 요일 기준이고,
+ * 평소보다 3분 이상 더 걸리는 요일은 강조색으로 칠한다.
+ */
+@Composable
+private fun TravelPatternCard(pattern: TravelPattern) {
+    val colors = RouteAlarmTheme.colors
+    val longest = pattern.weekdays.maxOf { it.typicalMinutes }.coerceAtLeast(1)
+    InfoCard {
+        Text(
+            pattern.slowest?.let { stringResource(R.string.travel_pattern_slow, dayName(it.day), it.extraMinutes) }
+                ?: stringResource(R.string.travel_pattern_even, pattern.baselineMinutes),
+            style = MaterialTheme.typography.labelLarge,
+            color = colors.textPrimary,
+        )
+        pattern.weekdays.forEach { day ->
+            val notable = day.extraMinutes >= TravelPatternPolicy.NOTABLE_EXTRA_MINUTES
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(dayName(day.day), style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary, modifier = Modifier.width(28.dp))
+                Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(colors.dotted)) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth(day.typicalMinutes.toFloat() / longest)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(if (notable) colors.accent else colors.textTertiary),
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    stringResource(R.string.common_minutes_format, day.typicalMinutes),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (notable) colors.accentText else colors.textPrimary,
+                    modifier = Modifier.width(44.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                )
+            }
+        }
+        Text(stringResource(R.string.travel_pattern_note), style = MaterialTheme.typography.bodySmall, color = colors.textTertiary)
+    }
+}
+
+@Composable
+private fun dayName(day: DayOfWeek): String = day.getDisplayName(TextStyle.SHORT, Locale.KOREAN)

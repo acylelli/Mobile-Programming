@@ -3,6 +3,7 @@ package com.example.routealarm.domain.repository
 import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.MetricType
 import com.example.routealarm.domain.model.MetricsSummary
+import com.example.routealarm.domain.policy.TravelObservation
 import kotlinx.coroutines.flow.Flow
 import java.time.Duration
 
@@ -18,6 +19,11 @@ interface AlarmHistoryRepository {
 
     /** 기상 알람을 끈 최근 기록. 기상 습관(평소 얼마나 늦게 끄는지) 분석에 쓴다. */
     fun observeDismissals(scheduleId: Long, limit: Int = 30): Flow<List<AlarmHistoryEvent>>
+
+    /** 회차마다 출발 직전 실시간 이동시간 하나를 남긴다(같은 회차는 덮어씀). 요일·시간대별 학습에 쓴다. */
+    suspend fun recordTravel(scheduleId: Long, observation: TravelObservation)
+    suspend fun travelObservations(scheduleId: Long): List<TravelObservation>
+    fun observeTravelObservations(scheduleId: Long): Flow<List<TravelObservation>>
 }
 
 /**

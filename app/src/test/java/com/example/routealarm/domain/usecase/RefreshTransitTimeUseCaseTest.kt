@@ -6,6 +6,7 @@ import com.example.routealarm.domain.model.AlarmType
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.model.UserPreferences
 import com.example.routealarm.domain.policy.AdjustmentPolicy
+import com.example.routealarm.domain.policy.TravelObservation
 import com.example.routealarm.fake.FakeAlarmHistoryRepository
 import com.example.routealarm.fake.FakeAlarmNotifier
 import com.example.routealarm.fake.FakeAlarmScheduler
@@ -78,6 +79,48 @@ class RefreshTransitTimeUseCaseTest {
     }
 
     private suspend fun schedule(id: Long): Schedule = schedules.getSchedule(id)!!
+
+    @Test
+    fun `실시간으로 다시 계산하면 이 회차의 실제 이동시간을 기록하고 같은 회차는 덮어쓴다`() = runTest {
+        val id = givenScheduledAt0720()
+        transit.travelMinutes = 63
+        transit.delayMinutes = 3
+        refresh(id)
+
+        val recorded = history.travel[id]!!.values.single()
+        assertEquals(seoul(day, 9, 0), recorded.occurrenceTarget)
+        assertEquals(63, recorded.travelMinutes)
+    }
+
+    @Test
+    fun `같은 요일 같은 시간대 기록이 3번 쌓이면 그 요일 이동시간을 섞어 더 일찍 깨운다`() = runTest {
+        // 지난 화요일 3번, 07:50 출발에 80분 걸렸다(이번 회차 2026-10-06 도 화요일).
+        val id = (schedules.upsert(TestData.schedule(oneTimeDate = day)) as com.example.routealarm.core.common.AppResult.Success).data
+        listOf(7L, 14L, 21L).forEach { weeksAgoDays ->
+            val past = day.minusDays(weeksAgoDays)
+            history.recordTravel(id, TravelObservation(seoul(past, 9, 0), seoul(past, 7, 50), 80))
+        }
+
+        refresh(id)
+
+        // 현재 60분 × 0.7 + 화요일 80분 × 0.3 = 66분 → 기상 07:14 (기록이 없을 때는 07:20)
+        val plan = schedule(id).plan!!
+        assertEquals(66, plan.travelMinutes)
+        assertEquals(seoul(day, 7, 14), plan.wakeUp)
+    }
+
+    @Test
+    fun `다른 요일 기록은 이번 회차 계산에 쓰지 않는다`() = runTest {
+        val id = (schedules.upsert(TestData.schedule(oneTimeDate = day)) as com.example.routealarm.core.common.AppResult.Success).data
+        listOf(1L, 8L, 15L).forEach { daysAgo -> // 월요일들
+            val past = day.minusDays(daysAgo)
+            history.recordTravel(id, TravelObservation(seoul(past, 9, 0), seoul(past, 7, 50), 80))
+        }
+
+        refresh(id)
+
+        assertEquals(seoul(day, 7, 20), schedule(id).plan!!.wakeUp)
+    }
 
     @Test
     fun `처음 계산하면 기상 알람과 출발 알림이 모두 등록된다`() = runTest {

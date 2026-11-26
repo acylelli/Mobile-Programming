@@ -9,8 +9,8 @@ import com.example.routealarm.domain.model.AlarmSound
 import com.example.routealarm.domain.model.AlarmType
 import com.example.routealarm.domain.model.ColorTheme
 import com.example.routealarm.domain.model.Entitlement
-import com.example.routealarm.domain.model.GroupPass
 import com.example.routealarm.domain.model.GeoPoint
+import com.example.routealarm.domain.model.GroupPass
 import com.example.routealarm.domain.model.MetricType
 import com.example.routealarm.domain.model.MetricsSummary
 import com.example.routealarm.domain.model.Place
@@ -22,6 +22,7 @@ import com.example.routealarm.domain.model.SubscriptionProduct
 import com.example.routealarm.domain.model.TransitRoute
 import com.example.routealarm.domain.model.TransitSegment
 import com.example.routealarm.domain.model.UserPreferences
+import com.example.routealarm.domain.policy.TravelObservation
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
 import com.example.routealarm.domain.repository.AlarmNotifier
 import com.example.routealarm.domain.repository.AlarmScheduler
@@ -32,14 +33,14 @@ import com.example.routealarm.domain.repository.ScheduleRepository
 import com.example.routealarm.domain.repository.SubscriptionRepository
 import com.example.routealarm.domain.repository.TransitRefreshScheduler
 import com.example.routealarm.domain.repository.TransitRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 
 class FakeTimeProvider(
     var instant: Instant,
@@ -171,6 +172,19 @@ class FakeAlarmHistoryRepository : AlarmHistoryRepository {
 
     override fun observeDismissals(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEvent>> =
         MutableStateFlow(events.filter { it.scheduleId == scheduleId && it.type == AlarmEventType.DISMISSED })
+
+    /** 일정 id → 회차 목표 시각 → 기록 (같은 회차는 덮어씀) */
+    val travel = mutableMapOf<Long, MutableMap<Instant, TravelObservation>>()
+
+    override suspend fun recordTravel(scheduleId: Long, observation: TravelObservation) {
+        travel.getOrPut(scheduleId) { mutableMapOf() }[observation.occurrenceTarget] = observation
+    }
+
+    override suspend fun travelObservations(scheduleId: Long): List<TravelObservation> =
+        travel[scheduleId]?.values?.sortedByDescending { it.departure }.orEmpty()
+
+    override fun observeTravelObservations(scheduleId: Long): Flow<List<TravelObservation>> =
+        MutableStateFlow(travel[scheduleId]?.values?.toList().orEmpty())
 }
 
 class FakeMetricsRepository : MetricsRepository {

@@ -97,6 +97,19 @@ interface AlarmHistoryDao {
     )
     fun observeDismissals(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEntity>>
 
+    /** 같은 회차는 (scheduleId, occurrenceTarget) 고유 인덱스로 덮어쓴다. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertTravel(entity: TravelObservationEntity)
+
+    @Query("SELECT * FROM travel_observations WHERE scheduleId = :scheduleId ORDER BY departureAt DESC LIMIT 200")
+    suspend fun travelObservations(scheduleId: Long): List<TravelObservationEntity>
+
+    @Query("SELECT * FROM travel_observations WHERE scheduleId = :scheduleId ORDER BY departureAt DESC LIMIT 200")
+    fun observeTravelObservations(scheduleId: Long): Flow<List<TravelObservationEntity>>
+
+    @Query("DELETE FROM travel_observations WHERE departureAt < :before")
+    suspend fun deleteTravelOlderThan(before: Long)
+
     @Query("DELETE FROM alarm_history WHERE occurredAt < :before")
     suspend fun deleteOlderThan(before: Long)
 }

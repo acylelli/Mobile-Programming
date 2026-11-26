@@ -7,10 +7,13 @@ import androidx.navigation.toRoute
 import com.example.routealarm.R
 import com.example.routealarm.core.common.AppError
 import com.example.routealarm.core.common.AppResult
+import com.example.routealarm.core.util.TimeProvider
 import com.example.routealarm.domain.model.AlarmHistoryEvent
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.model.ScheduleSound
 import com.example.routealarm.domain.model.UserPreferences
+import com.example.routealarm.domain.policy.TravelPattern
+import com.example.routealarm.domain.policy.TravelPatternPolicy
 import com.example.routealarm.domain.policy.WakeUpHabit
 import com.example.routealarm.domain.repository.AlarmHistoryRepository
 import com.example.routealarm.domain.repository.PreferencesRepository
@@ -52,6 +55,8 @@ sealed interface ScheduleDetailUiState {
         val wakeUpHabit: WakeUpHabit? = null,
         /** 일정 알람음이 "설정 따르기"일 때 보여 줄 설정 값 */
         val preferences: UserPreferences = UserPreferences(),
+        /** 요일별 실제 이동시간 요약. 기록이 모자라면 null */
+        val travelPattern: TravelPattern? = null,
     ) : ScheduleDetailUiState
 }
 
@@ -72,6 +77,7 @@ class ScheduleDetailViewModel @Inject constructor(
     private val setSkipHolidaysUseCase: SetSkipHolidaysUseCase,
     private val setScheduleSound: SetScheduleSoundUseCase,
     preferencesRepository: PreferencesRepository,
+    private val timeProvider: TimeProvider,
 ) : ViewModel() {
 
     private val scheduleId: Long = savedStateHandle.toRoute<Route.ScheduleDetail>().scheduleId
@@ -85,15 +91,18 @@ class ScheduleDetailViewModel @Inject constructor(
     val uiState: StateFlow<ScheduleDetailUiState> = combine(
         scheduleRepository.observeSchedule(scheduleId),
         historyRepository.observeHistory(scheduleId),
-        observeWakeUpHabit(scheduleId),
+        combine(observeWakeUpHabit(scheduleId), historyRepository.observeTravelObservations(scheduleId)) { habit, travel ->
+            habit to TravelPatternPolicy.pattern(travel, timeProvider.now(), timeProvider.zone())
+        },
         local,
         preferencesRepository.preferences,
-    ) { schedule, history, habit, state, prefs ->
+    ) { schedule, history, (habit, travelPattern), state, prefs ->
         when {
             state.deleted -> ScheduleDetailUiState.Success(schedule ?: return@combine ScheduleDetailUiState.NotFound, history, false, null, deleted = true)
             schedule == null -> ScheduleDetailUiState.NotFound
             else -> ScheduleDetailUiState.Success(
                 schedule, history, state.refreshing, state.error, deleted = false, wakeUpHabit = habit, preferences = prefs,
+                travelPattern = travelPattern,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ScheduleDetailUiState.Loading)
