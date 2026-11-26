@@ -56,14 +56,29 @@ export class DailyQuota {
 
   /** 상한 안이면 1 을 쓰고 true. 넘으면 false */
   take(): boolean {
+    this.rollOver();
+    if (this.used >= this.limit) return false;
+    this.used += 1;
+    return true;
+  }
+
+  /** 오늘(한국 시간) 쓴 횟수 */
+  usedToday(): number {
+    this.rollOver();
+    return this.used;
+  }
+
+  /** 오늘 쓴 비율이 ratio 이상이면 true. 절약 모드에 들어갈지 정할 때 쓴다. */
+  nearLimit(ratio: number): boolean {
+    return this.usedToday() >= this.limit * ratio;
+  }
+
+  private rollOver() {
     const today = Math.floor((this.now() + KST_OFFSET_MS) / DAY_MS);
     if (today !== this.day) {
       this.day = today;
       this.used = 0;
     }
-    if (this.used >= this.limit) return false;
-    this.used += 1;
-    return true;
   }
 
   /** 다음 한국 시간 자정까지 남은 초 */
