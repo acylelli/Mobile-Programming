@@ -48,6 +48,13 @@ class AlarmService : Service() {
     private var vibrator: Vibrator? = null
     private var scheduleId: Long = -1
 
+    /**
+     * 설정의 "기상 알람 미리 울려보기"로 울린 시험 울림. 끄거나 다시 울림을 눌러도 알람 기록을 남기지 않고
+     * 다시 울림 알람도 예약하지 않는다. 기록이 남으면 기록·통계, 기상 습관 제안, 지각 위험 택시 안내가
+     * 진짜 기상처럼 계산해 틀어진다.
+     */
+    private var demoRinging = false
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -61,6 +68,7 @@ class AlarmService : Service() {
         }
         if (id < 0) { stopSelf(); return START_NOT_STICKY }
         scheduleId = id
+        demoRinging = intent?.getBooleanExtra(EXTRA_DEMO, false) == true
         scope.launch { startRinging(id) }
         return START_NOT_STICKY
     }
@@ -99,20 +107,23 @@ class AlarmService : Service() {
     /** @param requestedMinutes 알람 화면에서 고른 간격. 알림 버튼처럼 지정하지 않으면 설정의 기본 간격을 쓴다. */
     private fun snooze(id: Long, requestedMinutes: Int? = null) {
         scope.launch {
-            val minutes = requestedMinutes ?: preferencesRepository.current().snoozeMinutes
-            handleAlarmEvent.onSnoozed(id, minutes)
+            if (!demoRinging) {
+                val minutes = requestedMinutes ?: preferencesRepository.current().snoozeMinutes
+                handleAlarmEvent.onSnoozed(id, minutes)
+            }
             stopRinging()
         }
     }
 
     private fun dismiss(id: Long) {
         scope.launch {
-            handleAlarmEvent.onDismissed(id)
+            if (!demoRinging) handleAlarmEvent.onDismissed(id)
             stopRinging()
         }
     }
 
     private fun stopRinging() {
+        demoRinging = false
         ringingScheduleId.value = null
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -131,6 +142,7 @@ class AlarmService : Service() {
         const val ACTION_DISMISS = "com.example.routealarm.action.DISMISS"
         private const val EXTRA_SCHEDULE_ID = "schedule_id"
         private const val EXTRA_SNOOZE_MINUTES = "snooze_minutes"
+        private const val EXTRA_DEMO = "demo"
         private const val AUTO_SILENCE_MILLIS = 5L * 60 * 1000
         private val VIBRATION_PATTERN = longArrayOf(0, 800, 600)
 
@@ -138,8 +150,11 @@ class AlarmService : Service() {
         private val ringingScheduleId = MutableStateFlow<Long?>(null)
         val ringing: StateFlow<Long?> get() = ringingScheduleId
 
-        fun start(context: Context, scheduleId: Long) {
-            val intent = Intent(context, AlarmService::class.java).putExtra(EXTRA_SCHEDULE_ID, scheduleId)
+        /** @param demo 설정의 미리 울려보기. true 면 끄기·다시 울림을 기록하지 않는다. */
+        fun start(context: Context, scheduleId: Long, demo: Boolean = false) {
+            val intent = Intent(context, AlarmService::class.java)
+                .putExtra(EXTRA_SCHEDULE_ID, scheduleId)
+                .putExtra(EXTRA_DEMO, demo)
             ContextCompat.startForegroundService(context, intent)
         }
 

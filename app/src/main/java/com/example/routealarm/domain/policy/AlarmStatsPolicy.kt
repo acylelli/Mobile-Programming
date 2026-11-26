@@ -34,7 +34,7 @@ data class AlarmStats(
  * 알람 이력으로 최근 30일 기상·조정 통계를 만든다. 모든 일정을 합쳐서 본다.
  *
  * - 늦게 끈 시간 = 기상 알람을 끈 시각 − 예정 기상 시각(다시 울림 포함). 기상 습관 분석과 같은 기준으로
- *   90분을 넘는 값(알람을 켜 두고 자리를 비운 경우 등)은 뺀다.
+ *   음수(예정 시각 전에 끈 기록)와 90분을 넘는 값(알람을 켜 두고 자리를 비운 경우 등)은 뺀다.
  * - 날짜는 예정 기상 시각의 날짜로 묶는다. 하루에 알람이 여럿이면 가장 늦게 끈 값을 그날 값으로 본다.
  */
 object AlarmStatsPolicy {
@@ -48,8 +48,9 @@ object AlarmStatsPolicy {
 
         val wakes = recent.filter { it.type == AlarmEventType.DISMISSED }.mapNotNull { event ->
             val planned = event.newWakeUp ?: return@mapNotNull null
-            val late = Duration.between(planned, event.occurredAt).toMinutes().coerceAtLeast(0)
-            if (late > WakeUpHabitPolicy.MAX_SAMPLE_MINUTES) null else planned.atZone(zone).toLocalDate() to late
+            val late = Duration.between(planned, event.occurredAt).toMinutes()
+            // 예정 시각보다 먼저 끈 기록(진짜 알람은 울리기 전에 끌 수 없다)과 90분 넘는 값은 뺀다.
+            if (late !in 0..WakeUpHabitPolicy.MAX_SAMPLE_MINUTES) null else planned.atZone(zone).toLocalDate() to late
         }
         val snoozeEvents = recent.filter { it.type == AlarmEventType.SNOOZED }
         val adjustments = recent.filter { it.type == AlarmEventType.AUTO_ADJUSTED || it.type == AlarmEventType.ADJUSTMENT_APPLIED }
