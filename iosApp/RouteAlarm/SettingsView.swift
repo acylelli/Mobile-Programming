@@ -19,6 +19,8 @@ struct SettingsView: View {
     @State private var notifications: UNAuthorizationStatus = .notDetermined
     @State private var refreshing = false
     @State private var toast: String?
+    @State private var showingSound = false
+    @State private var soundSummary = SoundSetting.preferences.summary
     let onRingDemo: () -> Void
 
     enum Sheet: String, Identifiable { case preparation, buffer, snooze, widget; var id: String { rawValue } }
@@ -42,7 +44,7 @@ struct SettingsView: View {
                             link("calendar", "캘린더 연동") { PendingFeatureView(title: "캘린더 연동") }
                         }
                         group("기록") {
-                            link("chart.bar.fill", "기록·통계", body: "최근 30일 제시간 기상률과 알람 조정 기록") { PendingFeatureView(title: "기록·통계") }
+                            link("chart.bar.fill", "기록·통계", body: "최근 30일 제시간 기상률과 알람 조정 기록") { StatsView() }
                         }
                         group("화면") {
                             link("paintpalette", "테마", value: (ColorTheme(rawValue: theme) ?? .standard).longLabel) { ThemeView() }
@@ -61,7 +63,7 @@ struct SettingsView: View {
                             divider
                             toggleRow("iphone.radiowaves.left.and.right", "진동", isOn: $vibration)
                             divider
-                            link("speaker.wave.2", "알람음", value: "기본 알람음") { PendingFeatureView(title: "알람음") }
+                            row("speaker.wave.2", "알람음", value: soundSummary) { showingSound = true }
                             divider
                             row("zzz", "다시 울림 간격", value: "\(snooze)분") { sheet = .snooze }
                         }
@@ -107,6 +109,12 @@ struct SettingsView: View {
             .overlay(alignment: .bottom) { if let toast { Snackbar(text: toast) { self.toast = nil } } }
         }
         .task { notifications = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus }
+        .sheet(isPresented: $showingSound) {
+            AlarmSoundSheet(initial: .preferences) { setting in
+                setting?.saveAsPreferences()
+                soundSummary = SoundSetting.preferences.summary
+            }
+        }
         .sheet(item: $sheet) { sheet in
             switch sheet {
             case .preparation:

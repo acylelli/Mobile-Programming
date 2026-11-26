@@ -1,28 +1,54 @@
 import Foundation
 import Shared
 
-/// 알람 목록 저장(UserDefaults)과 계산·예약.
-/// 계산은 안드로이드와 같은 Kotlin 코드(shared 모듈의 TripPlanner, Schedules)가 한다.
-/// 알람 한 회차에 일어난 일(안드로이드 AlarmHistory 와 같은 종류)
+/// 알람 목록 저장(UserDefaults)과 계산·예약. 계산·판단 규칙은 안드로이드와 같은 shared 모듈 코드다.
+
+/// 알람 한 회차에 일어난 일(안드로이드 AlarmHistoryEvent 와 같은 종류·문구)
 struct AlarmRecord: Codable, Identifiable, Hashable {
-    enum Kind: String, Codable { case created, recalculated, adjusted, dismissed, snoozed }
+    enum Kind: String, Codable { case created, recalculated, adjusted, suggested, applied, fired, dismissed, snoozed, refreshFailed }
     var id = UUID()
     var alarmId: UUID
     var kind: Kind
     var at: Date
     /// 그때 이동시간(분)
     var travelMinutes: Int?
-    /// 기상 알람 예정 시각(끈 기록에서 늦게 끈 시간을 구할 때)
+    /// 끄기·다시 울림: 예정 기상 시각. 조정: 새 기상 시각
     var plannedWakeUp: Date?
+    /// 조정: 이전 기상 시각
+    var previousWakeUp: Date?
+    /// 실시간으로 확인한 이 회차의 출발 시각(요일별 이동시간 학습)
+    var departure: Date?
+    /// 실시간 교통 정보로 계산한 값인지
+    var realtime: Bool?
 
     var title: String {
         switch kind {
         case .created: return "알람 생성"
         case .recalculated: return "교통 정보 재계산"
-        case .adjusted: return "알람 조정"
+        case .adjusted: return "알람 자동 조정"
+        case .suggested: return "알람 변경 추천"
+        case .applied: return "추천 변경 적용"
+        case .fired: return "알람 울림"
         case .dismissed: return "알람 종료"
         case .snoozed: return "다시 울림"
+        case .refreshFailed: return "교통 정보 조회 실패"
         }
+    }
+
+    /// shared 규칙에 넘길 이력
+    var event: AlarmEvent {
+        let type: String
+        switch kind {
+        case .dismissed: type = "DISMISSED"
+        case .snoozed: type = "SNOOZED"
+        case .adjusted: type = "AUTO_ADJUSTED"
+        case .applied: type = "ADJUSTMENT_APPLIED"
+        case .suggested: type = "ADJUSTMENT_SUGGESTED"
+        default: type = kind.rawValue.uppercased()
+        }
+        return AlarmEvent(type: type, occurredAtMillis: at.millis,
+                          newWakeUpMillis: plannedWakeUp.map { KotlinLong(value: $0.millis) },
+                          previousWakeUpMillis: previousWakeUp.map { KotlinLong(value: $0.millis) })
     }
 }
 
@@ -79,7 +105,7 @@ final class AlarmStore: ObservableObject {
     }
 
     func snooze(_ id: UUID, minutes: Int) async {
-        record(id, .snoozed)
+        record(id, .snoozed, planned: alarms.first { $0.id == id }?.plan?.wakeUp)
         ringing = nil
         if let alarm = alarms.first(where: { $0.id == id }) {
             await AlarmNotifier.scheduleSnooze(alarm, after: minutes)
@@ -93,13 +119,74 @@ final class AlarmStore: ObservableObject {
         await save(alarm)
     }
 
-    private func record(_ id: UUID, _ kind: AlarmRecord.Kind, planned: Date? = nil) {
-        let travel = alarms.first { $0.id == id }?.plan?.travelMinutes
-        records.append(AlarmRecord(alarmId: id, kind: kind, at: Date(), travelMinutes: travel, plannedWakeUp: planned))
+    private func record(_ id: UUID, _ kind: AlarmRecord.Kind, planned: Date? = nil, previous: Date? = nil,
+                        plan: SavedPlan? = nil) {
+        let source = plan ?? alarms.first { $0.id == id }?.plan
+        records.append(AlarmRecord(alarmId: id, kind: kind, at: Date(), travelMinutes: source?.travelMinutes, plannedWakeUp: planned,
+                                   previousWakeUp: previous, departure: plan?.departure, realtime: plan.map { !$0.isOffline }))
         // 90일 넘은 기록은 정리한다.
         let limit = Date().addingTimeInterval(-90 * 86_400)
         records.removeAll { $0.at < limit }
         if let data = try? JSONEncoder().encode(records) { UserDefaults.standard.set(data, forKey: "records.v1") }
+    }
+
+    // MARK: 이력 분석(shared 규칙)
+
+    var events: [AlarmEvent] { records.map(\.event) }
+
+    func events(for id: UUID) -> [AlarmEvent] { records.filter { $0.alarmId == id }.map(\.event) }
+
+    /// 최근 30일 기상·조정 통계(모든 일정)
+    var stats: AlarmStats { AlarmHistoryRules.shared.stats(events: events, nowMillis: Date().millis) }
+
+    /// 이 일정의 기상 습관 제안(제안을 적용·넘긴 뒤 기록만)
+    func habit(for alarm: Alarm) -> WakeUpHabit? {
+        AlarmHistoryRules.shared.habit(events: events(for: alarm.id), nowMillis: Date().millis,
+                                       sinceMillis: alarm.habitHandledAt?.millis ?? 0)
+    }
+
+    func applyHabit(_ alarm: Alarm, extra: Int) async {
+        var updated = alarm
+        updated.preparationMinutes += extra
+        updated.habitHandledAt = Date()
+        updated.plan = nil
+        await save(updated)
+    }
+
+    func dismissHabit(_ alarm: Alarm) {
+        update(alarm.id) { $0.habitHandledAt = Date() }
+    }
+
+    /// 실시간으로 확인한 실제 이동시간(요일별 학습용)
+    func travelRecords(for id: UUID) -> [TravelRecord] {
+        records.filter { $0.alarmId == id && $0.kind == .recalculated && $0.realtime == true }
+            .compactMap { record in
+                guard let departure = record.departure, let travel = record.travelMinutes else { return nil }
+                return TravelRecord(departureMillis: departure.millis, travelMinutes: Int32(travel))
+            }
+    }
+
+    /// 요일별 이동시간 요약(상세 화면 카드)
+    func travelPattern(for id: UUID) -> TravelPatternSummary? {
+        TravelHistory.shared.summary(records: travelRecords(for: id), nowMillis: Date().millis)
+    }
+
+    /// 같은 요일·시간대 기록(3번 이상이면 이동시간 안정화에 섞는다)
+    private func slotTravel(for id: UUID, departure: Date) -> [KotlinInt] {
+        TravelHistory.shared.slotMinutes(records: travelRecords(for: id), departureMillis: departure.millis, nowMillis: Date().millis)
+    }
+
+    // MARK: 알람 변경 추천
+
+    func applyPending(_ id: UUID) async {
+        guard let alarm = alarms.first(where: { $0.id == id }), let pending = alarm.pendingPlan else { return }
+        record(id, .applied, planned: pending.wakeUp, previous: alarm.plan?.wakeUp, plan: pending)
+        update(id) { $0.plan = pending; $0.pendingPlan = nil }
+        if let updated = alarms.first(where: { $0.id == id }) { await AlarmNotifier.schedule(updated, pending) }
+    }
+
+    func dismissPending(_ id: UUID) {
+        update(id) { $0.pendingPlan = nil }
     }
 
     private func count(_ change: (inout StoreMetrics) -> Void) {
@@ -133,7 +220,8 @@ final class AlarmStore: ObservableObject {
             let result = try await planner.plan(
                 origin: origin.shared, destination: alarm.destination.shared, targetArrivalMillis: target,
                 preparationMinutes: Int32(alarm.preparationMinutes), bufferMinutes: Int32(alarm.bufferMinutes),
-                useWeather: alarm.useWeather, nowMillis: now.millis, recentTravelMinutes: []
+                useWeather: alarm.useWeather, nowMillis: now.millis,
+                recentTravelMinutes: slotTravel(for: alarm.id, departure: Date(millis: target).addingTimeInterval(-Double(lead) * 60))
             )
             return (result.plan.map { SavedPlan($0, calculatedAt: now) }, result.error)
         } catch {
@@ -205,23 +293,60 @@ final class AlarmStore: ObservableObject {
                 origin: origin.shared, destination: alarm.destination.shared,
                 targetArrivalMillis: target,
                 preparationMinutes: Int32(alarm.preparationMinutes), bufferMinutes: Int32(alarm.bufferMinutes),
-                useWeather: alarm.useWeather, nowMillis: now.millis, recentTravelMinutes: []
+                useWeather: alarm.useWeather, nowMillis: now.millis,
+                recentTravelMinutes: slotTravel(for: id, departure: alarm.plan?.departure ?? Date(millis: target).addingTimeInterval(-Double(lead) * 60))
             )
             count {
                 $0.apiCalls += 1
                 $0.recalculations += 1
                 if result.plan?.usedFallback ?? true { $0.apiFailures += 1 }
             }
-            if let plan = result.plan {
-                let saved = SavedPlan(plan, calculatedAt: now)
-                update(id) { $0.plan = saved; $0.lastError = nil }
-                record(id, .recalculated)
-                if let updated = alarms.first(where: { $0.id == id }) { await AlarmNotifier.schedule(updated, saved) }
-            } else {
+            guard let plan = result.plan else {
+                record(id, .refreshFailed)
                 update(id) { $0.lastError = result.error }
+                return
             }
+            let saved = SavedPlan(plan, calculatedAt: now)
+            record(id, .recalculated, plan: saved)
+            await apply(saved, to: id, now: now)
         } catch {
             update(id) { $0.lastError = "계산하지 못했어요." }
+        }
+    }
+
+    /// 새 계산을 알람에 반영할지 shared AdjustmentEngine 으로 판단한다(안드로이드와 같은 규칙).
+    /// 같은 회차가 아니면(다음 회차로 넘어감) 그대로 반영한다.
+    private func apply(_ saved: SavedPlan, to id: UUID, now: Date) async {
+        guard let alarm = alarms.first(where: { $0.id == id }) else { return }
+        guard let current = alarm.plan, current.targetArrival == saved.targetArrival, current.wakeUp > now else {
+            update(id) { $0.plan = saved; $0.pendingPlan = nil; $0.lastError = nil }
+            if let updated = alarms.first(where: { $0.id == id }) { await AlarmNotifier.schedule(updated, saved) }
+            return
+        }
+        let decision = AdjustmentEngine.shared.evaluate(
+            currentWakeUp: current.wakeUp.kotlinInstant, proposedWakeUp: saved.wakeUp.kotlinInstant,
+            autoAdjustEnabled: Prefs.bool(Prefs.autoAdjust), policy: AdjustmentPolicy.companion.Default, now: now.kotlinInstant
+        )
+        switch decision {
+        case is AdjustmentDecisionKeep:
+            // 흔들림은 무시하고 기상 시각은 그대로, 교통 상태·갱신 시각만 새로
+            var kept = saved
+            kept.wakeUp = current.wakeUp
+            kept.departure = current.departure
+            kept.estimatedArrival = current.estimatedArrival
+            update(id) { $0.plan = kept; $0.lastError = nil }
+        case is AdjustmentDecisionAutoAdjust:
+            record(id, .adjusted, planned: saved.wakeUp, previous: current.wakeUp, plan: saved)
+            update(id) { $0.plan = saved; $0.pendingPlan = nil; $0.lastError = nil }
+            if let updated = alarms.first(where: { $0.id == id }) { await AlarmNotifier.schedule(updated, saved) }
+        default:
+            // 추천 또는 확인 필요: 알람은 그대로 두고 변경안을 카드로 보여 준다.
+            record(id, .suggested, planned: saved.wakeUp, previous: current.wakeUp, plan: saved)
+            update(id) {
+                $0.pendingPlan = saved
+                $0.pendingNeedsConfirmation = decision is AdjustmentDecisionRequireConfirmation
+                $0.lastError = nil
+            }
         }
     }
 

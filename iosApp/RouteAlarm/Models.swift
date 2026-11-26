@@ -167,6 +167,15 @@ struct Alarm: Codable, Identifiable, Hashable {
     var oneTimeDate: Date? = nil
     var enabled: Bool = true
     var plan: SavedPlan?
+    /// 알람 변경 추천(자동 조정이 꺼졌거나 변화가 커서 확인이 필요한 변경안)
+    var pendingPlan: SavedPlan? = nil
+    var pendingNeedsConfirmation: Bool? = nil
+    /// 이 일정만의 알람음(없으면 설정 따르기)
+    var sound: SoundSetting? = nil
+    /// 실제로 쓸 알람음
+    var effectiveSound: SoundSetting { sound ?? .preferences }
+    /// 기상 습관 제안을 적용하거나 넘긴 시각(그 뒤 기록만 다시 모은다)
+    var habitHandledAt: Date? = nil
     var lastError: String?
 
     var repeatLabel: String { Schedules.shared.repeatLabel(repeatMask: Int32(repeatMask)) }
@@ -180,4 +189,6 @@ struct Alarm: Codable, Identifiable, Hashable {
 extension Date {
     init(millis: Int64) { self.init(timeIntervalSince1970: TimeInterval(millis) / 1000) }
     var millis: Int64 { Int64((timeIntervalSince1970 * 1000).rounded()) }
+    /// shared(Kotlin) 의 시각
+    var kotlinInstant: KotlinInstant { KotlinInstant.companion.fromEpochMilliseconds(epochMilliseconds: millis) }
 }

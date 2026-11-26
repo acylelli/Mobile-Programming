@@ -10,6 +10,7 @@ struct AlarmDetailView: View {
     let onEdit: (Alarm) -> Void
     let onDeleted: () -> Void
     @State private var confirmDelete = false
+    @State private var editingSound = false
 
     private var alarm: Alarm? { store.alarms.first { $0.id == alarmId } }
 
@@ -68,11 +69,14 @@ struct AlarmDetailView: View {
             VStack(spacing: 8.dp) {
                 if !alarm.enabled { NoticeStrip(text: "알람이 꺼져 있어요. 켜면 교통 정보를 다시 확인해요.") }
                 if let weather = plan?.weather { WeatherStrip(weather: weather) }
+                LateRiskCard(alarm: alarm)
                 if let error = alarm.lastError, plan != nil {
                     NoticeStrip(text: "\(error) 마지막 계산 결과로 알람을 유지해요.", icon: "icloud.slash")
                 } else if let plan, plan.isOffline {
                     NoticeStrip(text: "실시간 교통 정보를 가져오지 못했어요. 마지막 계산 결과를 기준으로 알람을 유지합니다.", icon: "icloud.slash")
                 }
+                PendingAdjustmentCard(alarm: alarm)
+                WakeUpHabitCard(alarm: alarm)
             }
             .padding(.top, 16.dp)
 
@@ -114,6 +118,13 @@ struct AlarmDetailView: View {
                 }
             }
 
+            if let pattern = store.travelPattern(for: alarm.id) {
+                Spacer().frame(height: Space.lg)
+                SectionLabel(text: "요일별 이동시간")
+                Spacer().frame(height: 10.dp)
+                TravelPatternCard(pattern: pattern)
+            }
+
             Spacer().frame(height: Space.lg)
             SectionLabel(text: "일정 정보")
             Spacer().frame(height: 10.dp)
@@ -123,13 +134,25 @@ struct AlarmDetailView: View {
                 InfoRow(label: "반복", value: alarm.repeatLabel)
                 InfoRow(label: "알림 방식", value: alarm.wakeOnly == true ? "기상 알람만" : "기상 알람 + 출발 알림")
                 Rectangle().fill(AppColor.outline).frame(height: 1.dp)
-                HStack {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("알람음").font(AppFont.labelLarge).foregroundStyle(AppColor.textPrimary)
-                        Text("설정 따르기 (기본 알람음)").font(AppFont.bodySmall).foregroundStyle(AppColor.textSecondary).lineLimit(1)
+                Button { editingSound = true } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("알람음").font(AppFont.labelLarge).foregroundStyle(AppColor.textPrimary)
+                            Text(alarm.sound.map(\.summary) ?? "설정 따르기 (\(SoundSetting.preferences.summary))").font(AppFont.bodySmall)
+                                .foregroundStyle(alarm.sound == nil ? AppColor.textSecondary : AppColor.accentText).lineLimit(1)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.system(size: 14.dp, weight: .semibold)).foregroundStyle(AppColor.textTertiary)
                     }
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 14.dp, weight: .semibold)).foregroundStyle(AppColor.textTertiary)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .sheet(isPresented: $editingSound) {
+                    AlarmSoundSheet(title: "이 일정의 알람음", initial: alarm.effectiveSound, followSettings: alarm.sound == nil) { setting in
+                        var updated = alarm
+                        updated.sound = setting
+                        Task { await store.save(updated) }
+                    }
                 }
                 if alarm.repeatMask != 0 {
                     Rectangle().fill(AppColor.outline).frame(height: 1.dp)

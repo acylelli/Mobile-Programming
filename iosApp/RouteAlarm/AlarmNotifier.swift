@@ -26,9 +26,9 @@ enum AlarmNotifier {
             let date = plan.wakeUp.addingTimeInterval(TimeInterval(index * 60))
             guard date > now else { continue }
             let content = UNMutableNotificationContent()
-            content.title = index == 0 ? "일어날 시간이에요" : "다시 울림"
+            content.title = index == 0 ? "\(alarm.title) 기상 알람" : "다시 울림"
             content.body = "\(alarm.title) · \(time(plan.departure)) 출발\(line)"
-            content.sound = .default
+            content.sound = alarm.effectiveSound.kind.notificationSound
             content.userInfo = ["alarmId": alarm.id.uuidString]
             content.interruptionLevel = .timeSensitive
             await add("\(alarm.id.uuidString).wake.\(index)", content, date)
@@ -68,7 +68,7 @@ enum AlarmNotifier {
         let content = UNMutableNotificationContent()
         content.title = "다시 울림"
         content.body = "\(alarm.title) · \(minutes)분 지났어요"
-        content.sound = .default
+        content.sound = alarm.effectiveSound.kind.notificationSound
         content.userInfo = ["alarmId": alarm.id.uuidString]
         content.interruptionLevel = .timeSensitive
         await add("\(alarm.id.uuidString).snooze", content, Date().addingTimeInterval(TimeInterval(minutes * 60)))

@@ -64,6 +64,16 @@ class ProxyClient(
         }
     }.body()
 
+    suspend fun taxi(originLatitude: Double, originLongitude: Double, destinationLatitude: Double, destinationLongitude: Double): TaxiEstimateDto =
+        call {
+            http.get("v1/taxi/estimate") {
+                parameter("origin_lat", originLatitude)
+                parameter("origin_lng", originLongitude)
+                parameter("destination_lat", destinationLatitude)
+                parameter("destination_lng", destinationLongitude)
+            }
+        }.body()
+
     fun close() = http.close()
 
     private suspend fun call(block: suspend () -> HttpResponse): HttpResponse {
