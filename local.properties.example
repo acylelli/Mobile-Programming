@@ -10,3 +10,9 @@ sdk.dir=/Users/<you>/Library/Android/sdk
 # 카카오 개발자 콘솔의 네이티브 앱 키에 패키지명 com.example.routealarm 과 빌드하는 컴퓨터의 키 해시를 등록해야 지도가 뜬다.
 # 생략하면 지도만 보이지 않고 나머지는 그대로 동작한다.
 # routealarm.kakaoNativeAppKey=
+
+# Firebase App Distribution 으로 팀원에게 APK 를 보낼 때(./scripts/distribute.sh) 쓴다.
+# Firebase 콘솔 > 프로젝트 설정 > 내 앱 > 앱 ID
+# routealarm.firebaseAppId=1:000000000000:android:0000000000000000
+# 받을 테스터 그룹 별칭(쉼표로 여러 개). 생략하면 팀원
+# routealarm.firebaseGroups=팀원

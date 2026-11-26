@@ -407,6 +407,20 @@ server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검
 5. 구독 관리 > **테스트: 무료 플랜으로 되돌리기** 로 결제·이용권을 다시 시험할 수 있다.
 6. **기상 알람 미리 울려보기** 로 알람 화면을 바로 확인할 수 있다.
 
+### 팀원에게 테스트 APK 배포 (Firebase App Distribution)
+
+팀원은 Firebase App Tester 앱으로 설치하고, 새 버전이 올라오면 알림을 받아 바로 업데이트한다.
+
+```bash
+npx -y firebase-tools@15.36.0 login        # 처음 한 번, 브라우저에서 로그인
+./scripts/distribute.sh "출시 노트"         # 빌드 → 테스터 그룹(기본 팀원)으로 배포
+```
+
+- `local.properties` 에 `routealarm.firebaseAppId`(Firebase 콘솔 > 프로젝트 설정 > 내 앱 > 앱 ID)를 넣는다. 그룹은 `routealarm.firebaseGroups` 로 바꿀 수 있다.
+- 출시 노트를 생략하면 마지막 커밋 제목을 쓴다. 커밋하지 않은 변경이 있거나 `routealarm.proxyBaseUrl`(로컬 서버)이 켜져 있으면 배포하지 않는다.
+- 버전 이름은 `0.2.<커밋 수>-<커밋 해시>` 라 콘솔에서 어떤 코드인지 바로 알 수 있다.
+- 디버그 APK 는 빌드한 컴퓨터의 키로 서명된다. 테스터가 업데이트를 받으려면 항상 같은 컴퓨터에서 빌드해야 한다(카카오맵 키 해시도 그 컴퓨터 기준).
+
 ## 12. API 설정 방법
 
 실제 교통 API 는 **Backend Proxy** 를 통해 사용한다. 앱에는 어떤 Secret 도 들어가지 않는다.
