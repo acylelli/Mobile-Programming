@@ -454,6 +454,7 @@
     <string name="settings_calendar">캘린더 연동</string>
     <string name="settings_section_display">화면</string>
     <string name="settings_theme">테마</string>
+    <string name="settings_widget_theme">위젯 배경</string>
     <string name="settings_section_subscription">구독</string>
     <string name="settings_group_pass">단체 이용권 코드 입력</string>
     <string name="settings_group_pass_value">학교, 기업</string>

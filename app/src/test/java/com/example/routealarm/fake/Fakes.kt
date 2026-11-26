@@ -227,6 +227,7 @@ class FakePreferencesRepository(initial: UserPreferences = UserPreferences()) : 
     override suspend fun setWeatherAdjustment(enabled: Boolean) = state.update { it.copy(weatherAdjustment = enabled) }
     override suspend fun setSnoozeMinutes(minutes: Int) = state.update { it.copy(snoozeMinutes = minutes) }
     override suspend fun setColorTheme(theme: ColorTheme) = state.update { it.copy(colorTheme = theme) }
+    override suspend fun setWidgetTheme(theme: ColorTheme) = state.update { it.copy(widgetTheme = theme) }
     override suspend fun setLastPaywallPromptDay(epochDay: Long) = state.update { it.copy(lastPaywallPromptEpochDay = epochDay) }
     override suspend fun setOnboardingCompleted() = state.update { it.copy(onboardingCompleted = true) }
 }

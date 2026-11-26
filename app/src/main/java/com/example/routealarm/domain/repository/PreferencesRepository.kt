@@ -22,6 +22,7 @@ interface PreferencesRepository {
     suspend fun setWeatherAdjustment(enabled: Boolean)
     suspend fun setSnoozeMinutes(minutes: Int)
     suspend fun setColorTheme(theme: ColorTheme)
+    suspend fun setWidgetTheme(theme: ColorTheme)
     suspend fun setLastPaywallPromptDay(epochDay: Long)
     suspend fun setOnboardingCompleted()
 }

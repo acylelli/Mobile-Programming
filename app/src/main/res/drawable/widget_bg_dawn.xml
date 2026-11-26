@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 위젯 배경: 새벽 테마. 남색 밤하늘에서 동틀 녘 보라·복숭아빛으로 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient android:angle="315" android:startColor="#FF1B2140" android:centerColor="#FF3D3566" android:endColor="#FF8E5E72" android:type="linear" />
+    <corners android:radius="22dp" />
+</shape>

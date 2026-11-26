@@ -2,6 +2,7 @@ package com.example.routealarm.presentation.widget
 
 import android.content.Context
 import androidx.glance.appwidget.updateAll
+import com.example.routealarm.domain.repository.PreferencesRepository
 import com.example.routealarm.domain.repository.ScheduleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -16,7 +17,14 @@ import kotlinx.coroutines.launch
  */
 object WidgetUpdater {
     @OptIn(FlowPreview::class)
-    fun start(context: Context, scope: CoroutineScope, scheduleRepository: ScheduleRepository) {
+    fun start(context: Context, scope: CoroutineScope, scheduleRepository: ScheduleRepository, preferencesRepository: PreferencesRepository) {
+        // 위젯 배경을 바꾸면 바로 다시 그린다.
+        scope.launch {
+            preferencesRepository.preferences
+                .map { it.widgetTheme }
+                .distinctUntilChanged()
+                .collect { runCatching { NextAlarmWidget().updateAll(context) } }
+        }
         scope.launch {
             scheduleRepository.observeSchedules()
                 .map { list -> list.map { Triple(it.id, it.enabled, it.plan?.let { p -> p.wakeUp to p.delayMinutes }) to it.title } }
