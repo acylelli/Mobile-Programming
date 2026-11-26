@@ -82,6 +82,8 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
+        // shared 모듈이 쓰는 kotlin.time.Instant 변환
+        optIn.add("kotlin.time.ExperimentalTime")
     }
 }
 
@@ -91,6 +93,7 @@ ksp {
 }
 
 dependencies {
+    implementation(project(":shared"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.activity.compose)

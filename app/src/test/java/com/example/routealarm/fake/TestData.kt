@@ -5,10 +5,6 @@ import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.PlaceType
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.usecase.BuildAlarmPlanUseCase
-import com.example.routealarm.domain.usecase.CalculateDepartureTimeUseCase
-import com.example.routealarm.domain.usecase.CalculateSafetyBufferUseCase
-import com.example.routealarm.domain.usecase.CalculateWakeUpTimeUseCase
-import com.example.routealarm.domain.usecase.EstimateTravelTimeUseCase
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -52,10 +48,5 @@ object TestData {
         updatedAt = Instant.EPOCH,
     )
 
-    fun buildAlarmPlanUseCase() = BuildAlarmPlanUseCase(
-        EstimateTravelTimeUseCase(),
-        CalculateSafetyBufferUseCase(),
-        CalculateDepartureTimeUseCase(),
-        CalculateWakeUpTimeUseCase(),
-    )
+    fun buildAlarmPlanUseCase() = BuildAlarmPlanUseCase()
 }

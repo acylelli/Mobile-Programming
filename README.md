@@ -2,7 +2,7 @@
 
 > "몇 시까지 도착하고 싶은지"만 알려주면, 대중교통 상황을 분석해 **언제 일어나야 하는지**를 계산하고 알람을 자동으로 설정 및 조정하는 Android 앱
 
-Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataStore · WorkManager · AlarmManager
+Kotlin Multiplatform(알람 계산 공용 모듈 shared: Android·iOS) · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataStore · WorkManager · AlarmManager
 
 화면은 팀 UI 설계서 v1.1(시안 C "Route Line", 기본 색 오렌지)의 화면 정의(UI-A-001 ~ UI-F-003)를 기준으로 구현했다.
 
@@ -242,6 +242,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 분류 | 사용 기술 |
 |---|---|
 | 언어 | Kotlin 2.2, Coroutines / Flow |
+| 크로스 플랫폼 | Kotlin Multiplatform — `shared` 모듈(Android · JVM · iOS arm64/시뮬레이터), kotlinx-datetime |
 | UI | Jetpack Compose, Material 3, Navigation Compose(타입 안전 라우트), 역할 기반 색 토큰(컬러 테마 3종 × 라이트/다크) |
 | 아키텍처 | Clean Architecture, MVVM, UseCase, Repository Pattern |
 | DI | Hilt (+ hilt-work, hilt-navigation-compose) |
@@ -253,6 +254,33 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 빌드 | AGP 8.13, Gradle 9.2, KSP, Version Catalog |
 
 ## 6. 아키텍처
+
+### 크로스 플랫폼 구조 (Kotlin Multiplatform)
+
+알람 시각을 정하는 계산은 플랫폼과 상관없는 순수 Kotlin 이라 `shared` 모듈(commonMain)로 옮겼다. 안드로이드 앱과 iOS 앱이 **같은 코드·같은 테스트**로 기상 시각을 계산한다.
+
+```
+                 ┌──────────────── shared (commonMain) ────────────────┐
+                 │ AlarmEngine       이동시간 안정화 · 여유 · 출발 · 기상 │
+                 │ AdjustmentEngine  알람을 바꿀지 판단(흔들림 무시)     │
+                 │ OccurrenceEngine  다음 회차 · 공휴일 건너뛰기         │
+                 │ KoreanHolidays · WeatherRules · TravelPatternRules   │
+                 │   kotlin.time.Instant / kotlinx-datetime 만 사용     │
+                 └──────────┬───────────────────────────┬───────────────┘
+              Android(JVM) ↓                            ↓ iOS(Kotlin/Native, Shared.framework)
+┌──────────────────────────────────────┐   ┌──────────────────────────────┐
+│ app: UseCase 가 java.time ↔ kotlin   │   │ SwiftUI 앱이 같은 엔진 호출   │
+│ 시간을 바꿔 엔진에 맡김(Room·알람·   │   │                              │
+│ WorkManager 등 플랫폼 기능은 app 에) │   │                              │
+└──────────────────────────────────────┘   └──────────────────────────────┘
+                 ↘                                      ↙
+                  Proxy 서버(Render) — 경로·장소·날씨·실시간 도착
+```
+
+- `shared/src/commonTest` 테스트는 JVM 과 iOS 시뮬레이터 두 곳에서 똑같이 돈다(`:shared:jvmTest`, `:shared:iosSimulatorArm64Test`).
+- 앱의 `BuildAlarmPlanUseCase`, `EstimateTravelTimeUseCase`, `CalculateSafetyBufferUseCase`, `EvaluateAlarmAdjustmentUseCase`, `ResolveNextOccurrenceUseCase`, `KoreanHolidays`, `WeatherPolicy`, `TravelPatternPolicy` 는 이름·사용법을 그대로 두고 계산만 shared 에 맡긴다. 그래서 기존 앱 테스트가 바뀐 계산을 그대로 검증한다.
+
+### 안드로이드 앱 계층
 
 ```
 ┌──────────────────────── presentation ────────────────────────┐
@@ -284,22 +312,22 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 
 ## 7. 알람 계산 방식
 
-`domain/usecase/BuildAlarmPlanUseCase.kt` 가 아래 UseCase 를 순서대로 조립한다.
+`shared/.../AlarmEngine.kt` 가 계산하고, 앱의 `domain/usecase/BuildAlarmPlanUseCase.kt` 는 앱 모델과 엔진 사이를 변환한다.
 
 ```
-travel    = EstimateTravelTime(현재 ETA, 최근 실시간 이동시간 n개)
+travel    = estimateTravel(현재 ETA, 같은 요일·시간대(없으면 최근) 실제 이동시간)
             → max(현재, 0.7·현재 + 0.3·평균), 분 단위 올림
-buffer    = CalculateSafetyBuffer(기본 여유, 지연, 실시간 여부)
-            → 기본 + min(ceil(지연·0.3), 10) + (캐시 데이터면 +5)
-departure = CalculateDepartureTime: target − travel − buffer
-wakeUp    = CalculateWakeUpTime:   departure − preparation
+buffer    = safetyBuffer(기본 여유, 지연, 실시간 여부) + 날씨 여유
+            → 기본 + min(ceil(지연·0.3), 10) + (캐시 데이터면 +5) + (비 +5 / 눈 +10)
+departure = target − travel − buffer
+wakeUp    = departure − preparation
 ```
 
 - 모든 계산은 `Instant`(절대 시각) 위에서 한다. DST 전환일에 벽시계 시간으로 빼면 1시간 오차가 나기 때문이다.
 - 권장 출발 시각이 이미 지났으면 "지금 출발" 기준으로 다시 계산해 `PlanOutcome.TooLate`(예상 도착·지각 분) 를 돌려준다.
-- 반복 일정의 다음 회차는 `ResolveNextOccurrenceUseCase` 가 결정한다. 오늘 회차의 마지막 이벤트(출발 알림 또는 기상 알람)가 지나야 다음 회차로 넘어간다.
+- 반복 일정의 다음 회차는 `OccurrenceEngine`(앱에서는 `ResolveNextOccurrenceUseCase`)이 결정한다. 오늘 회차의 마지막 이벤트(출발 알림 또는 기상 알람)가 지나야 다음 회차로 넘어간다.
 
-### 알람 조정 정책 (`domain/policy/AdjustmentPolicy.kt`)
+### 알람 조정 정책 (`shared/.../AdjustmentEngine.kt`)
 
 | 변화량 | 동작 |
 |---|---|
@@ -344,6 +372,10 @@ wakeUp    = CalculateWakeUpTime:   departure − preparation
 ## 10. 프로젝트 구조
 
 ```
+shared/src            Kotlin Multiplatform 공용 모듈 (Android · iOS 가 함께 씀)
+├── commonMain        AlarmEngine, AdjustmentEngine, OccurrenceEngine, KoreanHolidays, WeatherRules, TravelPatternRules
+└── commonTest        같은 테스트를 JVM 과 iOS 시뮬레이터에서 실행
+
 app/src/main/java/com/example/routealarm
 ├── core
 │   ├── common        AppResult / AppError / Dispatcher Qualifier
@@ -463,15 +495,22 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ## 13. 테스트 방법
 
 ```bash
-./gradlew testDebugUnitTest
+./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test   # 공용 계산 모듈(JVM · iOS 시뮬레이터, 각 16개)
+./gradlew testDebugUnitTest                                # 안드로이드 앱
 ```
 
-도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 189개 테스트:
+| 공용 모듈 테스트 | 검증 내용 |
+|---|---|
+| `AlarmEngineTest` | 출발 = 목표 − 이동 − 여유, 기상 = 출발 − 준비, 비 예보면 5분 일찍, 지연·캐시 여유와 상한, 이동시간 안정화·올림, 지각(TooLate), 과거 목표·음수 입력, 조정 판단(흔들림 무시·늦추기 보수적·알람 직전 예외) |
+| `OccurrenceEngineTest` | 오늘 회차/다음 주 회차, 한글날 건너뛰기, 1회 일정 날짜, 공휴일 표 |
+| `TravelPatternRulesTest` | 같은 요일·시간대 기록 3번 이상이면 사용, 모자라면 빈 목록, 요일별 요약 |
+
+안드로이드 앱의 도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 187개 테스트:
 
 | 테스트 | 검증 내용 |
 |---|---|
 | `BuildAlarmPlanUseCaseTest` | 09:00/60분/10분/30분 → 07:20, 자정 넘김, 다음날, DST, 이동 0분, 음수 입력, 과거 목표, 지각(TooLate), 캐시 데이터 여유 |
-| `CalculationUseCasesTest` | 여유시간 계산, 이동시간 안정화(가중 평균·올림), 출발/기상 계산 |
+| `CalculationUseCasesTest` | 여유시간 계산, 이동시간 안정화(가중 평균·올림) |
 | `EvaluateAlarmAdjustmentUseCaseTest` | 5분 미만 유지, 5분 이상 자동, 늦춤 10분 기준, 30분 초과 확인, 자동 조정 OFF, 알람 직전 예외 |
 | `ResolveNextOccurrenceUseCaseTest` | 반복 요일의 다음 회차, 1회 일정 날짜 결정 |
 | `RefreshCheckpointPolicyTest` | PRO 24h/3h/1h/20분 체크포인트 선택, 무료 플랜 30분 전 1회 |
@@ -518,9 +557,10 @@ Proxy 서버 테스트는 `cd server && npm test` 로 실행한다(외부 API �
 
 ### CI
 
-GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main` 푸시와 모든 PR 에서 두 작업을 돌린다.
+GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main` 푸시와 모든 PR 에서 세 작업을 돌린다.
 
-- **Android**: `assembleDebug`, `assembleDebugAndroidTest`(계측 테스트 컴파일), `testDebugUnitTest`, `lintDebug` (JDK 17, 외부 API 를 호출하지 않아 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
+- **Android**: `:shared:jvmTest`, `assembleDebug`, `assembleDebugAndroidTest`(계측 테스트 컴파일), `testDebugUnitTest`, `lintDebug` (JDK 17, 외부 API 를 호출하지 않아 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
+- **공용 모듈 iOS**: macOS 러너에서 `:shared:iosSimulatorArm64Test` (같은 계산 테스트를 Kotlin/Native 로)
 - **Proxy 서버**: `npm ci`, 타입 검사, `npm test` (Node 20)
 
 ## 14. 주요 설계 결정
