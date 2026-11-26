@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
@@ -91,11 +92,12 @@ fun HomeRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = LocalAppSnackbar.current
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                is HomeEvent.ShowMessage -> snackbar.showSnackbar(context.getString(event.error.messageRes()))
+                is HomeEvent.ShowMessage -> snackbar.showSnackbar(resources.getString(event.error.messageRes()))
             }
         }
     }

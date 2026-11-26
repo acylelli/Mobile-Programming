@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -77,6 +78,7 @@ fun AlarmListRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = LocalAppSnackbar.current
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -85,12 +87,12 @@ fun AlarmListRoute(
                 AlarmListEvent.ShowPaywall -> onShowPaywall()
                 is AlarmListEvent.ShowLimitMessage -> {
                     val result = snackbar.showSnackbar(
-                        message = context.getString(R.string.alarms_limit_message, event.limit),
-                        actionLabel = context.getString(R.string.alarms_limit_action),
+                        message = resources.getString(R.string.alarms_limit_message, event.limit),
+                        actionLabel = resources.getString(R.string.alarms_limit_action),
                     )
                     if (result == SnackbarResult.ActionPerformed) onShowPaywall()
                 }
-                is AlarmListEvent.ShowError -> snackbar.showSnackbar(context.getString(event.error.messageRes()))
+                is AlarmListEvent.ShowError -> snackbar.showSnackbar(resources.getString(event.error.messageRes()))
             }
         }
     }

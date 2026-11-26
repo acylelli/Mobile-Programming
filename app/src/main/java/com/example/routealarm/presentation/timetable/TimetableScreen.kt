@@ -42,6 +42,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -87,6 +88,7 @@ fun TimetableRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val snackbar = LocalAppSnackbar.current
     // 사진 선택기: 저장소 권한 없이 사용자가 고른 사진 한 장만 받는다.
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -97,16 +99,16 @@ fun TimetableRoute(
         viewModel.events.collect { event ->
             when (event) {
                 is TimetableEvent.Recognized ->
-                    snackbar.showSnackbar(context.getString(R.string.timetable_recognized, event.count))
-                is TimetableEvent.ShowError -> snackbar.showSnackbar(context.getString(event.error.messageRes()))
+                    snackbar.showSnackbar(resources.getString(R.string.timetable_recognized, event.count))
+                is TimetableEvent.ShowError -> snackbar.showSnackbar(resources.getString(event.error.messageRes()))
                 is TimetableEvent.AlarmsCreated -> {
                     snackbar.showSnackbar(
                         if (event.failed == 0 && event.replaced > 0) {
-                            context.getString(R.string.timetable_alarms_replaced, event.created, event.replaced)
+                            resources.getString(R.string.timetable_alarms_replaced, event.created, event.replaced)
                         } else if (event.failed == 0) {
-                            context.getString(R.string.timetable_alarms_created, event.created)
+                            resources.getString(R.string.timetable_alarms_created, event.created)
                         } else {
-                            context.getString(R.string.timetable_alarms_partly_created, event.created, event.failed)
+                            resources.getString(R.string.timetable_alarms_partly_created, event.created, event.failed)
                         },
                     )
                     onAlarmsCreated()

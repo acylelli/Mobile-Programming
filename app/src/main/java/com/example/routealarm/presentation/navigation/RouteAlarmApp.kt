@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -107,6 +108,7 @@ fun RouteAlarmApp(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
     // PRO 페이월은 어느 화면에서든 잠긴 기능을 눌렀을 때 뜨는 바텀시트라 앱 최상위에서 한 번만 관리한다.
     var paywallVisible by rememberSaveable { mutableStateOf(false) }
     val showPaywall = { paywallVisible = true }
@@ -117,8 +119,8 @@ fun RouteAlarmApp(
         undoViewModel.offers.collect { offer ->
             scope.launch {
                 val result = snackbar.showSnackbar(
-                    message = context.getString(offer.messageRes),
-                    actionLabel = context.getString(R.string.common_undo),
+                    message = resources.getString(offer.messageRes),
+                    actionLabel = resources.getString(R.string.common_undo),
                     duration = SnackbarDuration.Long,
                 )
                 if (result == SnackbarResult.ActionPerformed) undoViewModel.undo(offer)
@@ -236,7 +238,7 @@ fun RouteAlarmApp(
                             openTab(Route.AlarmList, keepState = false)
                             scope.launch {
                                 snackbar.showSnackbar(
-                                    context.getString(if (inexactWarning) R.string.create_result_inexact_warning else R.string.create_result_saved),
+                                    resources.getString(if (inexactWarning) R.string.create_result_inexact_warning else R.string.create_result_saved),
                                 )
                             }
                         },
@@ -262,7 +264,7 @@ fun RouteAlarmApp(
                         // PRO 를 적용하고 들어왔던 화면(설정)으로 돌아간다(UI-E-002 ⑤).
                         onApplied = { organization ->
                             navController.popBackStack()
-                            scope.launch { snackbar.showSnackbar(context.getString(R.string.group_pass_applied, organization)) }
+                            scope.launch { snackbar.showSnackbar(resources.getString(R.string.group_pass_applied, organization)) }
                         },
                     )
                 }
