@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -105,12 +106,13 @@ fun CreateScheduleRoute(
     val isPro by viewModel.isPro.collectAsStateWithLifecycle()
     val snackbar = LocalAppSnackbar.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(state.validationError) {
         val error = state.validationError ?: return@LaunchedEffect
         viewModel.consumeValidationError()
-        snackbar.showSnackbar(context.getString(error.messageRes()))
+        snackbar.showSnackbar(resources.getString(error.messageRes()))
     }
     LaunchedEffect(state.result) {
         (state.result as? ResultState.Saved)?.let { onSaved(it.inexactWarning) }
@@ -124,7 +126,7 @@ fun CreateScheduleRoute(
         if (grants.values.any { it }) {
             viewModel.useCurrentLocation(currentLocationName)
         } else {
-            scope.launch { snackbar.showSnackbar(context.getString(R.string.error_location_permission)) }
+            scope.launch { snackbar.showSnackbar(resources.getString(R.string.error_location_permission)) }
         }
     }
 

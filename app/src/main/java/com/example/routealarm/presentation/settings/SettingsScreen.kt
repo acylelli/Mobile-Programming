@@ -59,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -107,12 +108,13 @@ fun SettingsRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = LocalAppSnackbar.current
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                SettingsEvent.RefreshDone -> snackbar.showSnackbar(context.getString(R.string.settings_demo_refresh_done))
-                SettingsEvent.NoScheduleToRing -> snackbar.showSnackbar(context.getString(R.string.settings_demo_ring_empty))
+                SettingsEvent.RefreshDone -> snackbar.showSnackbar(resources.getString(R.string.settings_demo_refresh_done))
+                SettingsEvent.NoScheduleToRing -> snackbar.showSnackbar(resources.getString(R.string.settings_demo_ring_empty))
                 is SettingsEvent.RingAlarm -> {
                     // 실제 알람과 같은 경로: 서비스가 소리·진동을 맡고 화면은 그 상태를 보여준다.
                     // 시험 울림이라 끄기·다시 울림을 알람 기록에 남기지 않는다.

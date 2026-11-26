@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,7 @@ fun CalendarImportRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val snackbar = LocalAppSnackbar.current
     val requestPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), viewModel::onPermissionResult)
 
@@ -70,7 +72,7 @@ fun CalendarImportRoute(
         viewModel.events.collect { event ->
             when (event) {
                 is CalendarImportEvent.AddedToTimetable -> {
-                    snackbar.showSnackbar(context.getString(R.string.calendar_added_to_timetable, event.count))
+                    snackbar.showSnackbar(resources.getString(R.string.calendar_added_to_timetable, event.count))
                     onOpenTimetable()
                 }
             }

@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -115,12 +116,13 @@ fun ScheduleDetailRoute(
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbar = LocalAppSnackbar.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(message) {
         val m = message ?: return@LaunchedEffect
         viewModel.consumeMessage()
-        snackbar.showSnackbar(context.getString(m.messageRes()))
+        snackbar.showSnackbar(resources.getString(m.messageRes()))
     }
     LaunchedEffect(state) {
         if ((state as? ScheduleDetailUiState.Success)?.deleted == true) onBack()
@@ -140,7 +142,7 @@ fun ScheduleDetailRoute(
         onSound = viewModel::setSound,
         onOpenMap = { destination ->
             if (!context.openInMapApp(destination)) {
-                scope.launch { snackbar.showSnackbar(context.getString(R.string.detail_map_unavailable)) }
+                scope.launch { snackbar.showSnackbar(resources.getString(R.string.detail_map_unavailable)) }
             }
         },
     )

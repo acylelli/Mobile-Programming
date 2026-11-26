@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -84,6 +85,7 @@ fun GroupPassRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = LocalAppSnackbar.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     // 개인 구독 중에 적용했다면 자동 갱신 해지 안내를 먼저 보여준 뒤 돌아간다(④ 중복 안내).
     var appliedWithSubscription by remember { mutableStateOf<String?>(null) }
 
@@ -92,7 +94,7 @@ fun GroupPassRoute(
             when (event) {
                 is GroupPassEvent.Applied ->
                     if (event.hadPersonalSubscription) appliedWithSubscription = event.organization else onApplied(event.organization)
-                is GroupPassEvent.ShowError -> snackbar.showSnackbar(context.getString(event.error.messageRes()))
+                is GroupPassEvent.ShowError -> snackbar.showSnackbar(resources.getString(event.error.messageRes()))
             }
         }
     }
