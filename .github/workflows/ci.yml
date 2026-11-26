@@ -48,7 +48,7 @@ jobs:
           retention-days: 7
 
   shared-ios:
-    name: 공용 계산 모듈 iOS 시뮬레이터 테스트
+    name: 공용 모듈 iOS 테스트·iOS 앱 빌드
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -64,6 +64,10 @@ jobs:
       # 안드로이드·iOS 가 함께 쓰는 알람 계산을 iOS 시뮬레이터(Kotlin/Native)에서도 같은 테스트로 검증한다.
       - name: iOS 시뮬레이터 테스트
         run: ./gradlew :shared:iosSimulatorArm64Test --console=plain
+
+      # SwiftUI iOS 앱. 빌드 단계에서 Gradle 이 Shared.framework 를 만든다(서명 없이 시뮬레이터용).
+      - name: iOS 앱 빌드
+        run: xcodebuild -project iosApp/RouteAlarm.xcodeproj -target RouteAlarm -configuration Debug -sdk iphonesimulator ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
 
   server:
     name: Proxy 서버 타입 검사·테스트

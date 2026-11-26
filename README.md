@@ -1,8 +1,8 @@
 # RouteAlarm — 목표 도착 시간 기반 스마트 출발 알람
 
-> "몇 시까지 도착하고 싶은지"만 알려주면, 대중교통 상황을 분석해 **언제 일어나야 하는지**를 계산하고 알람을 자동으로 설정 및 조정하는 Android 앱
+> "몇 시까지 도착하고 싶은지"만 알려주면, 대중교통 상황을 분석해 **언제 일어나야 하는지**를 계산하고 알람을 자동으로 설정 및 조정하는 Android · iOS 앱
 
-Kotlin Multiplatform(알람 계산 공용 모듈 shared: Android·iOS) · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataStore · WorkManager · AlarmManager
+Kotlin Multiplatform(공용 모듈 shared: 계산·노선도·서버 통신) · Jetpack Compose(Android) · SwiftUI(iOS) · Clean Architecture(MVVM) · Hilt · Room · DataStore · WorkManager · AlarmManager
 
 화면은 팀 UI 설계서 v1.1(시안 C "Route Line", 기본 색 오렌지)의 화면 정의(UI-A-001 ~ UI-F-003)를 기준으로 구현했다.
 
@@ -106,6 +106,25 @@ Kotlin Multiplatform(알람 계산 공용 모듈 shared: Android·iOS) · Jetpac
 | UI-G-001 | 홈 화면 위젯 | `widget/NextAlarmWidget.kt` |
 
 에뮬레이터(Pixel 10 Pro, Android 17)에서 다산역 → 한성대학교 일정으로 캡처했다. 모든 사진은 720×1606 으로 크기를 맞췄다. 알람 탭은 아이폰 시계처럼 구분선 목록에 "오전 7:29" 를 크게, 그 아래 반복·도착과 교통 정보 한 줄을 둔다. 시각 숫자는 앱 전체에서 보통 굵기(Regular)로 그린다. 계산 미리보기·택시 안내 화면은 ODsay 하루 한도가 찬 날이라 이전 버전 화면을 그대로 두었다.
+
+### iOS 앱 (SwiftUI + Kotlin Multiplatform)
+
+iOS 앱은 `iosApp/` 의 SwiftUI 앱이다. 화면은 안드로이드와 같은 디자인(색 토큰·검은 버튼·회색 알약·노선도·만들기 5단계)으로 맞췄고, **기상 시각 계산·다음 회차·공휴일·날씨 여유·노선도 문구와 노선색·장소 검색과 경로 조회(Ktor)** 는 안드로이드와 같은 Kotlin 코드(`shared`)를 쓴다. iOS 앱이 직접 하는 일은 화면과 알림 예약(UNUserNotificationCenter)뿐이다. 글꼴도 안드로이드 기본 글꼴과 같은 Roboto(숫자·영문)와 Noto Sans KR(한글)을 앱에 넣어 썼다(OFL 라이선스, `iosApp/RouteAlarm/Fonts/`). iPhone 17 Pro 시뮬레이터(iOS 27)에서 코엑스 → 홍익대학교 일정으로 캡처했다(ODsay 하루 한도가 찬 날이라 기본 이동시간 60분 계산 화면이다).
+
+<table>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-home.png" width="200" alt="iOS 홈 (노선도)"><br><sub>홈 (노선도)</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-create.png" width="200" alt="iOS 만들기 — 장소"><br><sub>만들기 — 장소</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-time.png" width="200" alt="iOS 만들기 — 도착 시각·반복"><br><sub>만들기 — 도착 시각·반복</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-result.png" width="200" alt="iOS 계산 미리보기"><br><sub>계산 미리보기</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-alarms.png" width="200" alt="iOS 알람 목록"><br><sub>알람 목록</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-detail.png" width="200" alt="iOS 일정 상세"><br><sub>일정 상세</sub></td>
+  </tr>
+</table>
+
+iOS 앱은 핵심 흐름(장소 검색 → 도착 시각·반복 → 준비 시간 → 계산 미리보기 → 알람)과 홈·알람 목록·상세·설정을 갖췄다. 기상 알람은 로컬 알림으로 1분 간격 3번 더, 출발 시각에 한 번 더 울리고, 앱을 열 때마다 교통 정보로 다시 계산해 알림을 옮긴다. PRO·시간표·위젯·통계 같은 부가 기능은 안드로이드에만 있다.
 
 ### 기본 흐름
 
@@ -265,18 +284,22 @@ Kotlin Multiplatform(알람 계산 공용 모듈 shared: Android·iOS) · Jetpac
                  │ AdjustmentEngine  알람을 바꿀지 판단(흔들림 무시)     │
                  │ OccurrenceEngine  다음 회차 · 공휴일 건너뛰기         │
                  │ KoreanHolidays · WeatherRules · TravelPatternRules   │
+                 │ RouteLineBuilder · LineColors · KoreanText (노선도)  │
+                 │ ProxyClient(Ktor) · TripPlanner · PlaceSearch        │
                  │   kotlin.time.Instant / kotlinx-datetime 만 사용     │
                  └──────────┬───────────────────────────┬───────────────┘
               Android(JVM) ↓                            ↓ iOS(Kotlin/Native, Shared.framework)
 ┌──────────────────────────────────────┐   ┌──────────────────────────────┐
-│ app: UseCase 가 java.time ↔ kotlin   │   │ SwiftUI 앱이 같은 엔진 호출   │
-│ 시간을 바꿔 엔진에 맡김(Room·알람·   │   │                              │
-│ WorkManager 등 플랫폼 기능은 app 에) │   │                              │
+│ app: UseCase 가 java.time ↔ kotlin   │   │ iosApp: SwiftUI 화면과 로컬   │
+│ 시간을 바꿔 엔진에 맡김(Room·알람·   │   │ 알림만. 검색·경로·계산·노선도 │
+│ WorkManager 등 플랫폼 기능은 app 에) │   │ 는 Shared.framework 를 호출   │
 └──────────────────────────────────────┘   └──────────────────────────────┘
                  ↘                                      ↙
                   Proxy 서버(Render) — 경로·장소·날씨·실시간 도착
 ```
 
+- 안드로이드는 서버 통신에 기존 Retrofit·OkHttp 를 계속 쓰고(검증된 오프라인 캐시·재시도), iOS 는 shared 의 Ktor 클라이언트(Darwin 엔진)를 쓴다. 두 앱이 같은 Render 서버를 부른다.
+- 노선색 표와 "(으)로" 조사 규칙은 안드로이드 노선도도 shared 것을 쓴다(`presentation/common/TransitLineColors.kt`).
 - `shared/src/commonTest` 테스트는 JVM 과 iOS 시뮬레이터 두 곳에서 똑같이 돈다(`:shared:jvmTest`, `:shared:iosSimulatorArm64Test`).
 - 앱의 `BuildAlarmPlanUseCase`, `EstimateTravelTimeUseCase`, `CalculateSafetyBufferUseCase`, `EvaluateAlarmAdjustmentUseCase`, `ResolveNextOccurrenceUseCase`, `KoreanHolidays`, `WeatherPolicy`, `TravelPatternPolicy` 는 이름·사용법을 그대로 두고 계산만 shared 에 맡긴다. 그래서 기존 앱 테스트가 바뀐 계산을 그대로 검증한다.
 
@@ -374,7 +397,14 @@ wakeUp    = departure − preparation
 ```
 shared/src            Kotlin Multiplatform 공용 모듈 (Android · iOS 가 함께 씀)
 ├── commonMain        AlarmEngine, AdjustmentEngine, OccurrenceEngine, KoreanHolidays, WeatherRules, TravelPatternRules
+│   ├── api           ProxyClient(Ktor) · 서버 응답 DTO
+│   ├── trip          TripPlanner(경로 조회 → 날씨 → 계산), PlaceSearch, Schedules(반복 요일 비트마스크)
+│   └── routeline     RouteLineBuilder(노선도 지점·구간·문구), LineColors(공식 노선색), KoreanText
 └── commonTest        같은 테스트를 JVM 과 iOS 시뮬레이터에서 실행
+
+iosApp                SwiftUI iOS 앱 (Xcode 프로젝트, 빌드할 때 Gradle 이 Shared.framework 를 만든다)
+└── RouteAlarm        RootView(홈·알람·설정 탭), HomeView, AlarmListView, AlarmDetailView, CreateFlowView(5단계),
+                      RouteLineView(노선도), Theme(안드로이드와 같은 색 토큰), AlarmStore(저장·계산), AlarmNotifier(로컬 알림)
 
 app/src/main/java/com/example/routealarm
 ├── core
@@ -442,6 +472,18 @@ server                Backend Proxy (Node.js) — ODsay 경로·Kakao 장소 검
 - 처음 실행하면 온보딩 3쪽(마지막 쪽에서 권한 안내) → 빈 홈 화면에서 **새 일정 만들기**로 시작한다.
 - 이전 버전에서 업데이트하면 DB 구조가 바뀌어(버전 2) 저장된 일정이 초기화된다.
 
+### iOS 앱 실행 (Mac)
+
+1. Xcode 16 이상과 JDK 17(Android Studio 의 JBR 도 된다)이 있어야 한다.
+2. `iosApp/RouteAlarm.xcodeproj` 를 Xcode 로 열고 iPhone 시뮬레이터를 골라 실행한다. 빌드 단계에서 `./gradlew :shared:embedAndSignAppleFrameworkForXcode` 가 공용 모듈을 iOS 프레임워크로 만든다.
+3. 명령줄로는 다음과 같다(서명 없이 시뮬레이터용).
+
+```bash
+xcodebuild -project iosApp/RouteAlarm.xcodeproj -target RouteAlarm -sdk iphonesimulator ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
+```
+
+- iOS 앱도 배포 서버를 쓰므로 키가 필요 없다. 실제 기기 설치와 TestFlight 배포는 Apple Developer 계정이 있어야 해서 시뮬레이터로 시연한다.
+
 ### 테스트 시나리오
 
 1. 알람 탭의 **+** 로 일정을 만든다. 장소 검색은 Kakao, 경로·소요시간은 ODsay 실제 데이터다.
@@ -495,7 +537,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ## 13. 테스트 방법
 
 ```bash
-./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test   # 공용 계산 모듈(JVM · iOS 시뮬레이터, 각 16개)
+./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test   # 공용 모듈(JVM · iOS 시뮬레이터, 각 25개)
 ./gradlew testDebugUnitTest                                # 안드로이드 앱
 ```
 
@@ -504,6 +546,8 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `AlarmEngineTest` | 출발 = 목표 − 이동 − 여유, 기상 = 출발 − 준비, 비 예보면 5분 일찍, 지연·캐시 여유와 상한, 이동시간 안정화·올림, 지각(TooLate), 과거 목표·음수 입력, 조정 판단(흔들림 무시·늦추기 보수적·알람 직전 예외) |
 | `OccurrenceEngineTest` | 오늘 회차/다음 주 회차, 한글날 건너뛰기, 1회 일정 날짜, 공휴일 표 |
 | `TravelPatternRulesTest` | 같은 요일·시간대 기록 3번 이상이면 사용, 모자라면 빈 목록, 요일별 요약 |
+| `TripPlannerTest` | 가짜 서버(Ktor MockEngine)로 가장 빠른 경로 선택·구간 전달, 비 예보면 5분 일찍, 서버 실패 시 기본 60분 + 불확실성 여유, 지난 도착 시각 오류 문장, 장소 검색, 요일 비트마스크 표시 |
+| `RouteLineTest` | 안드로이드 예시 경로(다산역 → 76번 → 화랑대역 환승 6호선 → 한성대)와 같은 지점·시각·문구·노선색, 경로가 없으면 이동 한 구간, 노선색 표와 조사 |
 
 안드로이드 앱의 도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 187개 테스트:
 
@@ -560,7 +604,7 @@ Proxy 서버 테스트는 `cd server && npm test` 로 실행한다(외부 API �
 GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main` 푸시와 모든 PR 에서 세 작업을 돌린다.
 
 - **Android**: `:shared:jvmTest`, `assembleDebug`, `assembleDebugAndroidTest`(계측 테스트 컴파일), `testDebugUnitTest`, `lintDebug` (JDK 17, 외부 API 를 호출하지 않아 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
-- **공용 모듈 iOS**: macOS 러너에서 `:shared:iosSimulatorArm64Test` (같은 계산 테스트를 Kotlin/Native 로)
+- **공용 모듈 iOS**: macOS 러너에서 `:shared:iosSimulatorArm64Test` (같은 테스트를 Kotlin/Native 로)와 SwiftUI iOS 앱 빌드(`xcodebuild`)
 - **Proxy 서버**: `npm ci`, 타입 검사, `npm test` (Node 20)
 
 ## 14. 주요 설계 결정
