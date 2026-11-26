@@ -20,6 +20,9 @@ interface AlarmHistoryRepository {
     /** 기상 알람을 끈 최근 기록. 기상 습관(평소 얼마나 늦게 끄는지) 분석에 쓴다. */
     fun observeDismissals(scheduleId: Long, limit: Int = 30): Flow<List<AlarmHistoryEvent>>
 
+    /** 모든 일정의 since 이후 기록(기록·통계 화면) */
+    fun observeSince(since: java.time.Instant): Flow<List<AlarmHistoryEvent>>
+
     /** 회차마다 출발 직전 실시간 이동시간 하나를 남긴다(같은 회차는 덮어씀). 요일·시간대별 학습에 쓴다. */
     suspend fun recordTravel(scheduleId: Long, observation: TravelObservation)
     suspend fun travelObservations(scheduleId: Long): List<TravelObservation>

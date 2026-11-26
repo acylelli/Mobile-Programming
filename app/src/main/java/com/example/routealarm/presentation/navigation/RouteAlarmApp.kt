@@ -66,6 +66,7 @@ import com.example.routealarm.presentation.schedule.create.CreateScheduleRoute
 import com.example.routealarm.presentation.schedule.detail.ScheduleDetailRoute
 import com.example.routealarm.presentation.settings.SettingsRoute
 import com.example.routealarm.presentation.settings.theme.ThemeRoute
+import com.example.routealarm.presentation.stats.StatsRoute
 import com.example.routealarm.presentation.subscription.GroupPassRoute
 import com.example.routealarm.presentation.subscription.PaywallSheet
 import com.example.routealarm.presentation.subscription.SubscriptionRoute
@@ -193,6 +194,7 @@ fun RouteAlarmApp(
                         onShowPaywall = showPaywall,
                         onOpenTheme = { navController.navigate(Route.ThemeSelect) },
                         onOpenGroupPass = { navController.navigate(Route.GroupPass) },
+                        onOpenStats = { navController.navigate(Route.Stats) },
                         onOpenSubscription = { navController.navigate(Route.Subscription) },
                         onOpenTimetable = { navController.navigate(Route.Timetable) },
                         onOpenCalendar = { navController.navigate(Route.CalendarImport) },
@@ -247,6 +249,9 @@ fun RouteAlarmApp(
                         onBack = { navController.popBackStack() },
                         onEdit = { navController.navigate(Route.CreateSchedule(editScheduleId = it)) },
                     )
+                }
+                composable<Route.Stats> {
+                    StatsRoute(onBack = { navController.popBackStack() })
                 }
                 composable<Route.ThemeSelect> {
                     ThemeRoute(onBack = { navController.popBackStack() })

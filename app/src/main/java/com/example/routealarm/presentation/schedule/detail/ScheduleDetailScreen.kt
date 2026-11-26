@@ -543,7 +543,7 @@ private fun WakeUpHabitCard(habit: WakeUpHabit, preparationMinutes: Int, onApply
 
 /** 반복 일정의 "공휴일에는 울리지 않기" 스위치와, 곧 건너뛸 공휴일 안내 */
 @Composable
-private fun HolidaySkipRow(schedule: Schedule, now: Instant, onChange: (Boolean) -> Unit) {
+internal fun HolidaySkipRow(schedule: Schedule, now: Instant, onChange: (Boolean) -> Unit) {
     val colors = RouteAlarmTheme.colors
     val skipped = HolidaySkipPolicy.nextSkipped(schedule, now, ZoneId.systemDefault())
     Row(
@@ -569,7 +569,7 @@ private fun HolidaySkipRow(schedule: Schedule, now: Instant, onChange: (Boolean)
 
 /** 이 일정만의 알람음·볼륨. 누르면 설정과 같은 알람음 시트를 "설정 따르기" 선택지와 함께 연다. */
 @Composable
-private fun ScheduleSoundRow(schedule: Schedule, prefs: UserPreferences, onSound: (ScheduleSound?) -> Unit) {
+internal fun ScheduleSoundRow(schedule: Schedule, prefs: UserPreferences, onSound: (ScheduleSound?) -> Unit) {
     val colors = RouteAlarmTheme.colors
     var open by remember { mutableStateOf(false) }
     val effective = AlarmVolumePolicy.forSchedule(prefs, schedule.sound)

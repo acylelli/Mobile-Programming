@@ -176,6 +176,9 @@ class FakeAlarmHistoryRepository : AlarmHistoryRepository {
     override fun observeDismissals(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEvent>> =
         MutableStateFlow(events.filter { it.scheduleId == scheduleId && it.type == AlarmEventType.DISMISSED })
 
+    override fun observeSince(since: Instant): Flow<List<AlarmHistoryEvent>> =
+        MutableStateFlow(events.filter { !it.occurredAt.isBefore(since) })
+
     /** 일정 id → 회차 목표 시각 → 기록 (같은 회차는 덮어씀) */
     val travel = mutableMapOf<Long, MutableMap<Instant, TravelObservation>>()
 

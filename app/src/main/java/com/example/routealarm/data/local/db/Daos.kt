@@ -97,6 +97,9 @@ interface AlarmHistoryDao {
     )
     fun observeDismissals(scheduleId: Long, limit: Int): Flow<List<AlarmHistoryEntity>>
 
+    @Query("SELECT * FROM alarm_history WHERE occurredAt >= :since ORDER BY occurredAt ASC")
+    fun observeSince(since: Long): Flow<List<AlarmHistoryEntity>>
+
     /** 같은 회차는 (scheduleId, occurrenceTarget) 고유 인덱스로 덮어쓴다. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertTravel(entity: TravelObservationEntity)
