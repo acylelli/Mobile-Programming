@@ -6,9 +6,17 @@ import com.example.routealarm.core.common.InvalidInputReason
 import com.example.routealarm.domain.model.AlarmPlan
 import com.example.routealarm.domain.model.PlanWeather
 import com.example.routealarm.domain.model.TransitRoute
+import com.example.routealarm.shared.AlarmEngine
+import com.example.routealarm.shared.EngineInput
+import com.example.routealarm.shared.EngineResult
+import com.example.routealarm.shared.InvalidReason
+import com.example.routealarm.shared.PlanTimes
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.toJavaInstant
+import kotlin.time.toKotlinDuration
+import kotlin.time.toKotlinInstant
 
 data class PlanInput(
     val targetArrival: Instant,
@@ -47,72 +55,59 @@ sealed interface PlanOutcome {
 }
 
 /**
- * 시간 계산 파이프라인을 조립한다.
+ * 알람 계산은 안드로이드·iOS 가 함께 쓰는 shared 모듈의 [AlarmEngine] 이 한다.
  *
- *   travel     = EstimateTravelTime(현재 ETA, 최근 이동시간)
- *   buffer     = CalculateSafetyBuffer(기본 여유, 지연, 실시간 여부) + 날씨 여유(비 +5, 눈 +10)
+ *   travel     = 이동시간 안정화(현재 ETA, 최근 이동시간)
+ *   buffer     = 기본 여유 + 지연 여유 + (실시간 아님) 불확실성 여유 + 날씨 여유(비 +5, 눈 +10)
  *   departure  = target - travel - buffer
  *   wakeUp     = departure - preparation
  *
- * 각 단계는 독립 UseCase 라서 개별 테스트가 가능하고, 이 클래스는 순서와 예외 상황(과거/지각)만 책임진다.
- * Android 의존성이 없는 순수 Kotlin 이므로 JVM 단위 테스트로 모든 경계 조건을 검증한다.
+ * 이 클래스는 앱의 모델(java.time, AlarmPlan)과 엔진 사이의 변환만 맡는다.
  */
-class BuildAlarmPlanUseCase @Inject constructor(
-    private val estimateTravelTime: EstimateTravelTimeUseCase,
-    private val calculateSafetyBuffer: CalculateSafetyBufferUseCase,
-    private val calculateDepartureTime: CalculateDepartureTimeUseCase,
-    private val calculateWakeUpTime: CalculateWakeUpTimeUseCase,
-) {
+class BuildAlarmPlanUseCase @Inject constructor() {
 
     operator fun invoke(input: PlanInput, now: Instant): AppResult<PlanOutcome> {
-        if (!input.targetArrival.isAfter(now)) {
-            return AppResult.Failure(AppError.InvalidInput(InvalidInputReason.TARGET_IN_PAST))
-        }
-        if (input.currentTravel.isNegative || input.preparation.isNegative || input.baseBufferMinutes < 0) {
-            return AppResult.Failure(AppError.InvalidInput(InvalidInputReason.NEGATIVE_DURATION))
-        }
-
-        val travel = estimateTravelTime(input.currentTravel, input.recentTravel)
-        val buffer = calculateSafetyBuffer(input.baseBufferMinutes, input.delay, input.isRealtime)
-            .plusMinutes((input.weather?.extraMinutes ?: 0).toLong())
-
-        val departureTimes = when (val result = calculateDepartureTime(input.targetArrival, travel, buffer)) {
-            is AppResult.Success -> result.data
-            is AppResult.Failure -> return result
-        }
-        val wakeUp = when (val result = calculateWakeUpTime(departureTimes.recommendedDeparture, input.preparation)) {
-            is AppResult.Success -> result.data
-            is AppResult.Failure -> return result
-        }
-
-        val basePlan = AlarmPlan(
-            targetArrival = input.targetArrival,
-            estimatedArrival = departureTimes.estimatedArrival,
-            departure = departureTimes.recommendedDeparture,
-            wakeUp = wakeUp,
-            travelMinutes = travel.toMinutes().toInt(),
-            safetyBufferMinutes = buffer.toMinutes().toInt(),
-            delayMinutes = input.delay.toMinutes().coerceAtLeast(0).toInt(),
-            previousTravelMinutes = input.previousTravelMinutes,
-            isRealtime = input.isRealtime,
-            lastUpdatedAt = input.fetchedAt,
-            route = input.route,
-            weather = input.weather,
+        val result = AlarmEngine.plan(
+            EngineInput(
+                targetArrival = input.targetArrival.toKotlinInstant(),
+                currentTravel = input.currentTravel.toKotlinDuration(),
+                delay = input.delay.toKotlinDuration(),
+                recentTravel = input.recentTravel.map { it.toKotlinDuration() },
+                preparation = input.preparation.toKotlinDuration(),
+                baseBufferMinutes = input.baseBufferMinutes,
+                isRealtime = input.isRealtime,
+                weatherExtraMinutes = input.weather?.extraMinutes ?: 0,
+            ),
+            now.toKotlinInstant(),
         )
-
-        if (!departureTimes.recommendedDeparture.isBefore(now)) {
-            return AppResult.Success(PlanOutcome.OnTime(basePlan, wakeUpAlreadyPassed = wakeUp.isBefore(now)))
-        }
-
-        // 권장 출발 시각이 이미 지났다: 지금 출발하는 경우를 기준으로 다시 본다.
-        val earliestArrival = now.plus(travel)
-        val nowPlan = basePlan.copy(departure = now, wakeUp = now, estimatedArrival = earliestArrival)
-        return if (earliestArrival.isAfter(input.targetArrival)) {
-            val lateBy = Duration.between(input.targetArrival, earliestArrival).toMinutes()
-            AppResult.Success(PlanOutcome.TooLate(nowPlan, earliestArrival, lateBy))
-        } else {
-            // 여유시간은 줄었지만 지금 출발하면 도착은 가능
-            AppResult.Success(PlanOutcome.OnTime(nowPlan, wakeUpAlreadyPassed = true))
+        return when (result) {
+            is EngineResult.Invalid -> AppResult.Failure(
+                AppError.InvalidInput(
+                    when (result.reason) {
+                        InvalidReason.TARGET_IN_PAST -> InvalidInputReason.TARGET_IN_PAST
+                        InvalidReason.NEGATIVE_DURATION -> InvalidInputReason.NEGATIVE_DURATION
+                    },
+                ),
+            )
+            is EngineResult.OnTime -> AppResult.Success(PlanOutcome.OnTime(result.times.toPlan(input), result.wakeUpAlreadyPassed))
+            is EngineResult.TooLate -> AppResult.Success(
+                PlanOutcome.TooLate(result.times.toPlan(input), result.earliestArrival.toJavaInstant(), result.lateByMinutes),
+            )
         }
     }
+
+    private fun PlanTimes.toPlan(input: PlanInput) = AlarmPlan(
+        targetArrival = targetArrival.toJavaInstant(),
+        estimatedArrival = estimatedArrival.toJavaInstant(),
+        departure = departure.toJavaInstant(),
+        wakeUp = wakeUp.toJavaInstant(),
+        travelMinutes = travelMinutes,
+        safetyBufferMinutes = safetyBufferMinutes,
+        delayMinutes = input.delay.toMinutes().coerceAtLeast(0).toInt(),
+        previousTravelMinutes = input.previousTravelMinutes,
+        isRealtime = input.isRealtime,
+        lastUpdatedAt = input.fetchedAt,
+        route = input.route,
+        weather = input.weather,
+    )
 }

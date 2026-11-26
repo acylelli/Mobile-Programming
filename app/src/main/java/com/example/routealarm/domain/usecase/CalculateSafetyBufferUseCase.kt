@@ -1,25 +1,16 @@
 package com.example.routealarm.domain.usecase
 
-import com.example.routealarm.domain.policy.BufferPolicy
+import com.example.routealarm.shared.AlarmEngine
 import java.time.Duration
 import javax.inject.Inject
-import kotlin.math.ceil
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 /**
- * safetyBuffer = 기본 여유시간 + 교통 변동에 따른 추가 여유시간
+ * safetyBuffer = 기본 여유시간 + 지연의 30%(최대 10분) + (실시간 아님) 5분.
+ * 계산은 shared 모듈의 [AlarmEngine.safetyBuffer] 가 한다.
  */
 class CalculateSafetyBufferUseCase @Inject constructor() {
-
-    operator fun invoke(baseBufferMinutes: Int, delay: Duration, isRealtime: Boolean): Duration {
-        val base = baseBufferMinutes.coerceAtLeast(0).toLong()
-
-        val delayMinutes = delay.toMinutes().coerceAtLeast(0)
-        val delayExtra = ceil(delayMinutes * BufferPolicy.DELAY_BUFFER_RATIO).toLong()
-            .coerceAtMost(BufferPolicy.MAX_DELAY_EXTRA_MINUTES)
-
-        // 캐시 데이터는 그 사이 상황이 바뀌었을 수 있으므로 불확실성만큼 여유를 더 둔다.
-        val uncertaintyExtra = if (isRealtime) 0L else BufferPolicy.NON_REALTIME_EXTRA_MINUTES
-
-        return Duration.ofMinutes(base + delayExtra + uncertaintyExtra)
-    }
+    operator fun invoke(baseBufferMinutes: Int, delay: Duration, isRealtime: Boolean): Duration =
+        AlarmEngine.safetyBuffer(baseBufferMinutes, delay.toKotlinDuration(), isRealtime).toJavaDuration()
 }

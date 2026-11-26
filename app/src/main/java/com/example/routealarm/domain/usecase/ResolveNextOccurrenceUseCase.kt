@@ -1,25 +1,29 @@
 package com.example.routealarm.domain.usecase
 
+import com.example.routealarm.shared.OccurrenceEngine
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinDayOfWeek
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalTime
+import kotlinx.datetime.toKotlinTimeZone
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.ZonedDateTime
-import com.example.routealarm.domain.policy.KoreanHolidays
 import javax.inject.Inject
+import kotlin.time.toJavaInstant
+import kotlin.time.toKotlinDuration
+import kotlin.time.toKotlinInstant
 
 /**
- * 일정의 "다음 목표 도착 시각"을 구한다.
+ * 일정의 "다음 목표 도착 시각"을 구한다. 계산은 shared 모듈의 [OccurrenceEngine] 이 한다.
  *
- * - 반복 일정: 오늘부터 7일 뒤까지 반복 요일 중, (목표시각 - leadTime) 이 아직 지나지 않은 첫 날.
+ * - 반복 일정: 반복 요일 중 (목표시각 - leadTime) 이 아직 지나지 않은 첫 날.
  *   leadTime 은 그 회차의 마지막 이벤트(출발 알림 또는 기상 알람)까지의 시간이다.
- *   즉 오늘 회차의 마지막 알림이 지나야 다음 회차로 넘어간다.
- * - skipHolidays 면 공휴일(대체공휴일 포함)인 날은 건너뛴다. 설 연휴처럼 며칠이 이어져도 찾을 수 있게 3주까지 본다.
+ * - skipHolidays 면 공휴일(대체공휴일 포함)인 날은 건너뛴다(3주까지 본다).
  * - 1회 일정: 지정된 날짜 그대로(과거 여부는 호출자가 판단). 1회 일정은 공휴일이어도 울린다.
- *
- * ZonedDateTime.of 는 DST 로 존재하지 않는 시각(봄 전환의 02:30 등)을 자동으로 뒤로 밀어준다.
  */
 class ResolveNextOccurrenceUseCase @Inject constructor() {
 
@@ -31,32 +35,18 @@ class ResolveNextOccurrenceUseCase @Inject constructor() {
         zone: ZoneId,
         leadTime: Duration,
         skipHolidays: Boolean = false,
-    ): Instant? {
-        if (repeatDays.isEmpty()) {
-            return oneTimeDate?.let { ZonedDateTime.of(it, targetTime, zone).toInstant() }
-        }
-        val today = now.atZone(zone).toLocalDate()
-        return (0L..DAYS_TO_SEARCH)
-            .asSequence()
-            .map { today.plusDays(it) }
-            .filter { it.dayOfWeek in repeatDays }
-            .filterNot { skipHolidays && KoreanHolidays.isHoliday(it) }
-            .map { ZonedDateTime.of(it, targetTime, zone).toInstant() }
-            .firstOrNull { it.minus(leadTime).isAfter(now) }
-    }
+    ): Instant? = OccurrenceEngine.next(
+        targetTime = targetTime.toKotlinLocalTime(),
+        repeatDays = repeatDays.mapTo(mutableSetOf()) { it.toKotlinDayOfWeek() },
+        oneTimeDate = oneTimeDate?.toKotlinLocalDate(),
+        now = now.toKotlinInstant(),
+        zone = zone.toKotlinTimeZone(),
+        leadTime = leadTime.toKotlinDuration(),
+        skipHolidays = skipHolidays,
+    )?.toJavaInstant()
 
-    /**
-     * 1회 일정의 날짜를 정한다. 오늘 목표시각이 아직 오지 않았으면 오늘, 지났으면 내일.
-     * (오늘이 빠듯한 경우는 "도착하기 어려워요" 결과로 사용자에게 보여준다.)
-     */
-    fun resolveOneTimeDate(targetTime: LocalTime, now: Instant, zone: ZoneId): LocalDate {
-        val today = now.atZone(zone).toLocalDate()
-        val todayTarget = ZonedDateTime.of(today, targetTime, zone).toInstant()
-        return if (todayTarget.isAfter(now)) today else today.plusDays(1)
-    }
-
-    private companion object {
-        /** 오늘부터 3주. 공휴일을 건너뛰지 않으면 7일 안에서 항상 찾는다. */
-        const val DAYS_TO_SEARCH = 21L
-    }
+    /** 1회 일정의 날짜: 오늘 목표시각이 아직 오지 않았으면 오늘, 지났으면 내일 */
+    fun resolveOneTimeDate(targetTime: LocalTime, now: Instant, zone: ZoneId): LocalDate =
+        OccurrenceEngine.oneTimeDate(targetTime.toKotlinLocalTime(), now.toKotlinInstant(), zone.toKotlinTimeZone())
+            .toJavaLocalDate()
 }
