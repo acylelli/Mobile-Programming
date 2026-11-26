@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createApp, DEFAULT_LIMITS, type GuardLimits } from "./app.ts";
 import { parseGroupPasses } from "./grouppass.ts";
 
@@ -26,6 +27,7 @@ const limits: GuardLimits = {
   routesPerMinute: limitEnv("ROUTES_PER_MINUTE", DEFAULT_LIMITS.routesPerMinute),
   searchPerMinute: limitEnv("SEARCH_PER_MINUTE", DEFAULT_LIMITS.searchPerMinute),
   odsayDailyLimit: limitEnv("ODSAY_DAILY_LIMIT", DEFAULT_LIMITS.odsayDailyLimit),
+  odsayPerIpDailyLimit: limitEnv("ODSAY_PER_IP_DAILY_LIMIT", DEFAULT_LIMITS.odsayPerIpDailyLimit),
   kakaoDailyLimit: limitEnv("KAKAO_DAILY_LIMIT", DEFAULT_LIMITS.kakaoDailyLimit),
   realtimeDailyLimit: limitEnv("REALTIME_DAILY_LIMIT", DEFAULT_LIMITS.realtimeDailyLimit),
   weatherDailyLimit: limitEnv("WEATHER_DAILY_LIMIT", DEFAULT_LIMITS.weatherDailyLimit),
@@ -51,8 +53,27 @@ try {
   process.exit(1);
 }
 
+/**
+ * 로컬 개발용 가짜 ODsay(ODSAY_MOCK=1). 실제 ODsay 대신 test/fixtures 의 실제 응답을 돌려줘
+ * 내 컴퓨터에서 테스트하느라 배포 서버와 함께 쓰는 하루 1,000번 한도를 쓰지 않게 한다.
+ * 출발·도착과 상관없이 같은 경로가 오고, 노선 모양은 없다(지도는 정류장 좌표로 그린다).
+ */
+const odsayMock = process.env.ODSAY_MOCK?.trim() === "1";
+let fetchImpl: typeof fetch | undefined;
+if (odsayMock) {
+  const fixture = readFileSync(new URL("../test/fixtures/odsay-routes.json", import.meta.url), "utf8");
+  fetchImpl = async (input, init) => {
+    const url = String(input);
+    if (url.startsWith("https://api.odsay.com/v1/api/searchPubTransPathT")) return new Response(fixture, { headers: { "content-type": "application/json" } });
+    if (url.startsWith("https://api.odsay.com/v1/api/loadLane")) return Response.json({ result: { lane: [] } });
+    return fetch(input, init);
+  };
+  console.log("[proxy] ODSAY_MOCK=1: 가짜 ODsay 응답을 씁니다(실제 ODsay 를 부르지 않음).");
+}
+
 const app = createApp({
-  odsayApiKey: requireEnv("ODSAY_API_KEY"),
+  odsayApiKey: odsayMock ? "mock" : requireEnv("ODSAY_API_KEY"),
+  fetchImpl,
   kakaoRestApiKey: requireEnv("KAKAO_REST_API_KEY"),
   limits,
   realtimeKeys,

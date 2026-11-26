@@ -164,7 +164,7 @@ test("실제 노선 모양이 있으면 탑승 구간 좌표로 쓰고, 탑승 �
   assert.equal(fallback[2]!.points, undefined);
 });
 
-test("실제 노선 모양은 소요시간이 짧은 상위 경로에만, 하루 상한 안에서만 가져온다", async () => {
+test("실제 노선 모양은 소요시간이 가장 짧은 경로 하나에만, 하루 상한 안에서만 가져온다", async () => {
   const body: OdsayResponse = {
     result: { path: [...ridePath(50, "slow")!.path!, ...ridePath(30, "fast")!.path!, ...ridePath(40, "mid")!.path!, ...ridePath(35)!.path!] },
   };
@@ -175,7 +175,8 @@ test("실제 노선 모양은 소요시간이 짧은 상위 경로에만, 하루
   }) as typeof fetch;
 
   await attachLaneGeometry("key", body, () => true, fakeFetch);
-  assert.deepEqual(requested.sort(), ["0:0@fast", "0:0@mid"]);
+  assert.deepEqual(requested, ["0:0@fast"]);
+  assert.equal(body.result!.path!.find((p) => p.info.mapObj === "mid")!.laneGeometry, undefined);
   assert.ok(body.result!.path!.find((p) => p.info.mapObj === "fast")!.laneGeometry);
   assert.equal(body.result!.path!.find((p) => p.info.mapObj === "slow")!.laneGeometry, undefined);
 

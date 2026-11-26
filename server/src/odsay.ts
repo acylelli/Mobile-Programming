@@ -16,7 +16,8 @@ import type { BusQuery, SubwayQuery } from "./realtime.ts";
 const ODSAY_ENDPOINT = "https://api.odsay.com/v1/api/searchPubTransPathT";
 const LOAD_LANE_ENDPOINT = "https://api.odsay.com/v1/api/loadLane";
 /** 실제 노선 모양은 앱이 지도에 그리는 상위 경로에만 붙인다(경로마다 ODsay 호출이 하나 더 든다). */
-export const GEOMETRY_ROUTES = 2;
+/** 노선 모양은 지도에 그리는 가장 빠른 경로 하나만 받는다(경로마다 loadLane 1회). */
+export const GEOMETRY_ROUTES = 1;
 const MAX_ROUTES = 5;
 
 /** ODsay trafficType */

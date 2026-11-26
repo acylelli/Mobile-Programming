@@ -1,7 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import type { PlaceSearchResponseDto } from "./contract.ts";
 import { UpstreamError } from "./contract.ts";
-import { type Clock, clientIp, DailyQuota, RateLimiter, TtlCache } from "./guard.ts";
+import { type Clock, clientIp, DailyQuota, KeyedDailyQuota, RateLimiter, TtlCache } from "./guard.ts";
 import { fetchKakaoPlaces } from "./kakao.ts";
 import { fetchTaxiEstimate, type TaxiEstimateDto } from "./taxi.ts";
 import { fetchForecast, type Forecast, latestBase, toGrid, weatherAt } from "./weather.ts";
@@ -29,6 +29,8 @@ export interface GuardLimits {
   searchPerMinute: number;
   /** 하루(한국 시간) ODsay 호출 상한 */
   odsayDailyLimit: number;
+  /** IP 하나가 하루에 일으킬 수 있는 ODsay 경로 검색 수(캐시 적중은 세지 않음) */
+  odsayPerIpDailyLimit: number;
   /** 하루(한국 시간) Kakao 호출 상한 */
   kakaoDailyLimit: number;
   /** 하루(한국 시간) 실시간 도착 API 호출 상한 (지하철·서울 버스·경기 버스 각각) */
@@ -41,6 +43,7 @@ export const DEFAULT_LIMITS: GuardLimits = {
   routesPerMinute: 20,
   searchPerMinute: 60,
   odsayDailyLimit: 1_000,
+  odsayPerIpDailyLimit: 150,
   kakaoDailyLimit: 10_000,
   realtimeDailyLimit: 900,
   weatherDailyLimit: 9_000,
@@ -102,6 +105,7 @@ export function createApp(config: AppConfig) {
   const kakaoQuota = new DailyQuota(limits.kakaoDailyLimit, clock);
   const routeCache = new TtlCache<OdsayResponse>(ROUTE_CACHE_TTL_MS, 1_000, clock);
   const staleRoutes = new TtlCache<OdsayResponse>(STALE_ROUTE_TTL_MS, 2_000, clock);
+  const odsayPerIp = new KeyedDailyQuota(limits.odsayPerIpDailyLimit, clock);
   let saverLogged = -1;
   /** 절약 모드: 오늘 ODsay 사용량이 상한의 80% 이상 */
   function saverMode(): boolean {
@@ -148,7 +152,7 @@ export function createApp(config: AppConfig) {
     }
 
     const coords = { originLat, originLng, destinationLat, destinationLng };
-    const key = [originLat, originLng, destinationLat, destinationLng].map((v) => v.toFixed(4)).join(",");
+    const key = routeCacheKey(coords);
     let raw = routeCache.get(key);
     let stale = false;
     if (!raw) {
@@ -160,6 +164,14 @@ export function createApp(config: AppConfig) {
       };
       if (saved && saverMode()) {
         useSaved("절약 모드");
+      } else if (!odsayPerIp.take(clientIp(req.headers, req.socket.remoteAddress))) {
+        // 한 IP 가 하루 몫을 다 썼다. 전체 한도는 남겨 두고 예비 캐시가 있으면 그것으로 답한다.
+        if (!saved) {
+          console.error(`[proxy] 429 IP 별 ODsay 하루 상한(${odsayPerIp.limit}) 도달`);
+          res.set("Retry-After", String(odsayQuota.secondsUntilReset())).status(429).json({ error: "daily limit reached" });
+          return;
+        }
+        useSaved("IP 별 하루 상한 도달");
       } else if (!odsayQuota.take()) {
         if (!saved) {
           console.error(`[proxy] 429 ODsay 하루 호출 상한(${odsayQuota.limit}) 도달`);
@@ -396,6 +408,18 @@ function rejectIfQuotaExceeded(res: Response, quota: DailyQuota, name: string): 
   res.set("Retry-After", String(quota.secondsUntilReset())).status(429).json({ error: "daily limit reached" });
   return true;
 }
+
+/**
+ * 경로 캐시 키. 좌표를 약 50m(0.0005도) 단위로 묶는다. 현재 위치 출발처럼 좌표가 조금씩 흔들려도
+ * 같은 캐시를 쓰게 해 ODsay 호출을 줄인다. 50m 안의 출발지는 경로와 걷는 시간이 거의 같다.
+ */
+export function routeCacheKey(c: { originLat: number; originLng: number; destinationLat: number; destinationLng: number }): string {
+  return [c.originLat, c.originLng, c.destinationLat, c.destinationLng]
+    .map((v) => (Math.round(v * ROUTE_KEY_STEPS_PER_DEGREE) / ROUTE_KEY_STEPS_PER_DEGREE).toFixed(4))
+    .join(",");
+}
+
+const ROUTE_KEY_STEPS_PER_DEGREE = 2_000;
 
 function latitude(value: unknown): number | null {
   return coordinate(value, 90);

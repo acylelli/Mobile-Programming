@@ -88,6 +88,33 @@ export class DailyQuota {
   }
 }
 
+/**
+ * 키(IP)마다 따로 세는 하루 호출 상한. 한 사람이나 테스트 중인 기기 하나가 전체 하루 한도를 다 쓰지 못하게 한다.
+ * 한국 시간 자정마다 모두 초기화된다.
+ */
+export class KeyedDailyQuota {
+  private readonly used = new Map<string, number>();
+  private day = -1;
+
+  constructor(
+    readonly limit: number,
+    private readonly now: Clock = Date.now,
+  ) {}
+
+  /** 상한 안이면 1 을 쓰고 true. 넘으면 false */
+  take(key: string): boolean {
+    const today = Math.floor((this.now() + KST_OFFSET_MS) / DAY_MS);
+    if (today !== this.day) {
+      this.day = today;
+      this.used.clear();
+    }
+    const count = this.used.get(key) ?? 0;
+    if (count >= this.limit) return false;
+    this.used.set(key, count + 1);
+    return true;
+  }
+}
+
 /** 오래된 것부터 지우는 크기 제한 캐시 */
 export class TtlCache<T> {
   private readonly entries = new Map<string, { value: T; expiresAt: number }>();
