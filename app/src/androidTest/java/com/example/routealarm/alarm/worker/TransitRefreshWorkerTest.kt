@@ -30,6 +30,7 @@ import com.example.routealarm.fake.FakeScheduleRepository
 import com.example.routealarm.fake.FakeSubscriptionRepository
 import com.example.routealarm.fake.FakeTimeProvider
 import com.example.routealarm.fake.FakeTransitRepository
+import com.example.routealarm.fake.FakeWeatherRepository
 import com.example.routealarm.fake.TestData
 import com.example.routealarm.fake.TestData.seoul
 import kotlinx.coroutines.runBlocking
@@ -55,11 +56,14 @@ class TransitRefreshWorkerTest {
     private val metrics = FakeMetricsRepository()
     private val subscription = FakeSubscriptionRepository(FakeSubscriptionRepository.PRO, time)
     private val scheduleAlarm = ScheduleAlarmUseCase(alarmScheduler, FakeRefreshScheduler(), subscription, time)
+    private val weather = FakeWeatherRepository()
+
     private val refresh = RefreshTransitTimeUseCase(
         scheduleRepository = schedules,
         preferencesRepository = FakePreferencesRepository(UserPreferences(autoAdjustment = true)),
         subscriptionRepository = subscription,
         transitRepository = transit,
+        weatherRepository = weather,
         locationRepository = FakeLocationRepository(),
         historyRepository = FakeAlarmHistoryRepository(),
         metricsRepository = metrics,

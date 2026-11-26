@@ -19,6 +19,7 @@ interface PreferencesRepository {
     suspend fun setCustomSound(uri: String, title: String?)
     suspend fun setAlarmVolume(percent: Int)
     suspend fun setGradualVolume(enabled: Boolean)
+    suspend fun setWeatherAdjustment(enabled: Boolean)
     suspend fun setSnoozeMinutes(minutes: Int)
     suspend fun setColorTheme(theme: ColorTheme)
     suspend fun setLastPaywallPromptDay(epochDay: Long)

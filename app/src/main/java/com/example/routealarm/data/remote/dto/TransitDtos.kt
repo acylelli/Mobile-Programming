@@ -59,6 +59,14 @@ data class PlaceDto(
 )
 
 @Serializable
+data class WeatherDto(
+    @SerialName("forecast_at") val forecastAt: String,
+    val precipitation: String = "NONE",
+    val probability: Int = 0,
+    val temperature: Int? = null,
+)
+
+@Serializable
 data class TaxiEstimateDto(
     val minutes: Int,
     @SerialName("distance_meters") val distanceMeters: Int = 0,

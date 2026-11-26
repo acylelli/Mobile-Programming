@@ -28,6 +28,7 @@ const limits: GuardLimits = {
   odsayDailyLimit: limitEnv("ODSAY_DAILY_LIMIT", DEFAULT_LIMITS.odsayDailyLimit),
   kakaoDailyLimit: limitEnv("KAKAO_DAILY_LIMIT", DEFAULT_LIMITS.kakaoDailyLimit),
   realtimeDailyLimit: limitEnv("REALTIME_DAILY_LIMIT", DEFAULT_LIMITS.realtimeDailyLimit),
+  weatherDailyLimit: limitEnv("WEATHER_DAILY_LIMIT", DEFAULT_LIMITS.weatherDailyLimit),
 };
 
 /** 실시간 도착 키는 선택이다. 없으면 시간표 기준으로만 응답한다. */

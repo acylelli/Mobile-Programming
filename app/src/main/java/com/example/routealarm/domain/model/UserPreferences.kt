@@ -36,6 +36,8 @@ data class UserPreferences(
     val alarmVolumePercent: Int = DEFAULT_ALARM_VOLUME_PERCENT,
     /** 작게 시작해 정한 크기까지 점점 커지게 울린다. */
     val gradualVolume: Boolean = false,
+    /** 비·눈 예보가 있으면 여유 시간을 늘리고 우산 안내를 한다. */
+    val weatherAdjustment: Boolean = true,
     val snoozeMinutes: Int = DEFAULT_SNOOZE_MINUTES,
     val colorTheme: ColorTheme = ColorTheme.DEFAULT,
     /** 일정 한도 때문에 페이월을 자동으로 띄운 마지막 날(epoch day). 같은 날 반복 노출하지 않기 위함 */

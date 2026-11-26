@@ -90,6 +90,25 @@ class RouteAlarmMigrationTest {
     }
 
     @Test
+    fun migrate5To6_addsPlanWeatherColumnsAsUnknown() {
+        helper.createDatabase(DB, 1).use { db ->
+            db.execSQL(insertPlace(id = 1, name = "다산역", isDemo = 0))
+            db.execSQL(insertSchedule(id = 10, title = "평일 등교", isDemo = 0))
+        }
+        helper.runMigrationsAndValidate(
+            DB, 5, true, Migrations.MIGRATION_1_2, Migrations.MIGRATION_2_3, Migrations.MIGRATION_3_4, Migrations.MIGRATION_4_5,
+        ).close()
+
+        helper.runMigrationsAndValidate(DB, 6, true, Migrations.MIGRATION_5_6).use { db ->
+            db.query("SELECT plan_weatherPrecipitation, plan_weatherProbability, plan_weatherExtraMinutes, title FROM schedules").use { cursor ->
+                cursor.moveToFirst()
+                (0..2).forEach { assertEquals(true, cursor.isNull(it)) }
+                assertEquals("평일 등교", cursor.getString(3))
+            }
+        }
+    }
+
+    @Test
     fun migratedDatabaseOpensWithRoomAndReadsSchedules() {
         helper.createDatabase(DB, 1).use { db ->
             db.execSQL(insertPlace(id = 1, name = "다산역", isDemo = 0))

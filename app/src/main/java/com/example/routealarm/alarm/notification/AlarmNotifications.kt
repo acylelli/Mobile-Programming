@@ -15,6 +15,8 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.routealarm.MainActivity
 import com.example.routealarm.R
+import com.example.routealarm.domain.policy.WeatherPolicy
+import com.example.routealarm.presentation.common.labelRes
 import com.example.routealarm.alarm.scheduler.AlarmIntents
 import com.example.routealarm.alarm.service.AlarmRingingActivity
 import com.example.routealarm.alarm.service.AlarmService
@@ -199,11 +201,20 @@ class AlarmNotifications @Inject constructor(
         runCatching { manager.notify(id, notification) }
     }
 
-    /** 첫 탑승 구간에 실시간 도착 안내가 있으면 다음 줄에 "다산역 8호선 · 약 8분 후 도착"을 붙인다. */
+    /**
+     * 첫 탑승 구간에 실시간 도착 안내가 있으면 다음 줄에 "다산역 8호선 · 약 8분 후 도착"을,
+     * 비·눈 예보가 있으면 "비 예보 70% · 우산 챙기세요"를 붙인다.
+     */
     private fun withBoarding(text: String, schedule: Schedule): String {
-        val boarding = schedule.plan?.boardingInfo() ?: return text
-        val where = listOfNotNull(boarding.stationName, boarding.lineName).joinToString(" ")
-        return text + "\n" + context.getString(R.string.notification_departure_boarding, where, boarding.arrivalInfo)
+        val lines = mutableListOf(text)
+        schedule.plan?.boardingInfo()?.let { boarding ->
+            val where = listOfNotNull(boarding.stationName, boarding.lineName).joinToString(" ")
+            lines += context.getString(R.string.notification_departure_boarding, where, boarding.arrivalInfo)
+        }
+        schedule.plan?.weather?.takeIf(WeatherPolicy::isNotable)?.let { weather ->
+            lines += context.getString(R.string.weather_umbrella_line, context.getString(weather.precipitation.labelRes()), weather.probability)
+        }
+        return lines.joinToString("\n")
     }
 
     private fun accentColor(): Int = ContextCompat.getColor(context, R.color.primary)

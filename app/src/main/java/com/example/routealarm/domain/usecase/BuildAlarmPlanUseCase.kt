@@ -4,6 +4,7 @@ import com.example.routealarm.core.common.AppError
 import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.core.common.InvalidInputReason
 import com.example.routealarm.domain.model.AlarmPlan
+import com.example.routealarm.domain.model.PlanWeather
 import com.example.routealarm.domain.model.TransitRoute
 import java.time.Duration
 import java.time.Instant
@@ -21,6 +22,8 @@ data class PlanInput(
     val fetchedAt: Instant,
     val route: TransitRoute? = null,
     val previousTravelMinutes: Int? = null,
+    /** 출발 시각 날씨. 비·눈이면 그만큼 여유를 더한다(WeatherPolicy). */
+    val weather: PlanWeather? = null,
 )
 
 sealed interface PlanOutcome {
@@ -47,7 +50,7 @@ sealed interface PlanOutcome {
  * 시간 계산 파이프라인을 조립한다.
  *
  *   travel     = EstimateTravelTime(현재 ETA, 최근 이동시간)
- *   buffer     = CalculateSafetyBuffer(기본 여유, 지연, 실시간 여부)
+ *   buffer     = CalculateSafetyBuffer(기본 여유, 지연, 실시간 여부) + 날씨 여유(비 +5, 눈 +10)
  *   departure  = target - travel - buffer
  *   wakeUp     = departure - preparation
  *
@@ -71,6 +74,7 @@ class BuildAlarmPlanUseCase @Inject constructor(
 
         val travel = estimateTravelTime(input.currentTravel, input.recentTravel)
         val buffer = calculateSafetyBuffer(input.baseBufferMinutes, input.delay, input.isRealtime)
+            .plusMinutes((input.weather?.extraMinutes ?: 0).toLong())
 
         val departureTimes = when (val result = calculateDepartureTime(input.targetArrival, travel, buffer)) {
             is AppResult.Success -> result.data
@@ -93,6 +97,7 @@ class BuildAlarmPlanUseCase @Inject constructor(
             isRealtime = input.isRealtime,
             lastUpdatedAt = input.fetchedAt,
             route = input.route,
+            weather = input.weather,
         )
 
         if (!departureTimes.recommendedDeparture.isBefore(now)) {

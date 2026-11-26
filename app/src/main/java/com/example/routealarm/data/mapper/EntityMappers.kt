@@ -12,6 +12,8 @@ import com.example.routealarm.domain.model.AlarmPlan
 import com.example.routealarm.domain.model.AlarmSound
 import com.example.routealarm.domain.model.Place
 import com.example.routealarm.domain.model.PlaceType
+import com.example.routealarm.domain.model.PlanWeather
+import com.example.routealarm.domain.model.Precipitation
 import com.example.routealarm.domain.model.Schedule
 import com.example.routealarm.domain.model.ScheduleSound
 import com.example.routealarm.domain.model.UserPreferences
@@ -135,6 +137,9 @@ class ScheduleEntityMapper(private val json: Json) {
         previousTravelMinutes = previousTravelMinutes,
         isRealtime = isRealtime,
         lastUpdatedAt = lastUpdatedAt.toEpochMilli(),
+        weatherPrecipitation = weather?.precipitation?.name,
+        weatherProbability = weather?.probability,
+        weatherExtraMinutes = weather?.extraMinutes,
     )
 
     private fun PlanColumns.toDomain(route: com.example.routealarm.domain.model.TransitRoute?) = AlarmPlan(
@@ -149,6 +154,9 @@ class ScheduleEntityMapper(private val json: Json) {
         isRealtime = isRealtime,
         lastUpdatedAt = Instant.ofEpochMilli(lastUpdatedAt),
         route = route,
+        weather = weatherPrecipitation?.let {
+            PlanWeather(enumValueOrDefault(it, Precipitation.NONE), weatherProbability ?: 0, weatherExtraMinutes ?: 0)
+        },
     )
 }
 

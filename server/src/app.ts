@@ -4,6 +4,7 @@ import { UpstreamError } from "./contract.ts";
 import { type Clock, clientIp, DailyQuota, RateLimiter, TtlCache } from "./guard.ts";
 import { fetchKakaoPlaces } from "./kakao.ts";
 import { fetchTaxiEstimate, type TaxiEstimateDto } from "./taxi.ts";
+import { fetchForecast, type Forecast, latestBase, toGrid, weatherAt } from "./weather.ts";
 import { createGroupPassRouter, DEFAULT_GROUP_PASSES, type GroupPassConfig } from "./grouppass.ts";
 import { createPaymentsRouter, type TossKeys } from "./payments.ts";
 import { attachLaneGeometry, fetchOdsayRaw, firstRideTarget, type OdsayResponse, type RideTarget, toRouteResponse, toRoutesWithPaths } from "./odsay.ts";
@@ -32,6 +33,8 @@ export interface GuardLimits {
   kakaoDailyLimit: number;
   /** 하루(한국 시간) 실시간 도착 API 호출 상한 (지하철·서울 버스·경기 버스 각각) */
   realtimeDailyLimit: number;
+  /** 하루(한국 시간) 기상청 단기예보 호출 상한 */
+  weatherDailyLimit: number;
 }
 
 export const DEFAULT_LIMITS: GuardLimits = {
@@ -40,6 +43,7 @@ export const DEFAULT_LIMITS: GuardLimits = {
   odsayDailyLimit: 1_000,
   kakaoDailyLimit: 10_000,
   realtimeDailyLimit: 900,
+  weatherDailyLimit: 9_000,
 };
 
 export interface AppConfig {
@@ -76,6 +80,8 @@ const GEOMETRY_CACHE_TTL_MS = 24 * 60 * 60_000;
 /** 장소 검색 결과는 자주 바뀌지 않으므로 10분 동안 재사용한다. */
 const SEARCH_CACHE_TTL_MS = 10 * 60_000;
 const TAXI_CACHE_TTL_MS = 5 * 60_000;
+/** 단기예보는 3시간마다 발표되므로 같은 격자·발표분은 한 번만 받는다. */
+const WEATHER_CACHE_TTL_MS = 3 * 60 * 60_000;
 /**
  * 실시간 도착 정보는 출발이 이만큼 가까울 때만 쓴다. 그보다 먼 출발에 "지금 3분 후 도착"을 붙이면
  * 사용자가 실제로 탈 차가 아니라서 오히려 틀린 안내가 된다.
@@ -111,6 +117,8 @@ export function createApp(config: AppConfig) {
   const geometryCache = new TtlCache<Array<Array<[number, number]>>>(GEOMETRY_CACHE_TTL_MS, 2_000, clock);
   const searchCache = new TtlCache<PlaceSearchResponseDto>(SEARCH_CACHE_TTL_MS, 1_000, clock);
   const taxiCache = new TtlCache<TaxiEstimateDto | null>(TAXI_CACHE_TTL_MS, 1_000, clock);
+  const weatherCache = new TtlCache<Forecast>(WEATHER_CACHE_TTL_MS, 500, clock);
+  const weatherQuota = new DailyQuota(limits.weatherDailyLimit, clock);
   const realtime = createRealtime(config.realtimeKeys ?? {}, limits.realtimeDailyLimit, clock, config.fetchImpl);
 
   const app = express();
@@ -191,6 +199,7 @@ export function createApp(config: AppConfig) {
       resets_in_seconds: odsayQuota.secondsUntilReset(),
       odsay: count(odsayQuota),
       kakao: count(kakaoQuota),
+      weather: count(weatherQuota),
       realtime: Object.fromEntries(Object.entries(realtime.quotas).map(([name, q]) => [name, count(q)])),
     });
   });
@@ -238,6 +247,39 @@ export function createApp(config: AppConfig) {
     taxiCache.set(key, estimate);
     if (estimate) res.json(estimate);
     else res.status(404).json({ error: "no route" });
+  });
+
+  // 출발 시각 날씨(기상청 단기예보). 같은 격자·발표분은 3시간 캐시한다.
+  app.get("/v1/weather", async (req, res) => {
+    if (rejectIfLimited(req, res, searchLimiter)) return;
+    const lat = latitude(req.query.lat);
+    const lng = longitude(req.query.lng);
+    const at = typeof req.query.at === "string" ? Date.parse(req.query.at) : Number.NaN;
+    if (lat === null || lng === null || Number.isNaN(at)) {
+      res.status(400).json({ error: "lat, lng 는 좌표, at 은 ISO-8601 시각이어야 합니다." });
+      return;
+    }
+    const key = config.realtimeKeys?.dataGoKrKey;
+    if (!key) {
+      res.status(503).json({ error: "weather unavailable" });
+      return;
+    }
+    const grid = toGrid(lat, lng);
+    const base = latestBase(clock());
+    const cacheKey = `${grid.nx},${grid.ny},${base.baseDate}${base.baseTime}`;
+    let forecast = weatherCache.get(cacheKey);
+    if (!forecast) {
+      if (rejectIfQuotaExceeded(res, weatherQuota, "기상청")) return;
+      forecast = (await fetchForecast(key, grid, base, config.fetchImpl)) ?? undefined;
+      if (!forecast) {
+        res.status(502).json({ error: "upstream error" });
+        return;
+      }
+      weatherCache.set(cacheKey, forecast);
+    }
+    const weather = weatherAt(forecast, at);
+    if (weather) res.json(weather);
+    else res.status(404).json({ error: "out of forecast range" });
   });
 
   app.use(createPaymentsRouter(config.tossKeys ?? {}, clock, config.fetchImpl));

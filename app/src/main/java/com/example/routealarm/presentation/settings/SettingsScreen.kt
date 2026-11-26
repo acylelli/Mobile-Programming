@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.Snooze
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material.icons.outlined.Traffic
+import androidx.compose.material.icons.outlined.Umbrella
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -136,6 +137,7 @@ fun SettingsRoute(
         onCustomSound = viewModel::setCustomSound,
         onVolume = viewModel::setAlarmVolume,
         onGradual = viewModel::setGradualVolume,
+        onWeather = viewModel::setWeatherAdjustment,
         onSnooze = viewModel::setSnoozeMinutes,
         onRefreshAll = viewModel::refreshAllNow,
         onRingAlarm = viewModel::ringAlarmNow,
@@ -164,6 +166,7 @@ fun SettingsScreen(
     onCustomSound: (String, String?) -> Unit = { _, _ -> },
     onVolume: (Int) -> Unit = {},
     onGradual: (Boolean) -> Unit = {},
+    onWeather: (Boolean) -> Unit = {},
     onRefreshAll: () -> Unit,
     onRingAlarm: () -> Unit,
 ) {
@@ -244,6 +247,15 @@ fun SettingsScreen(
             SettingsGroup(stringResource(R.string.settings_section_sound)) {
                 SettingsRow(Icons.Outlined.Traffic, stringResource(R.string.settings_traffic_notifications), onClick = { onTrafficNotifications(!prefs.trafficNotificationsEnabled) }) {
                     AppSwitch(checked = prefs.trafficNotificationsEnabled, onCheckedChange = onTrafficNotifications)
+                }
+                RowDivider()
+                SettingsRow(
+                    Icons.Outlined.Umbrella,
+                    stringResource(R.string.settings_weather),
+                    body = stringResource(R.string.settings_weather_body),
+                    onClick = { onWeather(!prefs.weatherAdjustment) },
+                ) {
+                    AppSwitch(checked = prefs.weatherAdjustment, onCheckedChange = onWeather)
                 }
                 RowDivider()
                 SettingsRow(Icons.Outlined.Vibration, stringResource(R.string.settings_vibration), onClick = { onVibration(!prefs.vibrationEnabled) }) {

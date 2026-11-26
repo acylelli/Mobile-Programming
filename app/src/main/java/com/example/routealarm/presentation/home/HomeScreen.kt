@@ -73,6 +73,7 @@ import com.example.routealarm.presentation.common.relativeUpdateText
 import com.example.routealarm.presentation.common.rememberNow
 import com.example.routealarm.presentation.navigation.LocalAppSnackbar
 import com.example.routealarm.presentation.permission.rememberPermissionStatus
+import com.example.routealarm.presentation.common.WeatherStrip
 import com.example.routealarm.presentation.taxi.LateRiskCard
 import java.time.Instant
 import kotlin.math.abs
@@ -251,6 +252,8 @@ private fun HomeContent(
             // 실시간 조회에 실패해 저장해 둔 경로로 계산한 상태도 같은 안내를 보여준다(SFR-009 오프라인 처리).
             plan?.isRealtime == false -> NoticeStrip(text = stringResource(R.string.home_offline_banner), icon = Icons.Outlined.CloudOff)
         }
+        // 출발 시각에 비·눈 예보가 있으면 여유를 더 뒀다고 알린다.
+        WeatherStrip(plan?.weather)
         // 지금 출발하면 늦는다면 택시 안내(지각 위험일 때만 보인다)
         LateRiskCard(schedule)
         if (state.pendingOutdatedMessage) NoticeStrip(text = stringResource(R.string.home_pending_outdated))
