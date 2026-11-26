@@ -1,5 +1,7 @@
 package com.example.routealarm.domain.model
 
+import com.example.routealarm.shared.subscription.PlanLimits as SharedPlanLimits
+import com.example.routealarm.shared.subscription.SubscriptionProduct as SharedProduct
 import java.time.Instant
 import java.time.LocalDate
 
@@ -7,8 +9,8 @@ enum class PlanType { FREE, PRO_MONTHLY, PRO_YEARLY, GROUP_PASS }
 
 /** PRO 기간제 이용권(월간 30일, 연간 365일). 금액은 Proxy 서버의 결제 금액과 같아야 한다(서버 값이 기준). */
 enum class SubscriptionProduct(val productId: String, val priceWon: Int) {
-    YEARLY("routealarm_pro_yearly", 24_000),
-    MONTHLY("routealarm_pro_monthly", 2_900),
+    YEARLY(SharedProduct.YEARLY.productId, SharedProduct.YEARLY.priceWon),
+    MONTHLY(SharedProduct.MONTHLY.productId, SharedProduct.MONTHLY.priceWon),
     ;
 
 }
@@ -60,13 +62,11 @@ data class GroupPass(
 
 object PlanLimits {
     /** 무료 플랜에서 만들 수 있는 일정 수 */
-    const val FREE_SCHEDULE_LIMIT = 2
+    const val FREE_SCHEDULE_LIMIT = SharedPlanLimits.FREE_SCHEDULE_LIMIT
 
     /** 연간 결제를 12개월로 나눈 금액과, 월간 결제 대비 할인율(화면 표시용) */
-    val YEARLY_MONTHLY_EQUIVALENT_WON: Int = SubscriptionProduct.YEARLY.priceWon / 12
-    val YEARLY_DISCOUNT_PERCENT: Int = (SubscriptionProduct.MONTHLY.priceWon * 12).let { yearOfMonthly ->
-        (yearOfMonthly - SubscriptionProduct.YEARLY.priceWon) * 100 / yearOfMonthly
-    }
+    val YEARLY_MONTHLY_EQUIVALENT_WON: Int = SharedPlanLimits.YEARLY_MONTHLY_EQUIVALENT_WON
+    val YEARLY_DISCOUNT_PERCENT: Int = SharedPlanLimits.YEARLY_DISCOUNT_PERCENT
 }
 
 /** 무료 플랜의 일정 사용량. PRO 는 제한이 없다. */

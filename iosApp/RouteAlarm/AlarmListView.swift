@@ -3,6 +3,7 @@ import SwiftUI
 /// 알람 탭(안드로이드 UI-D-001): 아이폰 시계식 큰 기상 시각, 아래 반복·도착과 교통 한 줄, 오른쪽 스위치
 struct AlarmListView: View {
     @EnvironmentObject private var store: AlarmStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     let onCreate: () -> Void
     let onOpen: (UUID) -> Void
 
@@ -25,6 +26,10 @@ struct AlarmListView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(store.alarms) { alarm in
                             AlarmRow(alarm: alarm) { onOpen(alarm.id) }
+                        }
+                        if !subscriptions.isPro {
+                            PlanLimitCard(used: store.alarms.count) { subscriptions.paywallVisible = true }
+                                .padding(.horizontal, Space.screen).padding(.top, Space.lg)
                         }
                     }
                     .padding(.top, 8.dp).padding(.bottom, Space.lg)

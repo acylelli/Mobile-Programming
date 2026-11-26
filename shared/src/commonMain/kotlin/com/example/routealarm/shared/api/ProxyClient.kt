@@ -7,6 +7,11 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
+import io.ktor.http.encodeURLPathPart
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
@@ -73,6 +78,24 @@ class ProxyClient(
                 parameter("destination_lng", destinationLongitude)
             }
         }.body()
+
+    /** PRO 기간제 이용권 주문을 만든다. 받은 checkout_url 을 브라우저로 연다. */
+    suspend fun createOrder(productId: String, platform: String? = null): CreateOrderResponseDto = call {
+        http.post("v1/payments/orders") {
+            contentType(ContentType.Application.Json)
+            setBody(CreateOrderRequestDto(productId, platform))
+        }
+    }.body()
+
+    suspend fun payment(orderId: String): PaymentResultDto =
+        call { http.get("v1/payments/${orderId.encodeURLPathPart()}") }.body()
+
+    /** 등록되지 않은 코드는 404(ProxyException.status) */
+    suspend fun groupPass(code: String): GroupPassDto =
+        call { http.get("v1/group-passes/${code.encodeURLPathPart()}") }.body()
+
+    suspend fun redeemGroupPass(code: String): GroupPassDto =
+        call { http.post("v1/group-passes/${code.encodeURLPathPart()}/redeem") }.body()
 
     fun close() = http.close()
 

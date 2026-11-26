@@ -1,5 +1,6 @@
 package com.example.routealarm.domain.usecase
 
+import com.example.routealarm.shared.subscription.GroupPassCode as SharedGroupPassCode
 import com.example.routealarm.core.common.AppError
 import com.example.routealarm.core.common.AppResult
 import com.example.routealarm.core.util.TimeProvider
@@ -19,18 +20,16 @@ import javax.inject.Inject
  * 단체 이용권 코드 규칙. 기관에서 받은 코드는 `HSU-2026-WAKE7` 처럼 영문 대문자·숫자를 하이픈으로 묶은 형태다.
  */
 object GroupPassCode {
-    const val MAX_LENGTH = 20
-    private val COMPLETE = Regex("^[A-Z0-9]{2,6}-[0-9]{4}-[A-Z0-9]{4,8}$")
+    const val MAX_LENGTH = SharedGroupPassCode.MAX_LENGTH
 
     /** 입력창에 남길 글자만 거른다: 영문·숫자·하이픈. 대소문자는 건드리지 않는다. */
-    fun sanitize(raw: String): String =
-        raw.filter { it in 'A'..'Z' || it in 'a'..'z' || it in '0'..'9' || it == '-' }.take(MAX_LENGTH)
+    fun sanitize(raw: String): String = SharedGroupPassCode.sanitize(raw)
 
     /** 서버에 보내는 형태: 허용 문자만 남기고 영문은 대문자로 바꾼다. */
-    fun normalize(raw: String): String = sanitize(raw).uppercase()
+    fun normalize(raw: String): String = SharedGroupPassCode.normalize(raw)
 
-    /** 서버에 물어볼 만큼 완성된 코드인지 */
-    fun isComplete(code: String): Boolean = COMPLETE.matches(code)
+    /** 서버에 물어볼 만큼 완성된 코드인지(규칙은 공용 모듈, iOS 와 같다) */
+    fun isComplete(code: String): Boolean = SharedGroupPassCode.isComplete(code)
 }
 
 /** 결제창(토스페이먼츠 테스트 결제)에서 돌아온 주문을 확인해 PRO 를 적용한다. 플랜이 바뀌면 재확인 일정도 다시 잡는다. */

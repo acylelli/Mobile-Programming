@@ -5,6 +5,7 @@ import UserNotifications
 struct RouteAlarmApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = AlarmStore.shared
+    @StateObject private var subscriptions = SubscriptionStore.shared
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(ColorTheme.storageKey) private var themeRaw = ColorTheme.standard.rawValue
     @AppStorage("onboardingDone") private var onboardingDone = false
@@ -17,6 +18,9 @@ struct RouteAlarmApp: App {
                 if onboardingDone { RootView() } else { OnboardingView { onboardingDone = true } }
             }
             .environmentObject(store)
+            .environmentObject(subscriptions)
+            // 토스페이먼츠 테스트 결제창에서 돌아오는 링크: routealarm://payment?orderId=…
+            .onOpenURL { subscriptions.handle(url: $0) }
             .tint(AppColor.accent)
             .font(AppFont.bodyLarge.font)
             // 테마를 바꾸면 화면 전체를 새 색으로 다시 그린다. 나이트는 항상 어둡게.
@@ -25,7 +29,13 @@ struct RouteAlarmApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             // 앱을 열 때마다 교통 상황으로 다시 계산해 알람을 맞춘다.
-            if phase == .active { Task { await store.refreshAll() } }
+            if phase == .active {
+                Task {
+                    // 결제창을 닫고 돌아왔어도 기억해 둔 주문이 있으면 결과를 확인한다.
+                    await subscriptions.resumePending()
+                    await store.refreshAll()
+                }
+            }
         }
     }
 }

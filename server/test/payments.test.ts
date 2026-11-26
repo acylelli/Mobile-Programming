@@ -146,3 +146,17 @@ test("앱이 먼저 주문을 만들면 주문 번호와 결제창 주소를 주
     assert.equal(bad.status, 400);
   });
 });
+
+test("iOS 앱이 만든 주문은 결과 페이지가 routealarm:// 링크로 앱에 돌아간다", async () => {
+  await withServer(keys, approve, async (base) => {
+    const res = await fetch(`${base}/v1/payments/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: "routealarm_pro_monthly", platform: "ios" }),
+    });
+    const { order_id } = (await res.json()) as { order_id: string };
+    const success = await (await fetch(`${base}/pay/success?paymentKey=pk&orderId=${order_id}&amount=2900`)).text();
+    assert.match(success, new RegExp(`routealarm://payment\\?orderId=${order_id}&amp;result=success|routealarm://payment\\?orderId=${order_id}&result=success`));
+    assert.doesNotMatch(success, /intent:\/\//);
+  });
+});

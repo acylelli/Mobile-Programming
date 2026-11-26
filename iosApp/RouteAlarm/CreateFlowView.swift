@@ -4,7 +4,9 @@ import Shared
 /// 새 일정 만들기(안드로이드 UI-C-001~006): 출발지 → 도착지 → 도착 시각·반복 → 준비 시간 → 여유·알림 방식 → 계산 미리보기
 struct CreateFlowView: View {
     @EnvironmentObject private var store: AlarmStore
+    @ObservedObject private var subscriptions = SubscriptionStore.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var showingGroupPass = false
 
     enum Step: Int { case origin, destination, time, preparation, buffer, result }
 
@@ -64,6 +66,17 @@ struct CreateFlowView: View {
             }
         }
         .background(AppColor.background)
+        // 만들기 화면은 전체 화면이라 PRO 페이월도 여기서 띄운다.
+        .sheet(isPresented: $subscriptions.paywallVisible) {
+            PaywallSheet {
+                subscriptions.paywallVisible = false
+                showingGroupPass = true
+            }
+            .environmentObject(subscriptions)
+        }
+        .fullScreenCover(isPresented: $showingGroupPass) {
+            NavigationStack { GroupPassView() }.environmentObject(subscriptions)
+        }
     }
 
     private func back() {
@@ -603,7 +616,9 @@ private struct PreviewStep: View {
                                                            bufferMinutes: Int32(draft.bufferMinutes), delayMinutes: 15),
            delayed.int64Value != plan.wakeUp.millis {
             Spacer().frame(height: 18.dp)
-            DelayScenarioCard(plan: plan, adjusted: Date(millis: delayed.int64Value))
+            DelayScenarioCard(plan: plan, adjusted: Date(millis: delayed.int64Value), isPro: SubscriptionStore.shared.isPro) {
+                SubscriptionStore.shared.paywallVisible = true
+            }
         }
         Spacer().frame(height: Space.lg)
     }
@@ -685,8 +700,14 @@ private struct RouteBar: View {
 private struct DelayScenarioCard: View {
     let plan: SavedPlan
     let adjusted: Date
+    let isPro: Bool
+    let onShowPaywall: () -> Void
 
     var body: some View {
+        if isPro { card } else { Button(action: onShowPaywall) { card.contentShape(Rectangle()) }.buttonStyle(.plain) }
+    }
+
+    @ViewBuilder private var card: some View {
         let shift = Int(plan.wakeUp.timeIntervalSince(adjusted) / 60)
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -706,7 +727,7 @@ private struct DelayScenarioCard: View {
                 Text("이동 15분 + 지연 여유 \(shift - 15)분만큼 앞당겨요.").font(AppFont.labelMedium).foregroundStyle(AppColor.textPrimary)
             }
             Spacer().frame(height: 6.dp)
-            Text("무료 플랜은 출발 전 1회 확인 후 알림만 보내요. PRO는 출발 직전까지 다시 계산해 알람을 옮겨요.")
+            Text(isPro ? "교통이 지연되면 출발 직전까지 다시 계산해 알람을 자동으로 옮겨요." : "무료 플랜은 출발 전 1회 확인 후 알림만 보내요. PRO는 출발 직전까지 다시 계산해 알람을 옮겨요.")
                 .font(AppFont.bodySmall).foregroundStyle(AppColor.textSecondary)
         }
         .padding(18.dp)
