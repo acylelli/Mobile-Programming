@@ -5,6 +5,7 @@ import UserNotifications
 /// 설정(안드로이드 UI-F-001 과 같은 묶음·순서·문구)
 struct SettingsView: View {
     @EnvironmentObject private var store: AlarmStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @AppStorage(Prefs.defaultPreparation) private var preparation = 30
     @AppStorage(Prefs.defaultBuffer) private var buffer = 10
     @AppStorage(Prefs.autoAdjust) private var autoAdjust = true
@@ -31,17 +32,30 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ScreenHeader(title: "설정")
                     VStack(alignment: .leading, spacing: 22.dp) {
+                        // PRO 배너: 무료 플랜 사용자에게만
+                        if !subscriptions.isPro { ProBanner { showPaywall() } }
                         group("알람 기본값") {
                             row("clock", "기본 준비 시간", value: "\(preparation)분") { sheet = .preparation }
                             divider
                             row("clock", "기본 여유 시간", value: "\(buffer)분") { sheet = .buffer }
                             divider
-                            toggleRow("arrow.triangle.2.circlepath", "실시간 자동 조정", body: "교통이 바뀌면 알람을 자동으로 옮겨요", isOn: $autoAdjust)
+                            // PRO 잠금 항목: 무료 플랜에서는 PRO 배지와 자물쇠. 누르면 PRO 페이월
+                            if subscriptions.isPro {
+                                toggleRow("arrow.triangle.2.circlepath", "실시간 자동 조정", body: "교통이 바뀌면 알람을 자동으로 옮겨요", isOn: $autoAdjust)
+                            } else {
+                                lockedRow("arrow.triangle.2.circlepath", "실시간 자동 조정")
+                            }
                         }
                         group("연동") {
-                            link("book.fill", "학교 시간표 연동") { TimetableView() }
-                            divider
-                            link("calendar", "캘린더 연동") { CalendarImportView() }
+                            if subscriptions.isPro {
+                                link("book.fill", "학교 시간표 연동") { TimetableView() }
+                                divider
+                                link("calendar", "캘린더 연동") { CalendarImportView() }
+                            } else {
+                                lockedRow("book.fill", "학교 시간표 연동")
+                                divider
+                                lockedRow("calendar", "캘린더 연동")
+                            }
                         }
                         group("기록") {
                             link("chart.bar.fill", "기록·통계", body: "최근 30일 제시간 기상률과 알람 조정 기록") { StatsView() }
@@ -52,9 +66,9 @@ struct SettingsView: View {
                             row("square.grid.2x2", "위젯 배경", value: (ColorTheme(rawValue: widgetTheme) ?? .standard).longLabel) { sheet = .widget }
                         }
                         group("구독") {
-                            link("ticket", "단체 이용권 코드 입력", value: "학교, 기업") { PendingFeatureView(title: "단체 이용권") }
+                            link("ticket", "단체 이용권 코드 입력", value: "학교, 기업") { GroupPassView() }
                             divider
-                            link("creditcard", "구독 관리", value: "무료") { PendingFeatureView(title: "구독 관리") }
+                            link("creditcard", "구독 관리", value: subscriptions.planName) { SubscriptionView() }
                         }
                         group("알람 소리와 알림") {
                             toggleRow("car", "교통 상황 알림", isOn: $trafficNotifications)
@@ -199,6 +213,26 @@ struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func showPaywall() { subscriptions.paywallVisible = true }
+
+    /// 무료 플랜에서 잠긴 항목: PRO 배지 + 자물쇠, 누르면 페이월
+    private func lockedRow(_ icon: String, _ title: String) -> some View {
+        Button(action: showPaywall) {
+            HStack(spacing: 0) {
+                rowLabel(icon, title, nil)
+                ProBadge()
+                Spacer().frame(width: 10.dp)
+                Image(systemName: "lock").font(.system(size: 15.dp)).foregroundStyle(AppColor.textTertiary)
+                    .frame(width: 18.dp, height: 18.dp).padding(.trailing, 4.dp)
+            }
+            .padding(.leading, 16.dp).padding(.trailing, 12.dp).padding(.vertical, 6.dp)
+            .frame(minHeight: 54.dp)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title), PRO 잠김")
     }
 
     private func toggleRow(_ icon: String, _ title: String, body: String? = nil, isOn: Binding<Bool>) -> some View {

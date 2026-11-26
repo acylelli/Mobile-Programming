@@ -323,10 +323,15 @@ final class AlarmStore: ObservableObject {
             if let updated = alarms.first(where: { $0.id == id }) { await AlarmNotifier.schedule(updated, saved) }
             return
         }
-        let decision = AdjustmentEngine.shared.evaluate(
+        let isPro = SubscriptionStore.shared.isPro
+        var decision = AdjustmentEngine.shared.evaluate(
             currentWakeUp: current.wakeUp.kotlinInstant, proposedWakeUp: saved.wakeUp.kotlinInstant,
-            autoAdjustEnabled: Prefs.bool(Prefs.autoAdjust), policy: AdjustmentPolicy.companion.Default, now: now.kotlinInstant
+            autoAdjustEnabled: isPro && Prefs.bool(Prefs.autoAdjust), policy: AdjustmentPolicy.companion.Default, now: now.kotlinInstant
         )
+        // 무료 플랜은 "알람 직전의 큰 지연" 예외에서도 알람을 옮기지 않고 확인만 요청한다.
+        if !isPro, let auto = decision as? AdjustmentDecisionAutoAdjust {
+            decision = AdjustmentDecisionRequireConfirmation(deltaMinutes: auto.deltaMinutes)
+        }
         switch decision {
         case is AdjustmentDecisionKeep:
             // 흔들림은 무시하고 기상 시각은 그대로, 교통 상태·갱신 시각만 새로
@@ -353,6 +358,12 @@ final class AlarmStore: ObservableObject {
     private func update(_ id: UUID, _ change: (inout Alarm) -> Void) {
         guard let index = alarms.firstIndex(where: { $0.id == id }) else { return }
         change(&alarms[index])
+        persist()
+    }
+
+    /// 플랜이 바뀌었다(결제·단체 이용권·무료로 되돌리기): 화면을 다시 그리고 알림을 다시 잡는다(안드로이드 RestoreAlarmsUseCase).
+    func planChanged() {
+        objectWillChange.send()
         persist()
     }
 

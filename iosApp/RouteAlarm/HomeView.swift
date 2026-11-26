@@ -4,6 +4,7 @@ import UserNotifications
 /// 홈(안드로이드 UI-B-001): 가장 가까운 일정의 기상 → 도착 노선도
 struct HomeView: View {
     @EnvironmentObject private var store: AlarmStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     let onCreate: () -> Void
     let onOpen: (UUID) -> Void
     @State private var notificationsDenied = false
@@ -14,8 +15,10 @@ struct HomeView: View {
                 ScrollView { content(alarm) }
                     .refreshable { await store.refresh(alarm.id) }
                 // 무료 플랜 안내 띠: 탭 바로 위에 고정
-                ProStrip()
-                    .padding(.horizontal, Space.screen).padding(.top, 8.dp).padding(.bottom, 12.dp)
+                if !subscriptions.isPro {
+                    Button { subscriptions.paywallVisible = true } label: { ProStrip() }.buttonStyle(.plain)
+                        .padding(.horizontal, Space.screen).padding(.top, 8.dp).padding(.bottom, 12.dp)
+                }
             } else {
                 ScreenHeader(title: "다음 알람")
                 Spacer().frame(height: Space.xl)

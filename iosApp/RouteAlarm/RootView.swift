@@ -1,3 +1,4 @@
+import Shared
 import SwiftUI
 
 enum AppTab: Hashable { case home, alarms, settings }
@@ -5,7 +6,10 @@ enum AppTab: Hashable { case home, alarms, settings }
 /// 홈 · 알람 · 설정 아래 탭(안드로이드 RouteAlarmBottomBar 와 같은 모양). 상세·테마 화면은 탭 위로 쌓인다.
 struct RootView: View {
     @EnvironmentObject private var store: AlarmStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var tab: AppTab = .home
+    @State private var showingGroupPass = false
+    @State private var limitMessage = false
     @State private var path: [UUID] = []
     @State private var creating: Alarm?
     @State private var snackbar: String?
@@ -16,7 +20,7 @@ struct RootView: View {
                 Group {
                     switch tab {
                     case .home: HomeView(onCreate: startCreate, onOpen: open)
-                    case .alarms: AlarmListView(onCreate: startCreate, onOpen: open)
+                    case .alarms: AlarmListView(onCreate: addFromList, onOpen: open)
                     case .settings: SettingsView(onRingDemo: { store.ringing = store.nextAlarm?.id ?? store.alarms.first?.id })
                     }
                 }
@@ -25,6 +29,7 @@ struct RootView: View {
             }
             .background(AppColor.background)
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $showingGroupPass) { GroupPassView() }
             .navigationDestination(for: UUID.self) { id in
                 AlarmDetailView(alarmId: id, onEdit: { creating = $0 }, onDeleted: {
                     path.removeAll()
@@ -36,7 +41,24 @@ struct RootView: View {
             if let snackbar {
                 Snackbar(text: snackbar, actionTitle: "되돌리기", action: { Task { await store.restoreDeleted() } }) { self.snackbar = nil }
                     .padding(.bottom, 72.dp)
+            } else if limitMessage {
+                Snackbar(text: "무료 플랜은 일정을 \(PlanLimits.shared.FREE_SCHEDULE_LIMIT)개까지 만들 수 있어요.", actionTitle: "PRO 보기",
+                         action: { subscriptions.paywallVisible = true }) { limitMessage = false }
+                    .padding(.bottom, 72.dp)
+            } else if let message = subscriptions.message {
+                Snackbar(text: message) { subscriptions.message = nil }.padding(.bottom, 72.dp)
             }
+        }
+        .sheet(isPresented: $subscriptions.paywallVisible) {
+            PaywallSheet {
+                subscriptions.paywallVisible = false
+                showingGroupPass = true
+            }
+            .environmentObject(subscriptions)
+        }
+        .sheet(item: Binding(get: { subscriptions.checkoutURL.map(CheckoutPage.init) }, set: { subscriptions.checkoutURL = $0?.url }),
+               onDismiss: { Task { await subscriptions.resumePending() } }) { page in
+            CheckoutSafari(url: page.url).ignoresSafeArea()
         }
         .fullScreenCover(item: $creating) { CreateFlowView(original: $0) }
         .fullScreenCover(item: Binding(get: { store.ringing.map(RingingID.init) }, set: { store.ringing = $0?.id })) {
@@ -45,10 +67,24 @@ struct RootView: View {
     }
 
     private func startCreate() { creating = Alarm.draft }
+
+    /// 알람 탭의 새 일정(+): 무료 플랜 한도에 차 있으면 만들기 대신 PRO 페이월(하루 한 번) 또는 안내
+    private func addFromList() {
+        switch subscriptions.addDecision(scheduleCount: store.alarms.count) {
+        case .create: startCreate()
+        case .paywall: subscriptions.paywallVisible = true
+        case .limitMessage: limitMessage = true
+        }
+    }
     private func open(_ id: UUID) { path = [id] }
 }
 
 private struct RingingID: Identifiable { let id: UUID }
+
+private struct CheckoutPage: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
 
 private struct BottomBar: View {
     @Binding var tab: AppTab

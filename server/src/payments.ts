@@ -45,6 +45,8 @@ interface Order {
   startedAt?: string;
   expiresAt?: string;
   failCode?: string;
+  /** 결과 페이지에서 돌아갈 앱. iOS 는 routealarm:// 링크, 그 밖에는 Android intent:// 링크 */
+  platform?: "ios";
 }
 
 const TOSS_CONFIRM_URL = "https://api.tosspayments.com/v1/payments/confirm";
@@ -70,17 +72,18 @@ export function createPaymentsRouter(keys: TossKeys, clock: Clock, fetchImpl: ty
     next();
   });
 
-  function createOrder(productId: string): Order | null {
+  function createOrder(productId: string, platform?: "ios"): Order | null {
     const product = PRODUCTS[productId];
     if (!product) return null;
-    const order: Order = { orderId: `ra_${randomUUID()}`, productId, amount: product.amount, status: "READY" };
+    const order: Order = { orderId: `ra_${randomUUID()}`, productId, amount: product.amount, status: "READY", ...(platform ? { platform } : {}) };
     orders.set(order.orderId, order);
     return order;
   }
 
   /** 앱이 결제 전에 주문을 만든다. 주문 번호를 앱이 먼저 알아야, 결제 후 앱으로 돌아오지 않아도 결과를 확인할 수 있다. */
   router.post("/v1/payments/orders", express.json({ limit: "1kb" }), (req, res) => {
-    const order = createOrder(String((req.body as { product_id?: unknown } | undefined)?.product_id ?? ""));
+    const body = req.body as { product_id?: unknown; platform?: unknown } | undefined;
+    const order = createOrder(String(body?.product_id ?? ""), body?.platform === "ios" ? "ios" : undefined);
     if (!order) {
       res.status(400).json({ error: "unknown product" });
       return;
@@ -227,9 +230,13 @@ function publicBaseUrl(req: Request): string {
   return `${proto}://${req.get("host")}`;
 }
 
-/** Android Chrome 은 intent:// 링크로 앱을 연다. 앱이 없으면 아무 일도 일어나지 않고 결과 페이지가 남는다. */
+/**
+ * Android Chrome 은 intent:// 링크로 앱을 연다. 앱이 없으면 아무 일도 일어나지 않고 결과 페이지가 남는다.
+ * iOS 앱이 만든 주문은 앱의 URL 스킴(routealarm://payment)으로 돌아간다.
+ */
 function appLink(order: Order, result: "success" | "fail"): string {
   const query = new URLSearchParams({ orderId: order.orderId, result });
+  if (order.platform === "ios") return `routealarm://payment?${query}`;
   return `intent://payment?${query}#Intent;scheme=routealarm;package=${APP_PACKAGE};end`;
 }
 

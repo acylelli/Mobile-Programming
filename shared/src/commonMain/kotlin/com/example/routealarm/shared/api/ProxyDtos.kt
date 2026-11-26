@@ -63,3 +63,43 @@ data class TaxiEstimateDto(
     @SerialName("fare_won") val fareWon: Int = 0,
     @SerialName("toll_won") val tollWon: Int = 0,
 )
+
+/** 결제 전에 서버에 만드는 주문(POST /v1/payments/orders). iOS 는 platform="ios" 로 앱 링크를 받는다. */
+@Serializable
+data class CreateOrderRequestDto(
+    @SerialName("product_id") val productId: String,
+    val platform: String? = null,
+)
+
+@Serializable
+data class CreateOrderResponseDto(
+    @SerialName("order_id") val orderId: String,
+    @SerialName("checkout_url") val checkoutUrl: String,
+)
+
+@Serializable
+data class SubscriptionStatusDto(
+    @SerialName("product_id") val productId: String,
+    @SerialName("started_at") val startedAt: String,
+    @SerialName("trial_ends_at") val trialEndsAt: String? = null,
+    @SerialName("expires_at") val expiresAt: String,
+    @SerialName("auto_renew") val autoRenew: Boolean = true,
+)
+
+/** 서버가 승인한 주문 결과(GET /v1/payments/{orderId}). status: READY | PAID | FAILED */
+@Serializable
+data class PaymentResultDto(
+    @SerialName("order_id") val orderId: String,
+    val status: String,
+    @SerialName("fail_code") val failCode: String? = null,
+    val subscription: SubscriptionStatusDto? = null,
+)
+
+@Serializable
+data class GroupPassDto(
+    val code: String,
+    val organization: String,
+    @SerialName("valid_from") val validFrom: String,
+    @SerialName("valid_until") val validUntil: String,
+    @SerialName("remaining_seats") val remainingSeats: Int,
+)
