@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import { createApp } from "../src/app.ts";
+import { createApp, routeCacheKey } from "../src/app.ts";
+import { KeyedDailyQuota } from "../src/guard.ts";
 import type { OdsayResponse } from "../src/odsay.ts";
 
 const odsayOk: OdsayResponse = {
@@ -24,8 +25,8 @@ const START = Date.parse("2026-11-26T01:00:00Z"); // 10:00 KST
 const MIN = 60_000;
 
 async function withServer(
-  options: { odsayDailyLimit?: number; odsay?: () => unknown },
-  run: (ctx: { get: (path: string) => Promise<Response>; odsayCalls: () => number; advance: (ms: number) => void }) => Promise<void>,
+  options: { odsayDailyLimit?: number; odsayPerIpDailyLimit?: number; odsay?: () => unknown },
+  run: (ctx: { get: (path: string, ip?: string) => Promise<Response>; odsayCalls: () => number; advance: (ms: number) => void }) => Promise<void>,
 ) {
   let now = START;
   let odsayCalls = 0;
@@ -41,12 +42,16 @@ async function withServer(
     kakaoRestApiKey: "k",
     fetchImpl: fakeFetch,
     clock: () => now,
-    limits: { odsayDailyLimit: options.odsayDailyLimit ?? 1000, routesPerMinute: 1000 },
+    limits: { odsayDailyLimit: options.odsayDailyLimit ?? 1000, odsayPerIpDailyLimit: options.odsayPerIpDailyLimit ?? 1000, routesPerMinute: 1000 },
   }).listen(0);
   await new Promise((resolve) => server.once("listening", resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   try {
-    await run({ get: (path) => fetch(`${base}${path}`), odsayCalls: () => odsayCalls, advance: (ms) => { now += ms; } });
+    await run({
+      get: (path, ip) => fetch(`${base}${path}`, ip ? { headers: { "cf-connecting-ip": ip } } : undefined),
+      odsayCalls: () => odsayCalls,
+      advance: (ms) => { now += ms; },
+    });
   } finally {
     server.close();
   }
@@ -115,4 +120,34 @@ test("ODsay 자체 한도 초과(오류 응답)면 예비 캐시로 답하고, �
     assert.equal(((await fresh.json()) as { realtime: boolean }).realtime, true);
     assert.equal(odsayCalls(), 4);
   });
+});
+
+test("경로 캐시 키는 약 50m 단위로 묶어, 조금 흔들린 현재 위치도 같은 캐시를 쓴다", () => {
+  const a = routeCacheKey({ originLat: 37.62451, originLng: 127.15301, destinationLat: 37.5826, destinationLng: 127.0105 });
+  const b = routeCacheKey({ originLat: 37.62459, originLng: 127.15318, destinationLat: 37.5826, destinationLng: 127.0105 });
+  const far = routeCacheKey({ originLat: 37.6260, originLng: 127.1532, destinationLat: 37.5826, destinationLng: 127.0105 });
+  assert.equal(a, b);
+  assert.notEqual(a, far);
+});
+
+test("IP 별 하루 상한: 한 IP 가 몫을 다 쓰면 새 경로는 429, 다른 IP 는 계속 쓸 수 있다", async () => {
+  await withServer({ odsayPerIpDailyLimit: 2 }, async ({ get, odsayCalls }) => {
+    assert.equal((await get(route(37.61), "1.1.1.1")).status, 200);
+    assert.equal((await get(route(37.62), "1.1.1.1")).status, 200);
+    // 같은 경로는 캐시라 상한에 들어가지 않는다
+    assert.equal((await get(route(37.62), "1.1.1.1")).status, 200);
+    assert.equal((await get(route(37.63), "1.1.1.1")).status, 429);
+    assert.equal((await get(route(37.63), "2.2.2.2")).status, 200);
+    assert.equal(odsayCalls(), 3);
+  });
+});
+
+test("KeyedDailyQuota 는 키마다 세고 한국 시간 자정에 초기화된다", () => {
+  let now = Date.parse("2026-11-26T14:00:00Z"); // 23:00 KST
+  const quota = new KeyedDailyQuota(1, () => now);
+  assert.equal(quota.take("a"), true);
+  assert.equal(quota.take("a"), false);
+  assert.equal(quota.take("b"), true);
+  now += 2 * 60 * 60 * 1000; // 다음 날 01:00 KST
+  assert.equal(quota.take("a"), true);
 });
