@@ -21,7 +21,7 @@ final class PlaceBook: ObservableObject {
             case .home: return "house"
             case .school: return "graduationcap"
             case .work: return "briefcase"
-            case .custom: return "mappin.and.ellipse"
+            case .custom: return "place"
             }
         }
     }

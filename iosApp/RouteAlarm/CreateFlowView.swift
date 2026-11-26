@@ -192,7 +192,7 @@ private struct PlaceStep: View {
             SectionLabel(text: "검색 결과")
             Spacer().frame(height: 4.dp)
             ForEach(results, id: \.self) { place in
-                PlaceRow(icon: "mappin", title: place.name, subtitle: place.subtitle,
+                PlaceRow(icon: "place", title: place.name, subtitle: place.subtitle,
                          selected: !usingCurrentLocation && selected?.isSame(place) == true, plainIcon: true) { select(place, fromSearch: true) }
             }
         }
@@ -204,11 +204,11 @@ private struct PlaceStep: View {
         if let selected, !usingCurrentLocation, !listed.contains(where: { $0.isSame(selected) }) {
             SectionLabel(text: "선택한 장소")
             Spacer().frame(height: 8.dp)
-            PlaceRow(icon: "mappin.and.ellipse", title: selected.name, subtitle: selected.address.isEmpty ? nil : selected.address, selected: true) {}
+            PlaceRow(icon: "place", title: selected.name, subtitle: selected.address.isEmpty ? nil : selected.address, selected: true) {}
             Spacer().frame(height: Space.lg)
         }
         if isOrigin {
-            PlaceRow(icon: "location", title: "현재 위치", subtitle: "출발할 때 한 번만 조회해요", selected: usingCurrentLocation) {
+            PlaceRow(icon: "scope", title: "현재 위치", subtitle: "출발할 때 한 번만 조회해요", selected: usingCurrentLocation) {
                 draft.useCurrentLocation = true
                 draft.origin = Place(name: "현재 위치", address: "", latitude: 0, longitude: 0)
                 draft.plan = nil
@@ -229,7 +229,7 @@ private struct PlaceStep: View {
                 }
             }
             ForEach(book.customs) { saved in
-                PlaceRow(icon: "mappin.and.ellipse", title: saved.place.name, subtitle: saved.place.address,
+                PlaceRow(icon: "place", title: saved.place.name, subtitle: saved.place.address,
                          selected: !usingCurrentLocation && selected?.isSame(saved.place) == true) { select(saved.place, fromSearch: false) }
                     .onLongPressGesture { deleteTarget = saved }
             }
@@ -247,6 +247,8 @@ private struct PlaceStep: View {
     }
 
     private func select(_ place: Place, fromSearch: Bool) {
+        // 장소를 고르면 검색을 마친 것이므로 키보드를 내린다(안드로이드 clearFocus).
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         if let registering {
             book.register(registering, place)
             self.registering = nil
@@ -291,10 +293,10 @@ struct PlaceRow: View {
         Button(action: action) {
             HStack(spacing: 14.dp) {
                 if plainIcon {
-                    Image(systemName: icon).font(.system(size: 19.dp)).foregroundStyle(selected ? AppColor.accentText : AppColor.textTertiary)
+                    AppIcon(name: icon, size: 19.dp).foregroundStyle(selected ? AppColor.accentText : AppColor.textTertiary)
                         .frame(width: 22.dp)
                 } else {
-                    Image(systemName: icon).font(.system(size: 19.dp)).foregroundStyle(selected ? AppColor.onAccent : AppColor.textPrimary)
+                    AppIcon(name: icon, size: 19.dp).foregroundStyle(selected ? AppColor.onAccent : AppColor.textPrimary)
                         .frame(width: 42.dp, height: 42.dp)
                         .background(RoundedRectangle(cornerRadius: Radius.tile).fill(selected ? AppColor.accent : AppColor.surface))
                 }

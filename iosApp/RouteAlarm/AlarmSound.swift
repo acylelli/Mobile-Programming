@@ -113,6 +113,8 @@ struct AlarmSoundSheet: View {
     @State private var setting: SoundSetting
     @State private var follow: Bool
     @State private var previewing = false
+    /// 내용 높이만큼만 시트를 올린다(안드로이드 바텀시트처럼)
+    @State private var contentHeight: CGFloat = 520
     @Environment(\.dismiss) private var dismiss
 
     init(title: String = "알람음", initial: SoundSetting, followSettings: Bool? = nil, onConfirm: @escaping (SoundSetting?) -> Void) {
@@ -180,7 +182,10 @@ struct AlarmSoundSheet: View {
             }
         }
         .padding(.horizontal, Space.screen).padding(.top, 28.dp).padding(.bottom, 16.dp)
-        .presentationDetents([.large])
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .presentationDetents([.height(contentHeight)])
         .presentationDragIndicator(.visible)
         .presentationBackground(AppColor.background)
         .onDisappear { AlarmSoundPlayer.shared.stop() }
