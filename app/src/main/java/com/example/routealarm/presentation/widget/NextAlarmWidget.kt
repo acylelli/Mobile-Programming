@@ -127,7 +127,7 @@ private fun WidgetContent(context: Context, schedule: Schedule?, style: WidgetSt
             style = TextStyle(color = secondary, fontSize = 13.sp),
             maxLines = 1,
         )
-        Text(TimeFormat.time(plan.wakeUp), style = TextStyle(color = primary, fontSize = 34.sp, fontWeight = FontWeight.Bold))
+        Text(TimeFormat.time(plan.wakeUp), style = TextStyle(color = primary, fontSize = 34.sp, fontWeight = FontWeight.Normal))
         Text(
             context.getString(
                 R.string.widget_summary,

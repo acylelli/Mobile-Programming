@@ -3,7 +3,6 @@ package com.example.routealarm.presentation.alarmlist
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarResult
@@ -36,30 +36,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.routealarm.R
-import com.example.routealarm.core.designsystem.component.AppCard
 import com.example.routealarm.core.designsystem.component.AppSwitch
 import com.example.routealarm.core.designsystem.component.EmptyState
 import com.example.routealarm.core.designsystem.component.LoadingState
-import com.example.routealarm.core.designsystem.component.Pill
 import com.example.routealarm.core.designsystem.component.PrimaryButton
 import com.example.routealarm.core.designsystem.component.ProBadge
 import com.example.routealarm.core.designsystem.component.ScreenHeader
-import com.example.routealarm.core.designsystem.component.TrafficStatusChip
 import com.example.routealarm.core.designsystem.component.dashedBorder
-import com.example.routealarm.core.designsystem.component.dashedLine
+import com.example.routealarm.core.designsystem.theme.AppType
 import com.example.routealarm.core.designsystem.theme.Radius
 import com.example.routealarm.core.designsystem.theme.RouteAlarmTheme
 import com.example.routealarm.core.designsystem.theme.Spacing
 import com.example.routealarm.domain.model.ScheduleQuota
+import com.example.routealarm.domain.model.TrafficStatus
 import com.example.routealarm.presentation.common.TimeFormat
 import com.example.routealarm.presentation.common.messageRes
 import com.example.routealarm.presentation.common.relativeUpdateText
@@ -67,6 +61,7 @@ import com.example.routealarm.presentation.common.rememberNow
 import com.example.routealarm.presentation.common.repeatLabel
 import com.example.routealarm.presentation.navigation.LocalAppSnackbar
 import java.time.Instant
+import java.time.ZoneId
 
 @Composable
 fun AlarmListRoute(
@@ -135,11 +130,13 @@ fun AlarmListScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = Spacing.screen, end = Spacing.screen, top = 20.dp, bottom = Spacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = Spacing.lg),
                 ) {
+                    item(key = "top-divider") {
+                        HorizontalDivider(Modifier.padding(start = Spacing.screen), thickness = 1.dp, color = RouteAlarmTheme.colors.outline)
+                    }
                     items(state.items, key = { it.schedule.id }) { item ->
-                        AlarmCard(
+                        AlarmRow(
                             item = item,
                             now = now,
                             onClick = { onOpenSchedule(item.schedule.id) },
@@ -147,7 +144,11 @@ fun AlarmListScreen(
                         )
                     }
                     (state.quota as? ScheduleQuota.Limited)?.let { quota ->
-                        item(key = "plan-limit") { PlanLimitCard(quota, onClick = onShowPaywall) }
+                        item(key = "plan-limit") {
+                            Box(Modifier.padding(start = Spacing.screen, end = Spacing.screen, top = Spacing.lg)) {
+                                PlanLimitCard(quota, onClick = onShowPaywall)
+                            }
+                        }
                     }
                 }
             }
@@ -174,96 +175,109 @@ private fun AddButton(onClick: () -> Unit) {
 }
 
 /**
- * 알람 카드(②): 반복 요일, 기상 시각, 목적지, 목표 도착 시각, 출발 시각. 누르면 일정 상세로 간다.
- * 교통 변화로 조정된 일정은 빨강 경고 칩과 "변경 전 → 변경 후" 시각으로 표시한다(④).
+ * 알람 행(②): 아이폰 시계 앱처럼 구분선으로 나눈 목록. 크고 가는 "오전 7:29", 그 아래 반복 요일과 도착지,
+ * 맨 아래 교통 정보 한 줄. 누르면 일정 상세로 간다. 꺼진 알람은 전체를 흐리게 그린다.
+ * 교통 변화로 조정된 일정은 "변경 전 → 변경 후" 시각을 강조색으로 보여준다(④).
  */
 @Composable
-private fun AlarmCard(item: AlarmListItem, now: Instant, onClick: () -> Unit, onToggle: (Boolean) -> Unit) {
+private fun AlarmRow(item: AlarmListItem, now: Instant, onClick: () -> Unit, onToggle: (Boolean) -> Unit) {
     val colors = RouteAlarmTheme.colors
     val schedule = item.schedule
     val plan = schedule.plan
-    val timeColor by animateColorAsState(if (schedule.enabled) colors.textPrimary else colors.textTertiary, label = "alarmTime")
+    val enabled = schedule.enabled
+    val timeColor by animateColorAsState(if (enabled) colors.textPrimary else colors.textTertiary, label = "alarmTime")
+    val subColor = if (enabled) colors.textSecondary else colors.textTertiary
 
-    AppCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
-        Column(Modifier.padding(start = 20.dp, end = 16.dp, top = 18.dp, bottom = 18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    repeatLabel(schedule.repeatDays, schedule.oneTimeDate),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colors.textSecondary,
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    plan?.wakeUp?.let(TimeFormat::time) ?: stringResource(R.string.time_placeholder),
-                    style = MaterialTheme.typography.displayMedium,
-                    color = timeColor,
-                    modifier = Modifier.weight(1f),
-                )
-                // 알람 켜기/끄기(③): 켜짐은 강조색, 꺼짐은 회색
-                AppSwitch(
-                    checked = schedule.enabled,
-                    onCheckedChange = onToggle,
-                    contentDescription = stringResource(R.string.alarms_toggle_description),
-                )
-            }
-            Text(
-                buildAnnotatedString {
-                    append(schedule.destination.name)
-                    append(" ")
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                        append(stringResource(R.string.alarms_arrival_format, TimeFormat.time(schedule.targetArrivalTime)))
+    Column(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick)) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = Spacing.screen, end = Spacing.screen, top = 14.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                val wakeUp = plan?.wakeUp?.atZone(ZoneId.systemDefault())?.toLocalTime()
+                Row(verticalAlignment = Alignment.Bottom) {
+                    if (wakeUp != null) {
+                        Text(
+                            stringResource(if (wakeUp.hour < NOON) R.string.time_am else R.string.time_pm),
+                            style = AppType.ListMeridiem,
+                            color = timeColor,
+                            modifier = Modifier.padding(bottom = 5.dp, end = 4.dp),
+                        )
                     }
-                    if (plan != null) {
-                        append(" | ")
-                        append(stringResource(R.string.alarms_departure_format, TimeFormat.time(plan.departure)))
-                    }
-                },
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = MaterialTheme.typography.labelLarge.fontSize),
-                color = if (schedule.enabled) colors.textPrimary else colors.textSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(end = 4.dp),
-            )
-            Box(Modifier.fillMaxWidth().padding(end = 4.dp).height(29.dp).dashedLine(colors.outline))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                when {
-                    !schedule.enabled -> Pill(stringResource(R.string.alarms_disabled))
-                    plan == null -> Pill(stringResource(R.string.alarms_not_calculated))
-                    else -> {
-                        TrafficStatusChip(plan.trafficStatus)
-                        Spacer(Modifier.width(10.dp))
-                        val adjustment = item.adjustment
-                        when {
-                            adjustment?.previousWakeUp != null && adjustment.newWakeUp != null -> Text(
-                                stringResource(
-                                    if (adjustment.newWakeUp.isBefore(adjustment.previousWakeUp)) R.string.alarms_adjusted_earlier else R.string.alarms_adjusted_later,
-                                    TimeFormat.time(adjustment.previousWakeUp),
-                                    TimeFormat.time(adjustment.newWakeUp),
-                                ),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.danger,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            !plan.isRealtime && plan.isStale(now) -> Text(
-                                stringResource(R.string.traffic_stale),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.danger,
-                            )
-                            else -> Text(
-                                relativeUpdateText(plan.lastUpdatedAt, if (now.isAfter(plan.lastUpdatedAt)) now else plan.lastUpdatedAt),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.textTertiary,
-                                maxLines = 1,
-                            )
-                        }
-                    }
+                    Text(
+                        wakeUp?.let { "${(it.hour % NOON).let { h -> if (h == 0) NOON else h }}:${"%02d".format(it.minute)}" }
+                            ?: stringResource(R.string.time_placeholder),
+                        style = AppType.ListTime,
+                        color = timeColor,
+                    )
                 }
+                Text(
+                    stringResource(
+                        R.string.alarms_row_label,
+                        repeatLabel(schedule.repeatDays, schedule.oneTimeDate),
+                        schedule.destination.name,
+                        TimeFormat.time(schedule.targetArrivalTime),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = subColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                TrafficLine(item, now)
             }
+            Spacer(Modifier.width(12.dp))
+            // 알람 켜기/끄기(③): 켜짐은 강조색, 꺼짐은 회색
+            AppSwitch(
+                checked = enabled,
+                onCheckedChange = onToggle,
+                contentDescription = stringResource(R.string.alarms_toggle_description),
+            )
         }
+        HorizontalDivider(Modifier.padding(start = Spacing.screen), thickness = 1.dp, color = colors.outline)
     }
 }
+
+/** 알람 행 맨 아래 교통 정보: 상태 점 + "교통 정상 · 07:59 출발 · 2분 전 갱신" 처럼 한 줄 */
+@Composable
+private fun TrafficLine(item: AlarmListItem, now: Instant) {
+    val colors = RouteAlarmTheme.colors
+    val schedule = item.schedule
+    val plan = schedule.plan
+    val (dotColor, text) = when {
+        !schedule.enabled -> colors.textTertiary to stringResource(R.string.alarms_disabled)
+        plan == null -> colors.textTertiary to stringResource(R.string.alarms_not_calculated)
+        else -> {
+            val status = plan.trafficStatus
+            val statusText = when (status) {
+                TrafficStatus.Normal -> stringResource(R.string.traffic_normal)
+                is TrafficStatus.MinorDelay -> stringResource(R.string.traffic_minor_delay, status.delayMinutes)
+                is TrafficStatus.SevereDelay -> stringResource(R.string.traffic_severe_delay, status.delayMinutes)
+            }
+            val adjustment = item.adjustment
+            val tail = when {
+                adjustment?.previousWakeUp != null && adjustment.newWakeUp != null -> stringResource(
+                    if (adjustment.newWakeUp.isBefore(adjustment.previousWakeUp)) R.string.alarms_adjusted_earlier else R.string.alarms_adjusted_later,
+                    TimeFormat.time(adjustment.previousWakeUp),
+                    TimeFormat.time(adjustment.newWakeUp),
+                )
+                !plan.isRealtime && plan.isStale(now) -> stringResource(R.string.traffic_stale)
+                else -> relativeUpdateText(plan.lastUpdatedAt, if (now.isAfter(plan.lastUpdatedAt)) now else plan.lastUpdatedAt)
+            }
+            val alert = status !is TrafficStatus.Normal || adjustment?.newWakeUp != null || (!plan.isRealtime && plan.isStale(now))
+            (if (alert) colors.danger else colors.accent) to stringResource(
+                R.string.alarms_traffic_line, statusText, TimeFormat.time(plan.departure), tail,
+            )
+        }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(dotColor))
+        Spacer(Modifier.width(6.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+private const val NOON = 12
 
 /** 플랜 한도(⑤): 무료 플랜의 일정 사용 개수와 PRO 안내를 점선 카드로 보여준다. */
 @Composable

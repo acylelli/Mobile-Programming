@@ -302,6 +302,8 @@
     <string name="weather_umbrella_line">%1$s 예보 %2$d%% · 우산 챙기세요</string>
     <string name="settings_weather">날씨 반영</string>
     <string name="settings_weather_body">출발 시각에 비 오면 5분, 눈 오면 10분 여유를 더하고 우산을 챙기라고 알려 줘요</string>
+    <string name="alarms_row_label">%1$s · %2$s %3$s 도착</string>
+    <string name="alarms_traffic_line">%1$s · %2$s 출발 · %3$s</string>
     <string name="stats_title">기록·통계</string>
     <string name="settings_section_records">기록</string>
     <string name="settings_stats_body">최근 30일 제시간 기상률과 알람 조정 기록</string>
