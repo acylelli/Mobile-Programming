@@ -43,6 +43,7 @@ import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material.icons.outlined.Traffic
 import androidx.compose.material.icons.outlined.Umbrella
 import androidx.compose.material.icons.outlined.Vibration
+import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -144,13 +145,14 @@ fun SettingsRoute(
         onVolume = viewModel::setAlarmVolume,
         onGradual = viewModel::setGradualVolume,
         onWeather = viewModel::setWeatherAdjustment,
+        onWidgetTheme = viewModel::setWidgetTheme,
         onSnooze = viewModel::setSnoozeMinutes,
         onRefreshAll = viewModel::refreshAllNow,
         onRingAlarm = viewModel::ringAlarmNow,
     )
 }
 
-private enum class SettingsSheet { PREPARATION, BUFFER, SOUND, SNOOZE }
+private enum class SettingsSheet { PREPARATION, BUFFER, SOUND, SNOOZE, WIDGET }
 
 /** 설정 — UI-F-001 */
 @Composable
@@ -173,6 +175,7 @@ fun SettingsScreen(
     onVolume: (Int) -> Unit = {},
     onGradual: (Boolean) -> Unit = {},
     onWeather: (Boolean) -> Unit = {},
+    onWidgetTheme: (ColorTheme) -> Unit = {},
     onOpenStats: () -> Unit = {},
     onRefreshAll: () -> Unit,
     onRingAlarm: () -> Unit,
@@ -243,6 +246,10 @@ fun SettingsScreen(
             SettingsGroup(stringResource(R.string.settings_section_display)) {
                 SettingsRow(Icons.Outlined.Palette, stringResource(R.string.settings_theme), onClick = onOpenTheme) {
                     RowValue(themeName(prefs.colorTheme, long = true))
+                }
+                RowDivider()
+                SettingsRow(Icons.Outlined.Widgets, stringResource(R.string.settings_widget_theme), onClick = { sheet = SettingsSheet.WIDGET }) {
+                    RowValue(themeName(prefs.widgetTheme, long = true))
                 }
             }
 
@@ -357,6 +364,13 @@ fun SettingsScreen(
             options = UserPreferences.SNOOZE_OPTIONS.map { it to stringResource(R.string.common_minutes_format, it) },
             selected = prefs.snoozeMinutes,
             onSelect = { onSnooze(it); sheet = null },
+            onDismiss = { sheet = null },
+        )
+        SettingsSheet.WIDGET -> ChoiceSheet(
+            title = stringResource(R.string.settings_widget_theme),
+            options = ColorTheme.entries.map { it to themeName(it, long = true) },
+            selected = prefs.widgetTheme,
+            onSelect = { onWidgetTheme(it); sheet = null },
             onDismiss = { sheet = null },
         )
         null -> Unit

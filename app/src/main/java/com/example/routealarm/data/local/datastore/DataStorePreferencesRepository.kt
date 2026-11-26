@@ -44,6 +44,7 @@ class DataStorePreferencesRepository @Inject constructor(
         val WEATHER_ADJUSTMENT = booleanPreferencesKey("weather_adjustment")
         val SNOOZE = intPreferencesKey("snooze_minutes")
         val COLOR_THEME = stringPreferencesKey("color_theme")
+        val WIDGET_THEME = stringPreferencesKey("widget_theme")
         val PAYWALL_PROMPT_DAY = longPreferencesKey("paywall_prompt_epoch_day")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_completed")
     }
@@ -69,6 +70,7 @@ class DataStorePreferencesRepository @Inject constructor(
         weatherAdjustment = this[Keys.WEATHER_ADJUSTMENT] ?: true,
         snoozeMinutes = this[Keys.SNOOZE] ?: UserPreferences.DEFAULT_SNOOZE_MINUTES,
         colorTheme = enumValueOrDefault(this[Keys.COLOR_THEME] ?: "", ColorTheme.DEFAULT),
+        widgetTheme = enumValueOrDefault(this[Keys.WIDGET_THEME] ?: "", ColorTheme.DEFAULT),
         lastPaywallPromptEpochDay = this[Keys.PAYWALL_PROMPT_DAY],
         onboardingCompleted = this[Keys.ONBOARDING_DONE] ?: false,
     )
@@ -95,6 +97,7 @@ class DataStorePreferencesRepository @Inject constructor(
     override suspend fun setWeatherAdjustment(enabled: Boolean) = set(Keys.WEATHER_ADJUSTMENT, enabled)
     override suspend fun setSnoozeMinutes(minutes: Int) = set(Keys.SNOOZE, minutes)
     override suspend fun setColorTheme(theme: ColorTheme) = set(Keys.COLOR_THEME, theme.name)
+    override suspend fun setWidgetTheme(theme: ColorTheme) = set(Keys.WIDGET_THEME, theme.name)
     override suspend fun setLastPaywallPromptDay(epochDay: Long) = set(Keys.PAYWALL_PROMPT_DAY, epochDay)
     override suspend fun setOnboardingCompleted() = set(Keys.ONBOARDING_DONE, true)
 }

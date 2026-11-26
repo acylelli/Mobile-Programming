@@ -16,12 +16,12 @@ private val Default = FontFamily.Default
 private const val TABULAR = "tnum"
 
 val AppTypography = Typography(
-    displayLarge = TextStyle(fontFamily = Default, fontWeight = FontWeight.Black, fontSize = 64.sp, lineHeight = 68.sp, letterSpacing = (-2).sp, fontFeatureSettings = TABULAR),
-    displayMedium = TextStyle(fontFamily = Default, fontWeight = FontWeight.Black, fontSize = 44.sp, lineHeight = 48.sp, letterSpacing = (-1.5).sp, fontFeatureSettings = TABULAR),
-    displaySmall = TextStyle(fontFamily = Default, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp, lineHeight = 40.sp, letterSpacing = (-0.5).sp),
-    headlineLarge = TextStyle(fontFamily = Default, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp, lineHeight = 40.sp, letterSpacing = (-0.5).sp),
-    headlineMedium = TextStyle(fontFamily = Default, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, lineHeight = 34.sp, letterSpacing = (-0.3).sp),
-    headlineSmall = TextStyle(fontFamily = Default, fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 30.sp),
+    displayLarge = TextStyle(fontFamily = Default, fontWeight = FontWeight.Black, fontSize = 48.sp, lineHeight = 54.sp, letterSpacing = (-1.5).sp, fontFeatureSettings = TABULAR),
+    displayMedium = TextStyle(fontFamily = Default, fontWeight = FontWeight.Black, fontSize = 36.sp, lineHeight = 42.sp, letterSpacing = (-1).sp, fontFeatureSettings = TABULAR),
+    displaySmall = TextStyle(fontFamily = Default, fontWeight = FontWeight.ExtraBold, fontSize = 27.sp, lineHeight = 36.sp, letterSpacing = (-0.5).sp),
+    headlineLarge = TextStyle(fontFamily = Default, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, lineHeight = 34.sp, letterSpacing = (-0.5).sp),
+    headlineMedium = TextStyle(fontFamily = Default, fontWeight = FontWeight.ExtraBold, fontSize = 23.sp, lineHeight = 31.sp, letterSpacing = (-0.3).sp),
+    headlineSmall = TextStyle(fontFamily = Default, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 27.sp),
     titleLarge = TextStyle(fontFamily = Default, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 28.sp),
     titleMedium = TextStyle(fontFamily = Default, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 24.sp),
     titleSmall = TextStyle(fontFamily = Default, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp),
@@ -36,7 +36,7 @@ val AppTypography = Typography(
 /** Material3 역할에 맞지 않는 화면 전용 글자 스타일 */
 object AppType {
     /** 알람 화면의 현재 시각 */
-    val RingTime = TextStyle(fontFamily = Default, fontWeight = FontWeight.Black, fontSize = 104.sp, lineHeight = 108.sp, letterSpacing = (-4).sp, fontFeatureSettings = TABULAR)
+    val RingTime = TextStyle(fontFamily = Default, fontWeight = FontWeight.Black, fontSize = 88.sp, lineHeight = 92.sp, letterSpacing = (-3).sp, fontFeatureSettings = TABULAR)
 
     /** 경로 타임라인의 지점 시각 */
     val NodeTime = TextStyle(fontFamily = Default, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, lineHeight = 24.sp, letterSpacing = (-0.5).sp, fontFeatureSettings = TABULAR)

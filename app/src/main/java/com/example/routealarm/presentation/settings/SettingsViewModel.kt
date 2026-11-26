@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.routealarm.BuildConfig
 import com.example.routealarm.core.util.TimeProvider
 import com.example.routealarm.domain.model.AlarmSound
+import com.example.routealarm.domain.model.ColorTheme
 import com.example.routealarm.domain.model.Entitlement
 import com.example.routealarm.domain.model.MetricsSummary
 import com.example.routealarm.domain.model.UserPreferences
@@ -83,6 +84,7 @@ class SettingsViewModel @Inject constructor(
     fun setCustomSound(uri: String, title: String?) = launch { preferencesRepository.setCustomSound(uri, title) }
     fun setAlarmVolume(percent: Int) = launch { preferencesRepository.setAlarmVolume(percent) }
     fun setGradualVolume(enabled: Boolean) = launch { preferencesRepository.setGradualVolume(enabled) }
+    fun setWidgetTheme(theme: ColorTheme) = launch { preferencesRepository.setWidgetTheme(theme) }
     fun setWeatherAdjustment(enabled: Boolean) = launch { preferencesRepository.setWeatherAdjustment(enabled) }
     fun setSnoozeMinutes(minutes: Int) = launch { preferencesRepository.setSnoozeMinutes(minutes) }
 

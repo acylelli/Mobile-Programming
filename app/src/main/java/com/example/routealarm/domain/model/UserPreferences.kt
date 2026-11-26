@@ -40,6 +40,8 @@ data class UserPreferences(
     val weatherAdjustment: Boolean = true,
     val snoozeMinutes: Int = DEFAULT_SNOOZE_MINUTES,
     val colorTheme: ColorTheme = ColorTheme.DEFAULT,
+    /** 홈 화면 위젯 배경. 앱 테마와 따로 고른다. */
+    val widgetTheme: ColorTheme = ColorTheme.DEFAULT,
     /** 일정 한도 때문에 페이월을 자동으로 띄운 마지막 날(epoch day). 같은 날 반복 노출하지 않기 위함 */
     val lastPaywallPromptEpochDay: Long? = null,
     val onboardingCompleted: Boolean = false,
