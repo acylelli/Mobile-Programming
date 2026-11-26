@@ -105,7 +105,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | UI-F-005 | 캘린더 연동 | `calendar/CalendarImportScreen.kt` |
 | UI-G-001 | 홈 화면 위젯 | `widget/NextAlarmWidget.kt` |
 
-에뮬레이터(Pixel 10 Pro, Android 17)에서 배포 서버의 실제 데이터로 캡처했다(다산역 → 한성대학교). 모든 사진은 720×1606 으로 크기를 맞췄다.
+에뮬레이터(Pixel 10 Pro, Android 17)에서 다산역 → 한성대학교 일정으로 캡처했다. 모든 사진은 720×1606 으로 크기를 맞췄다. 알람 탭은 아이폰 시계처럼 구분선 목록에 "오전 7:29" 를 크게, 그 아래 반복·도착과 교통 정보 한 줄을 둔다. 시각 숫자는 앱 전체에서 보통 굵기(Regular)로 그린다. 계산 미리보기·택시 안내 화면은 ODsay 하루 한도가 찬 날이라 이전 버전 화면을 그대로 두었다.
 
 ### 기본 흐름
 
