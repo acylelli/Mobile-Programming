@@ -543,7 +543,7 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 
 - [x] 실제 Backend Proxy 서버 구현 (ODsay 경로·Kakao 장소 검색 정규화, `server/`)
 - [x] Proxy 서버 https 배포 (Render, 수동 배포)
-- [x] 출발 30분 이내 경로에 실시간 지하철·버스 도착 정보 반영 (`arrival_message`, 대기 시간)
+- [x] 출발 30분 이내 경로에 실시간 지하철·버스 도착 정보 반영 (`arrival_message`, 대기 시간). 버스는 서울·경기 API 와 국토교통부 TAGO 로 전국, 지하철은 수도권
 - [x] 평소 대비 지연(`delay_minutes`) 계산: 실시간 대기 − 시간표 기준 대기
 - [x] PRO 결제(토스페이먼츠 테스트 결제)와 서버의 단체 이용권 확인·사용
 - [ ] 실제 출시용 결제(Google Play Billing 또는 토스페이먼츠 실 키·정기결제), 단체 이용권 발급·관리 화면

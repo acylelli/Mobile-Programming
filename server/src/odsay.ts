@@ -38,6 +38,9 @@ export interface OdsaySubPath {
   startArsID?: string;
   /** 지역 버스 정보 시스템의 정류장 ID(경기: 9자리) */
   startLocalStationID?: string;
+  /** 승차 정류장 좌표(경도·위도) */
+  startX?: number | string;
+  startY?: number | string;
   passStopList?: { stations?: Array<{ stationName?: string; x?: string; y?: string }> };
 }
 
@@ -216,6 +219,16 @@ function rideTarget(ride: OdsaySubPath, lane: NonNullable<OdsaySubPath["lane"]>[
     // 경기 버스 노선·정류소 ID 는 2 로 시작하는 9자리다.
     if (/^2\d{8}$/.test(lane.busLocalBlID) && ride.startLocalStationID) {
       return { kind: "bus", query: { region: "gyeonggi", stationKey: ride.startLocalStationID, routeId: lane.busLocalBlID } };
+    }
+  }
+  // 그 밖의 지역 버스는 승차 정류장 좌표와 노선 번호로 TAGO 에서 찾는다(서울 노선은 위에서 처리했거나 정보가 모자란 경우라 제외).
+  if (ride.trafficType === BUS && lane.busNo && lane.busCityCode !== SEOUL_CITY_CODE && !/^2\d{8}$/.test(lane.busLocalBlID ?? "")) {
+    const first = ride.passStopList?.stations?.[0];
+    const lat = Number(ride.startY ?? first?.y);
+    const lng = Number(ride.startX ?? first?.x);
+    const stopName = ride.startName ?? first?.stationName;
+    if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && stopName) {
+      return { kind: "bus", query: { region: "tago", lat, lng, stopName, routeNo: lane.busNo } };
     }
   }
   return null;
