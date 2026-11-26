@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ConfirmationNumber
@@ -100,6 +101,7 @@ fun SettingsRoute(
     onOpenSubscription: () -> Unit,
     onOpenTimetable: () -> Unit,
     onOpenCalendar: () -> Unit,
+    onOpenStats: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -128,6 +130,7 @@ fun SettingsRoute(
         onOpenSubscription = onOpenSubscription,
         onOpenTimetable = onOpenTimetable,
         onOpenCalendar = onOpenCalendar,
+        onOpenStats = onOpenStats,
         onPreparation = viewModel::setDefaultPreparation,
         onBuffer = viewModel::setDefaultBuffer,
         onAutoAdjust = viewModel::setAutoAdjustment,
@@ -167,6 +170,7 @@ fun SettingsScreen(
     onVolume: (Int) -> Unit = {},
     onGradual: (Boolean) -> Unit = {},
     onWeather: (Boolean) -> Unit = {},
+    onOpenStats: () -> Unit = {},
     onRefreshAll: () -> Unit,
     onRingAlarm: () -> Unit,
 ) {
@@ -222,6 +226,13 @@ fun SettingsScreen(
                 RowDivider()
                 SettingsRow(Icons.Outlined.CalendarToday, stringResource(R.string.settings_calendar), onClick = if (state.isPro) onOpenCalendar else onShowPaywall) {
                     if (state.isPro) RowChevron() else RowLock()
+                }
+            }
+
+            // 기록·통계
+            SettingsGroup(stringResource(R.string.settings_section_records)) {
+                SettingsRow(Icons.Outlined.BarChart, stringResource(R.string.stats_title), body = stringResource(R.string.settings_stats_body), onClick = onOpenStats) {
+                    RowChevron()
                 }
             }
 

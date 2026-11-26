@@ -72,6 +72,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 | 컬러 테마 | 기본(오렌지)·새벽·나이트 3종, 모든 플랜에서 선택 가능 |
 | 재부팅·시간대 대응 | BOOT_COMPLETED / TIMEZONE_CHANGED 수신 후 알람 복구 |
 | 테스트 도구 | 설정에서 교통 정보 즉시 재확인, 기상 알람 미리 울려보기 |
+| 기록·통계 | 설정 > 기록·통계: 최근 30일 제시간 기상률(5분 안에 끈 아침 비율), 평균 늦게 끈 시간, 다시 울림 횟수, 교통 변화로 조정한 횟수와 앞당긴 시간, 최근 14일 기상 막대 그래프. 알람 이력(Room)만으로 기기 안에서 계산 |
 | 측정 지표 | API 호출/실패/캐시 적중/재계산/자동 조정 횟수를 Room 에 기록, 설정 화면에서 확인 |
 | 학교 시간표 연동 (PRO) | 시간표 캡처 사진 인식(ML Kit 한국어, 기기 안에서 처리)·캘린더 반복 일정 가져오기·직접 입력 → 요일별 첫 수업에 맞춘 반복 알람 생성. 인식이 틀린 수업은 눌러서 수정·삭제, 학기가 바뀌어 다시 만들면 예전 시간표 알람을 새 알람으로 교체 |
 | 경로 지도 | 일정 상세 화면에 카카오맵으로 경로 표시(탑승 구간은 노선색, 도보는 회색, 출발·도착 점). 상위 2개 경로는 ODsay 노선 그래픽으로 실제 도로·선로 모양대로 그린다. 네이티브 앱 키는 `local.properties` 에만 두고, 키가 없거나 인증에 실패하면 지도만 숨긴다 |
@@ -125,7 +126,7 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
 
 ### 알람 상세 · 위젯
 
-경로 지도는 실제 도로·선로 모양대로 그린 경로선이다. 요일별 이동시간 카드는 에뮬레이터 DB 에 4주치 시험용 이동시간 기록을, 날씨 안내는 비 예보(70%)를 넣어 캡처했다. 기상 습관 카드와 택시 안내는 에뮬레이터 DB 에 시험용 기상 기록(알람을 늦게 끈 기록)을 넣어 캡처했고, 택시 시간·요금은 카카오모빌리티 실제 값이다.
+경로 지도는 실제 도로·선로 모양대로 그린 경로선이다. 요일별 이동시간 카드는 에뮬레이터 DB 에 4주치 시험용 이동시간 기록을, 날씨 안내는 비 예보(70%)를, 기록·통계는 3주치 시험용 기상 기록을 넣어 캡처했다. 기상 습관 카드와 택시 안내는 에뮬레이터 DB 에 시험용 기상 기록(알람을 늦게 끈 기록)을 넣어 캡처했고, 택시 시간·요금은 카카오모빌리티 실제 값이다.
 
 <table>
   <tr>
@@ -139,6 +140,9 @@ Kotlin · Jetpack Compose · Clean Architecture(MVVM) · Hilt · Room · DataSto
     <td align="center" valign="top"><img src="docs/screenshots/schedule-sound.png" width="200" alt="일정별 알람음·볼륨"><br><sub>일정별 알람음·볼륨</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/travel-pattern.png" width="200" alt="요일별 이동시간 학습"><br><sub>요일별 이동시간 학습</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/weather.png" width="200" alt="비 예보 → 여유 +5분"><br><sub>비 예보 → 여유 +5분</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/stats.png" width="200" alt="기록·통계"><br><sub>기록·통계</sub></td>
   </tr>
   <tr>
     <td align="center" valign="top"><img src="docs/screenshots/ringing.png" width="200" alt="기상 알람"><br><sub>기상 알람</sub></td>
@@ -456,7 +460,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ./gradlew testDebugUnitTest
 ```
 
-도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 184개 테스트:
+도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 188개 테스트:
 
 | 테스트 | 검증 내용 |
 |---|---|
@@ -479,6 +483,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `HolidayTest` | 공휴일 표(대체공휴일·선거일), 평일 알람이 성탄절·설 연휴(대체공휴일 포함)를 건너뛰고 다음 평일로, 매주 금요일 알람이 공휴일 두 번을 건너뜀, 끄면 공휴일에도 울림, 곧 건너뛸 공휴일 안내 |
 | `TravelPatternPolicyTest` | 같은 요일·출발 ±1시간 기록만 같은 시간대로 봄, 저녁 출발·3번 미만·8주 지난 기록 제외, 요일별 중앙값과 평소보다 오래 걸리는 요일 찾기 |
 | `WeatherPolicyTest` | 날씨 여유: 비·소나기 +5분, 눈·진눈깨비 +10분, 비가 안 와도 강수확률 60% 이상이면 우산 안내 |
+| `AlarmStatsPolicyTest` | 기록·통계: 제시간 기상률·평균 늦게 끈 시간·다시 울림, 앞당긴 조정만 합산(늦춘 조정 제외), 30일 지난 기록·90분 넘는 값 제외, 최근 14일 날짜별 막대(하루에 알람 여럿이면 가장 늦게 끈 값) |
 | `NextAlarmTest` | 위젯의 다음 알람: 켜져 있고 출발 전인 일정 중 기상 알람이 가장 이른 것 |
 | `MigrationCoverageTest` | 내보낸 Room 스키마(`app/schemas`)의 버전이 1부터 빠짐없이 이어지고, 이웃한 모든 버전 사이에 Migration 이 있음 |
 | `TimetableTest` | 실제 에브리타임 시간표 캡처의 글자 위치와 ML Kit 실제 인식 결과(요일·시각 일부 누락, 글자 붙음)에서 같은 수업 8개 읽기, 12시간제 시각 변환, 요일별 첫 수업 알람 제안과 같은 시각 요일 묶기, 다시 만들 때 예전 알람 교체(일부 실패 시 남김) |
@@ -487,7 +492,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 
 리포트: `app/build/reports/tests/testDebugUnitTest/index.html`
 
-DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에서 계측 테스트로 확인한다(CI 는 에뮬레이터가 없어 실행하지 않고, 테스트 코드가 컴파일되는지만 확인한다). 현재 22개:
+DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에서 계측 테스트로 확인한다(CI 는 에뮬레이터가 없어 실행하지 않고, 테스트 코드가 컴파일되는지만 확인한다). 현재 30개:
 
 ```bash
 ./gradlew connectedDebugAndroidTest
@@ -499,6 +504,7 @@ DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에�
 | `RouteAlarmDaoTest` | 메모리 SQLite: 일정·계획·경로 좌표가 Entity 를 거쳐 그대로 돌아옴, 켜진 일정만 조회, 일정 삭제 시 알람 기록 함께 삭제, 실시간 이동시간만 안정화 입력, 일정별 최근 조정, 기상 알람 끈 기록, 오래된 기록 정리 |
 | `TransitRefreshWorkerTest` | `TestListenableWorkerBuilder` 로 Worker 실행: 재계산 후 기상 알람 등록·지표 기록, 네트워크 실패 시 재시도 후 포기, 일정 id 없으면 실패 |
 | `ScreenUiTest` | Compose UI: 시간표 빈 화면·요일별 수업·알람 만들기·수업 수정, 모두 지우기 확인 창, 캘린더 권한 요청·반복 일정 추가·일정 선택, 알람 변경 추천 카드 |
+| `NewFeatureUiTest` | Compose UI: 알람음 시트(소리 고르기·볼륨 표시·일정용 '설정 따르기'와 점점 크게 숨김), 일정 알람음 행(설정 따르기/일정 전용), 공휴일 건너뛰기 행(성탄절 안내·끄기), 날씨 안내 띠(비면 보이고 맑으면 없음), 기록·통계(제시간 기상률·횟수·막대 설명, 기록 없을 때 빈 화면) |
 
 > 기기에서 계측 테스트를 돌리면 테스트가 끝난 뒤 앱이 지워진다(앱 데이터도 함께). 실제로 쓰는 기기 말고 에뮬레이터에서 돌린다.
 

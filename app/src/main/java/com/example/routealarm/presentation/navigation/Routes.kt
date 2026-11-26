@@ -47,4 +47,7 @@ sealed interface Route {
 
     /** 캘린더 연동(PRO): 기기 캘린더 일정에서 알람 만들기 */
     @Serializable data object CalendarImport : Route
+
+    /** 기록·통계 */
+    @Serializable data object Stats : Route
 }
