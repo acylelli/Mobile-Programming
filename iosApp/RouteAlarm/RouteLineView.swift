@@ -1,7 +1,7 @@
 import SwiftUI
 import Shared
 
-/// 기상 → 출발 → 역 → 환승 → 도착 노선도(안드로이드 RouteTimelineView 와 같은 모양).
+/// 기상 → 출발 → 역 → 환승 → 도착 노선도(안드로이드 RouteTimelineView 와 같은 크기: 시각 열 64dp, 레일 56dp, 선 5dp).
 /// 지점·구간·문구는 shared 의 RouteLineBuilder 가 만든다.
 struct RouteLineView: View {
     let line: RouteLine
@@ -18,8 +18,8 @@ struct RouteLineView: View {
     }
 }
 
-private let timeWidth: CGFloat = 62
-private let railWidth: CGFloat = 56
+private var timeWidth: CGFloat { 64.dp }
+private var railWidth: CGFloat { 56.dp }
 
 private struct RailStyle {
     let color: Color
@@ -57,7 +57,7 @@ private struct Rail: View {
             path.move(to: CGPoint(x: x, y: from))
             path.addLine(to: CGPoint(x: x, y: to))
         }
-        .stroke(style.color, style: StrokeStyle(lineWidth: 5, dash: style.dashed ? [6, 5] : []))
+        .stroke(style.color, style: StrokeStyle(lineWidth: 5.dp, dash: style.dashed ? [6.dp, 5.dp] : []))
     }
 }
 
@@ -69,21 +69,22 @@ private struct NodeRow: View {
     var body: some View {
         HStack(spacing: 0) {
             Text(TimeText.hm(Date(millis: node.timeMillis)))
-                .font(AppFont.nodeTime)
+                .font(AppFont.nodeTime).monospacedDigit()
                 .foregroundStyle(node.isAlarmPoint ? AppColor.accentText : AppColor.textPrimary)
+                .lineLimit(1)
                 .frame(width: timeWidth, alignment: .trailing)
             ZStack {
                 Rail(upper: RailStyle(before), lower: RailStyle(after))
                 dot
             }
             .frame(width: railWidth)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(node.title).font(AppFont.nodeTitle).foregroundStyle(AppColor.textPrimary).lineLimit(1)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(node.title).font(AppFont.titleMedium).foregroundStyle(AppColor.textPrimary).lineLimit(1)
                 if let subtitle = node.subtitle {
-                    Text(subtitle).font(AppFont.caption).foregroundStyle(AppColor.textSecondary).lineLimit(2)
+                    Text(subtitle).font(AppFont.bodySmall).foregroundStyle(AppColor.textSecondary).lineLimit(2)
                 }
             }
-            .padding(.vertical, node.isAlarmPoint ? 0 : 3)
+            .padding(.vertical, node.isAlarmPoint ? 0 : 3.dp)
             Spacer(minLength: 0)
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -119,7 +120,7 @@ private struct LegRow: View {
                     Pill(text: leg.label)
                 }
             }
-            .padding(.vertical, leg.kind == .transit ? 14 : 8)
+            .padding(.vertical, leg.kind == .transit ? 14.dp : 8.dp)
             Spacer(minLength: 0)
         }
         .fixedSize(horizontal: false, vertical: true)

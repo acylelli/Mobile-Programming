@@ -14,7 +14,14 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
 /** 출발지·도착지 */
-data class TripPlace(val name: String, val address: String, val latitude: Double, val longitude: Double)
+data class TripPlace(
+    val name: String,
+    val address: String,
+    val latitude: Double,
+    val longitude: Double,
+    /** 역·정류장이면 지나는 노선(검색 결과 둘째 줄 "서울 강남구 | 2호선, 신분당선") */
+    val lines: List<String> = emptyList(),
+)
 
 /** 경로 한 구간(화면 표시용) */
 data class TripSegment(
@@ -25,6 +32,8 @@ data class TripSegment(
     val to: String,
     val minutes: Int,
     val arrivalMessage: String?,
+    /** 탑승 구간 좌표를 [위도, 경도, 위도, 경도 …] 로 편 것(Swift 에서 쓰기 쉽게). 도보는 빈 목록 */
+    val points: List<Double> = emptyList(),
 )
 
 /** 날씨 반영 결과 */
@@ -140,7 +149,7 @@ class TripPlanner(private val client: ProxyClient = ProxyClient()) {
             isLate = late,
             lateByMinutes = lateBy,
             segments = route?.segments.orEmpty().map {
-                TripSegment(it.mode, it.lineName, it.from, it.to, it.minutes, it.arrivalMessage)
+                TripSegment(it.mode, it.lineName, it.from, it.to, it.minutes, it.arrivalMessage, it.points.filter { p -> p.size >= 2 }.flatMap { p -> p.take(2) })
             },
             weather = weather,
         )
@@ -163,5 +172,28 @@ class TripPlanner(private val client: ProxyClient = ProxyClient()) {
         throw e
     } catch (_: Exception) {
         null
+    }
+}
+
+/**
+ * "만약 15분 늦어진다면?"(안드로이드 PreviewDelayScenarioUseCase): 이동시간과 지연을 15분 늘려 다시 계산한 기상 시각.
+ * 지금 시각에 따라 결과가 달라지지 않게(지각 처리) 아주 이른 시각을 기준으로 계산한다.
+ */
+object DelayScenario {
+    const val DEFAULT_DELAY_MINUTES = 15
+
+    fun wakeUpMillis(plan: TripPlan, preparationMinutes: Int, bufferMinutes: Int, delayMinutes: Int = DEFAULT_DELAY_MINUTES): Long? {
+        val result = AlarmEngine.plan(
+            EngineInput(
+                targetArrival = Instant.fromEpochMilliseconds(plan.targetArrivalMillis),
+                currentTravel = (plan.travelMinutes + delayMinutes).minutes,
+                delay = (plan.delayMinutes + delayMinutes).minutes,
+                preparation = preparationMinutes.minutes,
+                baseBufferMinutes = bufferMinutes,
+                isRealtime = plan.isRealtime,
+            ),
+            Instant.fromEpochMilliseconds(0),
+        )
+        return (result as? EngineResult.OnTime)?.times?.wakeUp?.toEpochMilliseconds()
     }
 }

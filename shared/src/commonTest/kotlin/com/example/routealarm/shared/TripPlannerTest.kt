@@ -67,6 +67,13 @@ class TripPlannerTest {
     }
 
     @Test
+    fun 만약_15분_늦어지면_이동_15분과_지연_여유_5분만큼_앞당긴다() = runTest {
+        val plan = assertNotNull(TripPlanner(client()).plan(home, school, target, 30, 10, false, now).plan)
+        val delayed = assertNotNull(com.example.routealarm.shared.trip.DelayScenario.wakeUpMillis(plan, 30, 10))
+        assertEquals(20, (plan.wakeUpMillis - delayed) / 60_000)
+    }
+
+    @Test
     fun 비_예보면_5분_일찍() = runTest {
         val plan = assertNotNull(
             TripPlanner(client("""{"precipitation":"RAIN","probability":80}""")).plan(home, school, target, 30, 10, true, now).plan,
@@ -103,7 +110,16 @@ class TripPlannerTest {
     fun 요일_비트마스크_표시() {
         assertEquals("평일", Schedules.repeatLabel(Schedules.WEEKDAYS))
         assertEquals("매일", Schedules.repeatLabel(Schedules.EVERYDAY))
-        assertEquals("월 수 금", Schedules.repeatLabel(0b10101))
+        assertEquals("월, 수, 금", Schedules.repeatLabel(0b10101))
+        assertEquals("평일 반복", Schedules.repeatHeader(Schedules.WEEKDAYS, null))
+    }
+
+    @Test
+    fun 곧_건너뛸_공휴일() {
+        // 2026-12-20(일) 기준 평일 알람은 12/25(금) 성탄절을 건너뛴다(시간대는 기기 설정)
+        val now = Instant.parse("2026-12-20T03:00:00Z").toEpochMilliseconds()
+        assertEquals("12월 25일 (금) 성탄절", Schedules.nextSkippedHoliday(9, 0, Schedules.WEEKDAYS, true, now))
+        assertEquals(null, Schedules.nextSkippedHoliday(9, 0, Schedules.WEEKDAYS, false, now))
         assertEquals("한 번", Schedules.repeatLabel(0))
     }
 }
