@@ -87,7 +87,7 @@ struct SettingsView: View {
                             row("alarm", "정확한 알람", value: notifications == .denied ? "권한 필요" : "허용됨",
                                 valueColor: notifications == .denied ? AppColor.danger : nil) { openSettings() }
                             divider
-                            row("location", "위치", value: "허용 안 됨") { openSettings() }
+                            row("scope", "위치", value: "허용 안 됨") { openSettings() }
                         }
                         group("테스트 도구") {
                             row("arrow.triangle.2.circlepath", refreshing ? "교통 정보 확인 중" : "지금 교통 정보 다시 확인") {
@@ -271,7 +271,7 @@ struct ThemeView: View {
                         }
                     }
                     Spacer().frame(height: 20.dp)
-                    notice("mappin.and.ellipse", "지하철 노선 색은 공식 노선색으로 고정되어 테마와 관계없이 같은 색으로 보여요.")
+                    notice("place", "지하철 노선 색은 공식 노선색으로 고정되어 테마와 관계없이 같은 색으로 보여요.")
                     Spacer().frame(height: 10.dp)
                     notice("moon", "기기의 다크 모드를 켜면 어두운 화면으로 보여요. 나이트는 항상 어두운 화면이에요.")
                 }
@@ -288,7 +288,7 @@ struct ThemeView: View {
 
     private func notice(_ icon: String, _ text: String) -> some View {
         HStack(alignment: .top, spacing: 10.dp) {
-            Image(systemName: icon).font(.system(size: 15.dp)).foregroundStyle(AppColor.textSecondary)
+            AppIcon(name: icon, size: 15.dp).foregroundStyle(AppColor.textSecondary)
             Text(text).font(AppFont.bodySmall).foregroundStyle(AppColor.textSecondary)
         }
     }

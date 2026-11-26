@@ -4,7 +4,8 @@
 
 Kotlin Multiplatform(공용 모듈 shared: 계산·노선도·서버 통신) · Jetpack Compose(Android) · SwiftUI(iOS) · Clean Architecture(MVVM) · Hilt · Room · DataStore · WorkManager · AlarmManager
 
-화면은 팀 UI 설계서 v1.1(시안 C "Route Line", 기본 색 오렌지)의 화면 정의(UI-A-001 ~ UI-F-003)를 기준으로 구현했다.
+화면은 팀 UI 설계서 v1.1(시안 C "Route Line", 기본 색 오렌지)의 화면 정의(UI-A-001 ~ UI-G-001)를 기준으로 구현했다.
+**Android 앱과 iOS 앱은 같은 화면·같은 기능·같은 문구**이며, 기상 시각 계산·알람 조정·공휴일·노선도·시간표 해석·구독 규칙 같은 플랫폼과 무관한 규칙은 Kotlin Multiplatform 공용 모듈(`shared`) 하나를 두 앱이 함께 쓴다.
 
 ---
 
@@ -105,28 +106,92 @@ Kotlin Multiplatform(공용 모듈 shared: 계산·노선도·서버 통신) · 
 | UI-F-005 | 캘린더 연동 | `calendar/CalendarImportScreen.kt` |
 | UI-G-001 | 홈 화면 위젯 | `widget/NextAlarmWidget.kt` |
 
-에뮬레이터(Pixel 10 Pro, Android 17)에서 다산역 → 한성대학교 일정으로 캡처했다. 모든 사진은 720×1606 으로 크기를 맞췄다. 알람 탭은 아이폰 시계처럼 구분선 목록에 "오전 7:29" 를 크게, 그 아래 반복·도착과 교통 정보 한 줄을 둔다. 시각 숫자는 앱 전체에서 보통 굵기(Regular)로 그린다. 계산 미리보기·택시 안내 화면은 ODsay 하루 한도가 찬 날이라 이전 버전 화면을 그대로 두었다.
+에뮬레이터(Pixel 10 Pro, Android 17)에서 다산역 → 한성대학교 일정으로 캡처했다. 모든 사진은 720×1606 으로 크기를 맞췄다. 알람 탭은 아이폰 시계처럼 구분선 목록에 "오전 7:29" 를 크게, 그 아래 반복·도착과 교통 정보 한 줄을 둔다. 시각 숫자는 앱 전체에서 보통 굵기(Regular)로 그린다. 계산 미리보기는 2026년 11월 27일 실제 경로(다산역 → 76번 → 화랑대역 환승 6호선 → 한성대, 이동 51분)로 다시 캡처했고, iOS 캡처와 같은 일정·같은 계산 결과(07:29 기상)다. 택시 안내 화면은 시험용 기상 기록이 필요해 이전 캡처를 그대로 두었다(화면 구성은 지금과 같다).
 
 ### iOS 앱 (SwiftUI + Kotlin Multiplatform)
 
-iOS 앱은 `iosApp/` 의 SwiftUI 앱이다. 화면은 안드로이드와 같은 디자인(색 토큰·검은 버튼·회색 알약·노선도·만들기 5단계)으로 맞췄고, **기상 시각 계산·다음 회차·공휴일·날씨 여유·노선도 문구와 노선색·장소 검색과 경로 조회(Ktor)** 는 안드로이드와 같은 Kotlin 코드(`shared`)를 쓴다. iOS 앱이 직접 하는 일은 화면과 알림 예약(UNUserNotificationCenter)뿐이다. 글꼴도 안드로이드 기본 글꼴과 같은 Roboto(숫자·영문)와 Noto Sans KR(한글)을 앱에 넣어 썼다(OFL 라이선스, `iosApp/RouteAlarm/Fonts/`). iPhone 17 Pro 시뮬레이터(iOS 27)에서 코엑스 → 홍익대학교 일정으로 캡처했다(ODsay 하루 한도가 찬 날이라 기본 이동시간 60분 계산 화면이다).
+iOS 앱(`iosApp/`)은 안드로이드 앱과 **화면 구성·순서·문구·크기 비율까지 똑같이** 만든 SwiftUI 앱이다.
+
+- **같은 규칙**: 기상 시각 계산, 알람 조정 판단, 다음 회차·공휴일, 날씨 여유, 요일별 이동시간 학습, 노선도 문구와 노선색, 지도 경로선, 기상 기록 통계·기상 습관·지각 위험, 시간표 사진 해석과 첫 수업 알람 제안, 요금·무료 한도·단체 이용권 코드 규칙과 결제 확인은 모두 `shared` 의 Kotlin 코드를 그대로 부른다. 같은 테스트가 JVM 과 iOS 시뮬레이터에서 돈다.
+- **같은 모양**: 색 토큰(기본·새벽·나이트 × 라이트·다크), 버튼·카드·알약·휠·시트의 크기와 모서리를 안드로이드 값 그대로 옮겼다. 화면 폭을 안드로이드 기준 폭(426.7dp)에 맞춰 비례로 줄이고 늘려(`Dp.scale`), 기기가 달라도 화면 비율이 같다. 글꼴도 안드로이드 기본 글꼴과 같은 Roboto(숫자·영문)와 Noto Sans KR(한글)을 넣었고(OFL, `iosApp/RouteAlarm/Fonts/`), 줄 높이도 안드로이드 Typography 값으로 맞췄다. 아이콘도 안드로이드 Material 아이콘과 같은 모양을 쓴다(장소 핀은 Material 경로를 그대로 그림).
+- **플랫폼 기능만 iOS 방식**: 알람·알림은 UNUserNotificationCenter(기상 알람 + 1분 간격 3번 더, 출발 10분 전·출발 알림, 다시 울림), 위젯은 WidgetKit(App Group 으로 다음 알람 전달), 시간표 글자 인식은 Vision, 캘린더는 EventKit, 지도는 MapKit, 결제창은 앱 안 사파리(SFSafariViewController), 알람음은 AVAudioPlayer.
+
+iPhone 17 Pro 시뮬레이터(iOS 27)에서 안드로이드와 같은 다산역 → 한성대학교 평일 09:00 도착 일정으로 캡처했다(2026년 11월 27일, ODsay 실제 경로). 통계·요일별 이동시간은 시뮬레이터에 3주치 시험용 기상·이동 기록을 넣었고, 시간표·캘린더는 안드로이드 캡처와 같은 수업·일정을 넣었다. PRO 화면은 시뮬레이터에만 단체 이용권 상태를 넣어 캡처했다(서버 이용권 인원은 쓰지 않음).
+
+**기본 흐름**
 
 <table>
   <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/ios-home.png" width="200" alt="iOS 홈 (노선도)"><br><sub>홈 (노선도)</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/ios-create.png" width="200" alt="iOS 만들기 — 장소"><br><sub>만들기 — 장소</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/ios-time.png" width="200" alt="iOS 만들기 — 도착 시각·반복"><br><sub>만들기 — 도착 시각·반복</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-onboarding.png" width="200" alt="온보딩"><br><sub>온보딩</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-permission.png" width="200" alt="권한 안내"><br><sub>권한 안내</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-home.png" width="200" alt="홈 (노선도)"><br><sub>홈 (노선도)</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-create.png" width="200" alt="만들기 — 출발지"><br><sub>만들기 — 출발지</sub></td>
   </tr>
   <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/ios-result.png" width="200" alt="iOS 계산 미리보기"><br><sub>계산 미리보기</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/ios-alarms.png" width="200" alt="iOS 알람 목록"><br><sub>알람 목록</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/ios-detail.png" width="200" alt="iOS 일정 상세"><br><sub>일정 상세</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-search.png" width="200" alt="만들기 — 장소 검색"><br><sub>만들기 — 장소 검색</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-time.png" width="200" alt="도착 시각·반복"><br><sub>도착 시각·반복</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-preparation.png" width="200" alt="준비 시간 휠"><br><sub>준비 시간 휠</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-buffer.png" width="200" alt="여유 시간·알림 방식"><br><sub>여유 시간·알림 방식</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-result.png" width="200" alt="계산 미리보기"><br><sub>계산 미리보기</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-alarms.png" width="200" alt="알람 목록 (무료 한도)"><br><sub>알람 목록 (무료 한도)</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-detail.png" width="200" alt="일정 상세"><br><sub>일정 상세</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-detail-map.png" width="200" alt="경로 지도 (MapKit)"><br><sub>경로 지도 (MapKit)</sub></td>
   </tr>
 </table>
 
-iOS 앱은 핵심 흐름(장소 검색 → 도착 시각·반복 → 준비 시간 → 계산 미리보기 → 알람)과 홈·알람 목록·상세·설정을 갖췄다. 기상 알람은 로컬 알림으로 1분 간격 3번 더, 출발 시각에 한 번 더 울리고, 앱을 열 때마다 교통 정보로 다시 계산해 알림을 옮긴다. PRO·시간표·위젯·통계 같은 부가 기능은 안드로이드에만 있다.
+**상세 · 알람 · 기록**
 
-### 기본 흐름
+<table>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-detail-info.png" width="200" alt="일정 정보·공휴일 건너뛰기"><br><sub>일정 정보·공휴일 건너뛰기</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-sound.png" width="200" alt="일정별 알람음·볼륨"><br><sub>일정별 알람음·볼륨</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-travel-pattern.png" width="200" alt="요일별 이동시간 학습"><br><sub>요일별 이동시간 학습</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-stats.png" width="200" alt="기록·통계"><br><sub>기록·통계</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-ringing.png" width="200" alt="기상 알람"><br><sub>기상 알람</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-widget.png" width="200" alt="홈 화면 위젯 (WidgetKit)"><br><sub>홈 화면 위젯 (WidgetKit)</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-theme.png" width="200" alt="테마 선택"><br><sub>테마 선택</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-settings-pro.png" width="200" alt="설정 (PRO)"><br><sub>설정 (PRO)</sub></td>
+  </tr>
+</table>
+
+**시간표 · 캘린더 · PRO**
+
+<table>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-timetable.png" width="200" alt="학교 시간표"><br><sub>학교 시간표</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-timetable-edit.png" width="200" alt="수업 수정"><br><sub>수업 수정</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-timetable-alarms.png" width="200" alt="첫 수업 알람 만들기"><br><sub>첫 수업 알람 만들기</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-calendar.png" width="200" alt="캘린더 연동"><br><sub>캘린더 연동</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-settings.png" width="200" alt="설정 (무료 플랜)"><br><sub>설정 (무료 플랜)</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-paywall.png" width="200" alt="PRO 페이월 — 개인"><br><sub>PRO 페이월 — 개인</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-paywall-group.png" width="200" alt="PRO 페이월 — 단체"><br><sub>PRO 페이월 — 단체</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-group-pass.png" width="200" alt="단체 이용권 확인"><br><sub>단체 이용권 확인</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-subscription.png" width="200" alt="구독 관리 (단체 이용권)"><br><sub>구독 관리 (단체 이용권)</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-theme-dawn-home.png" width="200" alt="새벽 테마 — 홈"><br><sub>새벽 테마 — 홈</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/ios-theme-night-home.png" width="200" alt="나이트 테마 — 홈"><br><sub>나이트 테마 — 홈</sub></td>
+  </tr>
+</table>
+
+**iOS 에서 달라지는 부분** (플랫폼에 없는 기능만 바꿈)
+
+| 항목 | Android | iOS | 이유 |
+|---|---|---|---|
+| 경로 지도 | 카카오맵 SDK | MapKit(Apple 지도) | 경로선(노선색·도보 회색·출발/도착 점)은 같은 `shared` 좌표로 그린다 |
+| 알람음 "휴대폰 벨소리" | 기기 벨소리 직접 고르기 | "기기 알림음" | iOS 는 앱이 기기 벨소리 목록에 접근할 수 없다 |
+| 구독 관리 안내 문구 | Google Play 에서 구독 관리 | App Store 에서 구독 관리 | 각 플랫폼의 구독 관리 화면 |
+| 캘린더 안내 | Google·삼성 캘린더 일정도 보여요 | Google 캘린더 일정도 보여요 | iOS 에는 삼성 캘린더가 없다 |
+| 결제창 | 브라우저 → `intent://` 로 복귀 | 앱 안 사파리 → `routealarm://` 로 복귀 | 결제창을 닫기만 해도 기억해 둔 주문을 서버에 다시 확인한다 |
+| 정확한 알람 | AlarmManager + Foreground Service | 로컬 알림(1분 간격 3번 더 울림) | iOS 는 앱이 꺼져 있을 때 소리를 계속 재생할 수 없다 |
+
+### 안드로이드 — 기본 흐름
 
 <table>
   <tr>
@@ -261,7 +326,8 @@ iOS 앱은 핵심 흐름(장소 검색 → 도착 시각·반복 → 준비 시�
 | 분류 | 사용 기술 |
 |---|---|
 | 언어 | Kotlin 2.2, Coroutines / Flow |
-| 크로스 플랫폼 | Kotlin Multiplatform — `shared` 모듈(Android · JVM · iOS arm64/시뮬레이터), kotlinx-datetime |
+| 크로스 플랫폼 | Kotlin Multiplatform — `shared` 모듈(Android · JVM · iOS arm64/시뮬레이터), kotlinx-datetime, Ktor 3(iOS 는 Darwin 엔진), kotlinx.serialization |
+| iOS | Swift 6 · SwiftUI(iOS 17+), UNUserNotificationCenter, WidgetKit + App Group, MapKit, Vision(글자 인식), EventKit(캘린더), PhotosUI, SFSafariViewController(결제창), AVFoundation(알람음), CoreLocation |
 | UI | Jetpack Compose, Material 3, Navigation Compose(타입 안전 라우트), 역할 기반 색 토큰(컬러 테마 3종 × 라이트/다크) |
 | 아키텍처 | Clean Architecture, MVVM, UseCase, Repository Pattern |
 | DI | Hilt (+ hilt-work, hilt-navigation-compose) |
@@ -269,7 +335,7 @@ iOS 앱은 핵심 흐름(장소 검색 → 도착 시각·반복 → 준비 시�
 | 백그라운드 | WorkManager (교통 재확인), AlarmManager (정확한 알람), Foreground Service (알람 재생) |
 | 네트워크 | Retrofit 3, OkHttp, kotlinx.serialization |
 | 위치 | FusedLocationProviderClient (1회 조회만) |
-| 테스트 | JUnit4, kotlinx-coroutines-test, Fake Repository |
+| 테스트 | JUnit4, kotlinx-coroutines-test, Fake Repository, Ktor MockEngine(공용 모듈), node:test(서버) |
 | 빌드 | AGP 8.13, Gradle 9.2, KSP, Version Catalog |
 
 ## 6. 아키텍처
@@ -284,15 +350,18 @@ iOS 앱은 핵심 흐름(장소 검색 → 도착 시각·반복 → 준비 시�
                  │ AdjustmentEngine  알람을 바꿀지 판단(흔들림 무시)     │
                  │ OccurrenceEngine  다음 회차 · 공휴일 건너뛰기         │
                  │ KoreanHolidays · WeatherRules · TravelPatternRules   │
-                 │ RouteLineBuilder · LineColors · KoreanText (노선도)  │
-                 │ ProxyClient(Ktor) · TripPlanner · PlaceSearch        │
+                 │ RouteLineBuilder · LineColors · RouteMapLines(노선도)│
+                 │ AlarmHistoryRules(통계·기상 습관·지각 위험)          │
+                 │ Timetables · TimetableImageParser(시간표 사진 해석)   │
+                 │ SubscriptionService(요금·한도·결제·단체 이용권)      │
+                 │ ProxyClient(Ktor) · TripPlanner · PlaceSearch · Taxi │
                  │   kotlin.time.Instant / kotlinx-datetime 만 사용     │
                  └──────────┬───────────────────────────┬───────────────┘
               Android(JVM) ↓                            ↓ iOS(Kotlin/Native, Shared.framework)
 ┌──────────────────────────────────────┐   ┌──────────────────────────────┐
-│ app: UseCase 가 java.time ↔ kotlin   │   │ iosApp: SwiftUI 화면과 로컬   │
-│ 시간을 바꿔 엔진에 맡김(Room·알람·   │   │ 알림만. 검색·경로·계산·노선도 │
-│ WorkManager 등 플랫폼 기능은 app 에) │   │ 는 Shared.framework 를 호출   │
+│ app: UseCase 가 java.time ↔ kotlin   │   │ iosApp: SwiftUI 화면·로컬 알림│
+│ 시간을 바꿔 엔진에 맡김(Room·알람·   │   │ ·위젯·Vision·EventKit·MapKit. │
+│ WorkManager 등 플랫폼 기능은 app 에) │   │ 규칙은 Shared.framework 호출  │
 └──────────────────────────────────────┘   └──────────────────────────────┘
                  ↘                                      ↙
                   Proxy 서버(Render) — 경로·장소·날씨·실시간 도착
@@ -300,6 +369,8 @@ iOS 앱은 핵심 흐름(장소 검색 → 도착 시각·반복 → 준비 시�
 
 - 안드로이드는 서버 통신에 기존 Retrofit·OkHttp 를 계속 쓰고(검증된 오프라인 캐시·재시도), iOS 는 shared 의 Ktor 클라이언트(Darwin 엔진)를 쓴다. 두 앱이 같은 Render 서버를 부른다.
 - 노선색 표와 "(으)로" 조사 규칙은 안드로이드 노선도도 shared 것을 쓴다(`presentation/common/TransitLineColors.kt`).
+- 시간표 사진 해석(`TimetableImageParser`)은 안드로이드 ML Kit 과 iOS Vision 이 읽은 글자 위치를 같은 해석기에 넘긴다. 단체 이용권 코드 규칙·요금·무료 한도도 안드로이드가 shared 값을 그대로 쓴다.
+- Swift 에서는 Kotlin 의 `Duration`·`TimeZone` 이 다루기 불편해 밀리초 기반 함수를 함께 두었고, 결과는 `GroupPassOutcome.Verified` 같은 봉인 클래스로 돌려줘 Swift 에서 예외 없이 분기한다.
 - `shared/src/commonTest` 테스트는 JVM 과 iOS 시뮬레이터 두 곳에서 똑같이 돈다(`:shared:jvmTest`, `:shared:iosSimulatorArm64Test`).
 - 앱의 `BuildAlarmPlanUseCase`, `EstimateTravelTimeUseCase`, `CalculateSafetyBufferUseCase`, `EvaluateAlarmAdjustmentUseCase`, `ResolveNextOccurrenceUseCase`, `KoreanHolidays`, `WeatherPolicy`, `TravelPatternPolicy` 는 이름·사용법을 그대로 두고 계산만 shared 에 맡긴다. 그래서 기존 앱 테스트가 바뀐 계산을 그대로 검증한다.
 
@@ -390,6 +461,8 @@ wakeUp    = departure − preparation
 | `USE_FULL_SCREEN_INTENT` | 잠금화면 위 알람 화면 | — |
 | `FOREGROUND_SERVICE(_MEDIA_PLAYBACK)` | 알람음 재생 | — |
 
+iOS 앱은 같은 순서로 알림(UNUserNotificationCenter) → 위치(사용 중에만, 현재 위치 출발을 고를 때 1회) 권한을 요청하고, 캘린더 전체 읽기(`NSCalendarsFullAccessUsageDescription`)는 캘린더 연동 화면에서 "캘린더 권한 허용"을 눌렀을 때만, 사진은 시스템 사진 선택기(PhotosPicker)로 고른 한 장만 받는다.
+
 권한을 요청하기 전에 온보딩 마지막 쪽에서 **왜 필요한지**(알림·정확한 알람은 필수, 위치는 선택) 먼저 설명하고, 알림 → 정확한 알람 → 위치 순서로 요청한다. 거부해도 앱은 크래시 없이 동작하며 설정 화면에서 권한 상태를 확인할 수 있다.
 
 ## 10. 프로젝트 구조
@@ -398,13 +471,22 @@ wakeUp    = departure − preparation
 shared/src            Kotlin Multiplatform 공용 모듈 (Android · iOS 가 함께 씀)
 ├── commonMain        AlarmEngine, AdjustmentEngine, OccurrenceEngine, KoreanHolidays, WeatherRules, TravelPatternRules
 │   ├── api           ProxyClient(Ktor) · 서버 응답 DTO
-│   ├── trip          TripPlanner(경로 조회 → 날씨 → 계산), PlaceSearch, Schedules(반복 요일 비트마스크)
-│   └── routeline     RouteLineBuilder(노선도 지점·구간·문구), LineColors(공식 노선색), KoreanText
+│   ├── trip          TripPlanner(경로 조회 → 날씨 → 계산, 지연 시나리오), PlaceSearch, Schedules(반복 요일·다음 공휴일), Taxi, TravelHistory
+│   ├── routeline     RouteLineBuilder(노선도 지점·구간·문구), RouteMapLines(지도 경로선), LineColors(공식 노선색), KoreanText
+│   ├── history       AlarmHistoryRules(기록·통계, 기상 습관, 지각 위험)
+│   ├── timetable     TimetableImageParser(시간표 사진 글자 위치 → 수업), Timetables(첫 수업 알람 제안)
+│   └── subscription  플랜·요금·무료 한도, GroupPassCode, SubscriptionService(결제 주문·결과, 단체 이용권 확인·사용)
 └── commonTest        같은 테스트를 JVM 과 iOS 시뮬레이터에서 실행
 
 iosApp                SwiftUI iOS 앱 (Xcode 프로젝트, 빌드할 때 Gradle 이 Shared.framework 를 만든다)
-└── RouteAlarm        RootView(홈·알람·설정 탭), HomeView, AlarmListView, AlarmDetailView, CreateFlowView(5단계),
-                      RouteLineView(노선도), Theme(안드로이드와 같은 색 토큰), AlarmStore(저장·계산), AlarmNotifier(로컬 알림)
+├── RouteAlarm        RootView(홈·알람·설정 탭), OnboardingView, HomeView, AlarmListView, AlarmDetailView, CreateFlowView(5단계),
+│                     RouteLineView(노선도), RouteMapView(MapKit 경로), RingingView(기상 알람), InsightCards(추천·습관·지각 위험·통계),
+│                     SettingsView(테마·알람음·권한), TimetableView(시간표·캘린더), SubscriptionViews(페이월·구독 관리·단체 이용권),
+│                     Theme·AppFonts·Components·Wheel(안드로이드와 같은 색·글꼴·부품·휠), AlarmStore(저장·계산·기록),
+│                     AlarmNotifier(로컬 알림), AlarmSound(알람음·볼륨), TimetableStore(Vision·EventKit), SubscriptionStore(결제·이용권),
+│                     PlaceBook(즐겨찾기·최근 검색·현재 위치), WidgetBridge(위젯에 다음 알람 전달)
+├── RouteAlarmWidget  WidgetKit 홈 화면 위젯(다음 알람, 테마별 그라데이션)
+└── RouteAlarm-Info.plist  결제창 복귀용 URL 스킴(routealarm://)
 
 app/src/main/java/com/example/routealarm
 ├── core
@@ -483,6 +565,9 @@ xcodebuild -project iosApp/RouteAlarm.xcodeproj -target RouteAlarm -sdk iphonesi
 ```
 
 - iOS 앱도 배포 서버를 쓰므로 키가 필요 없다. 실제 기기 설치와 TestFlight 배포는 Apple Developer 계정이 있어야 해서 시뮬레이터로 시연한다.
+- 위젯은 홈 화면을 길게 눌러 **편집 > 위젯 추가 > RouteAlarm** 에서 넣는다(작은 크기·중간 크기).
+- 테스트 결제 후 앱으로 돌아오는 `routealarm://payment` 링크는 서버가 `platform=ios` 주문에만 만든다. 결제창을 그냥 닫아도 앱이 기억해 둔 주문을 서버에 다시 확인해 PRO 를 적용한다.
+- 시간표·캘린더 연동은 PRO 기능이라 무료 플랜에서는 잠겨 있다. 설정 > 단체 이용권 코드 입력에 `HSU-2026-WAKE7` 을 넣으면 바로 열린다.
 
 ### 테스트 시나리오
 
@@ -537,7 +622,7 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 ## 13. 테스트 방법
 
 ```bash
-./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test   # 공용 모듈(JVM · iOS 시뮬레이터, 각 25개)
+./gradlew :shared:jvmTest :shared:iosSimulatorArm64Test   # 공용 모듈(JVM · iOS 시뮬레이터, 각 38개)
 ./gradlew testDebugUnitTest                                # 안드로이드 앱
 ```
 
@@ -547,7 +632,9 @@ routealarm.proxyBaseUrl=http://10.0.2.2:8080/
 | `OccurrenceEngineTest` | 오늘 회차/다음 주 회차, 한글날 건너뛰기, 1회 일정 날짜, 공휴일 표 |
 | `TravelPatternRulesTest` | 같은 요일·시간대 기록 3번 이상이면 사용, 모자라면 빈 목록, 요일별 요약 |
 | `TripPlannerTest` | 가짜 서버(Ktor MockEngine)로 가장 빠른 경로 선택·구간 전달, 비 예보면 5분 일찍, 서버 실패 시 기본 60분 + 불확실성 여유, 지난 도착 시각 오류 문장, 장소 검색, 요일 비트마스크 표시 |
-| `RouteLineTest` | 안드로이드 예시 경로(다산역 → 76번 → 화랑대역 환승 6호선 → 한성대)와 같은 지점·시각·문구·노선색, 경로가 없으면 이동 한 구간, 노선색 표와 조사 |
+| `RouteLineTest` | 안드로이드 예시 경로(다산역 → 76번 → 화랑대역 환승 6호선 → 한성대)와 같은 지점·시각·문구·노선색, 경로가 없으면 이동 한 구간, 노선색 표와 조사, 지도 경로선 |
+| `AlarmHistoryRulesTest` | 기록·통계(제시간 기상률·평균 늦게 끈 시간·다시 울림·조정), 기상 습관 제안, 지각 위험(늦게 끈 알람·교통 악화) |
+| `SubscriptionTest` | 코드 정리·형식 검사, 연간 월 2,000원꼴·31% 할인·무료 일정 2개, iOS 주문은 `platform=ios` 로 결제창 주소 받기, 서버가 승인한 주문만 PRO(결제 중은 다시 확인, 실패는 정리), 단체 이용권 확인 → 사용 → 마지막 날 자정까지 PRO, 없는 코드·만료·정원 초과·형식 오류 구분 |
 
 안드로이드 앱의 도메인 계층과 화면 모델, 휠 선택기의 계산 규칙과 움직임은 Android 의존성이 없어 JVM 에서 바로 실행된다. 현재 187개 테스트:
 
@@ -597,14 +684,16 @@ DB·Worker·화면은 실제 Android 런타임이 필요해 에뮬레이터에�
 
 > 기기에서 계측 테스트를 돌리면 테스트가 끝난 뒤 앱이 지워진다(앱 데이터도 함께). 실제로 쓰는 기기 말고 에뮬레이터에서 돌린다.
 
-Proxy 서버 테스트는 `cd server && npm test` 로 실행한다(외부 API 를 호출하지 않아 키가 필요 없다).
+Proxy 서버 테스트는 `cd server && npm test` 로 실행한다(72개, 외부 API 를 호출하지 않아 키가 필요 없다).
+
+iOS 화면은 시뮬레이터에서 안드로이드 에뮬레이터 캡처와 나란히 놓고 같은 크기(dp 환산)인지 비교해 맞췄다.
 
 ### CI
 
 GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main` 푸시와 모든 PR 에서 세 작업을 돌린다.
 
 - **Android**: `:shared:jvmTest`, `assembleDebug`, `assembleDebugAndroidTest`(계측 테스트 컴파일), `testDebugUnitTest`, `lintDebug` (JDK 17, 외부 API 를 호출하지 않아 키 불필요). 실패하면 테스트·Lint 리포트를 artifact 로 올린다.
-- **공용 모듈 iOS**: macOS 러너에서 `:shared:iosSimulatorArm64Test` (같은 테스트를 Kotlin/Native 로)와 SwiftUI iOS 앱 빌드(`xcodebuild`)
+- **공용 모듈 iOS**: macOS 러너에서 `:shared:iosSimulatorArm64Test` (같은 테스트를 Kotlin/Native 로)와 SwiftUI iOS 앱·위젯 빌드(`xcodebuild`)
 - **Proxy 서버**: `npm ci`, 타입 검사, `npm test` (Node 20)
 
 ## 14. 주요 설계 결정
@@ -636,6 +725,9 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 | **휠 선택기는 위치값 하나와 끌기 제스처로 직접 구현** | 고리처럼 끝없이 돌고, 원통 모양으로 그리고, 멈출 칸을 미리 정하려면 스크롤 목록보다 위치(가운데 칸 번호) 하나를 직접 움직이는 편이 단순하다. 끌기를 휠이 모두 가져가므로 스크롤 화면 안에서도 화면이 따라 움직이지 않는다 (`Wheel.kt`) |
 | **시 휠은 24칸 고리, 오전/오후는 거기서 계산** | 12시간제 숫자를 두 번 반복해 보여주면 11↔12 를 지날 때 오전/오후가 저절로 바뀌고, 빠르게 돌려도 숫자와 오전/오후가 어긋날 수 없다 (`WheelMath.kt`) |
 | **휠에서 손을 떼는 순간 멈출 칸을 정해 값을 알림** | 관성으로 도는 동안 다음 단계로 넘어가도 고른 값이 반영된다. 멈출 때까지 기다리면 그 사이의 값을 잃을 수 있다 (`WheelState.targetIndex`) |
+| **플랫폼과 무관한 규칙은 shared 하나에** | 두 앱이 따로 구현하면 계산·문구가 조금씩 어긋난다. 계산·조정·공휴일·노선도·통계·시간표 해석·구독 규칙을 한 곳에 두고 같은 테스트를 두 플랫폼에서 돌린다 (`shared/`) |
+| **iOS 화면은 안드로이드 dp 를 화면 폭 비율로 환산** | 아이폰마다 폭이 달라도 안드로이드와 같은 비율로 보이도록 모든 크기를 `Dp.scale`(화면 폭 ÷ 426.7)로 계산하고, 글꼴도 같은 Roboto·Noto Sans KR 을 넣었다 (`iosApp/RouteAlarm/Theme.swift`, `AppFonts.swift`) |
+| **iOS 결제 복귀 링크만 따로** | 안드로이드 Chrome 은 `intent://`, iOS 는 앱 URL 스킴으로 돌아와야 해서 주문에 `platform` 을 남겨 결과 페이지가 알맞은 링크를 고른다. 어느 쪽이든 링크 값은 믿지 않고 서버 결과만 쓴다 (`server/src/payments.ts`) |
 | **입력 중인 글자는 Compose 상태로 두고 입력값을 바꿔 끼우지 않음** | StateFlow 를 거치거나 입력 도중 대문자로 바꾸면 빠르게 칠 때 글자가 빠짐. 대문자 변환은 표시와 서버 확인 단계에서만 (`GroupPassViewModel`) |
 
 ## 15. 향후 개선사항
@@ -658,6 +750,8 @@ GitHub Actions([`.github/workflows/ci.yml`](.github/workflows/ci.yml))가 `main`
 - [x] 알람 변경 되돌리기, 홈 화면 위젯
 - [x] 알람음 고르기·볼륨·점점 크게, 일정별 알람음, 반복 알람 공휴일 건너뛰기
 - [x] 날씨 반영(기상청 단기예보: 비 +5분·눈 +10분, 우산 안내), ODsay 절약 모드(예비 캐시·사용량 확인)
+- [x] iOS 앱(SwiftUI): 안드로이드의 모든 화면·기능을 같은 모양으로(홈·만들기·상세·지도·알람·통계·시간표·캘린더·PRO·위젯·테마)
+- [ ] iOS 실제 기기 배포(TestFlight)와 iOS 카카오맵 SDK 적용
 - [ ] Wear OS 전용 앱(타일·컴플리케이션). 지금은 휴대폰 기상 알람 알림이 워치로 전달되어 워치에서 끄기·다시 울림만 가능
 
 ---

@@ -109,7 +109,7 @@ struct OnboardingView: View {
             VStack(spacing: 10.dp) {
                 permission("bell", "알림", "알람과 출발 알림을 보내요", required: true)
                 permission("alarm", "정확한 알람", "정해진 시각에 정확히 울려요", required: true)
-                permission("location", "위치", "출발지를 현재 위치로 지정할 때만 1회 사용", required: false)
+                permission("scope", "위치", "출발지를 현재 위치로 지정할 때만 1회 사용", required: false)
             }
         }
     }

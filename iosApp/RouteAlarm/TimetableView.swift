@@ -205,7 +205,7 @@ private struct TimetableAlarmSheet: View {
             Spacer().frame(height: 10.dp)
             SectionLabel(text: "도착지 (학교)")
             Spacer().frame(height: 6.dp)
-            PlaceRow(icon: "mappin.and.ellipse", title: destination?.name ?? "눌러서 고르기", subtitle: destination?.address, selected: false) { picking = false }
+            PlaceRow(icon: "place", title: destination?.name ?? "눌러서 고르기", subtitle: destination?.address, selected: false) { picking = false }
             if !timetable.alarmIds.isEmpty {
                 Spacer().frame(height: 12.dp)
                 Text("예전에 시간표로 만든 알람 \(timetable.alarmIds.count)개는 새 알람이 모두 만들어지면 지워져요.")
@@ -260,7 +260,7 @@ struct PlacePickerSheet: View {
                 VStack(spacing: 0) {
                     let places = query.isEmpty ? book.saved.map(\.place) : results
                     ForEach(Array(places.enumerated()), id: \.offset) { _, place in
-                        PlaceRow(icon: "mappin", title: place.name, subtitle: place.subtitle, selected: false, plainIcon: true) {
+                        PlaceRow(icon: "place", title: place.name, subtitle: place.subtitle, selected: false, plainIcon: true) {
                             if !query.isEmpty { book.remember(place) }
                             onPick(place)
                             dismiss()
