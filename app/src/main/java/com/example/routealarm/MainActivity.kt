@@ -3,6 +3,8 @@ package com.example.routealarm
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
+import android.view.animation.AccelerateInterpolator
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -30,7 +32,21 @@ class MainActivity : ComponentActivity() {
     private var requestedScheduleId by mutableStateOf<Long?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        // 시작 화면 "노선 그리기": 바늘이 다 그려진 뒤 시계가 확대되며 사라지고 홈 화면이 드러난다(iOS 와 같은 움직임).
+        installSplashScreen().setOnExitAnimationListener { provider ->
+            val remaining = (provider.iconAnimationStartMillis + provider.iconAnimationDurationMillis - SystemClock.uptimeMillis())
+                .coerceIn(0L, SPLASH_MAX_WAIT_MS)
+            provider.iconView.animate()
+                .scaleX(SPLASH_ZOOM).scaleY(SPLASH_ZOOM)
+                .setStartDelay(remaining).setDuration(SPLASH_EXIT_MS)
+                .setInterpolator(AccelerateInterpolator())
+                .start()
+            provider.view.animate()
+                .alpha(0f)
+                .setStartDelay(remaining + SPLASH_EXIT_MS / 4).setDuration(SPLASH_EXIT_MS * 3 / 4)
+                .withEndAction { provider.remove() }
+                .start()
+        }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // setKeepOnScreenCondition 은 쓰지 않는다. 앱 업데이트 직후 시스템이 Activity 를 되살리는 경로에서
@@ -100,6 +116,11 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_SCHEDULE_ID = "schedule_id"
         private const val PAYMENT_SCHEME = "routealarm"
         private const val PAYMENT_HOST = "payment"
+
+        /** 시작 화면: 바늘 그리기가 아직 남았으면 기다리는 최대 시간, 확대되며 사라지는 시간과 배율 */
+        private const val SPLASH_MAX_WAIT_MS = 700L
+        private const val SPLASH_EXIT_MS = 380L
+        private const val SPLASH_ZOOM = 6f
 
         /** 알림을 눌렀을 때 해당 일정 상세로 들어가는 인텐트 */
         fun createIntent(context: Context, scheduleId: Long? = null): Intent =
