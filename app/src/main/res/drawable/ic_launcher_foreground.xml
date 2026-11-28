@@ -1,9 +1,23 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <group android:scaleX="2.1" android:scaleY="2.1" android:translateX="28.8" android:translateY="27.6">
-        <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2"
-            android:strokeLineCap="round" android:strokeLineJoin="round"
-            android:pathData="M19.5,13a7.5,7.5 0 1,1 -15,0a7.5,7.5 0 1,1 15,0M12,9v4l2.6,1.8M5.2,3.4L2.6,5.8M18.8,3.4L21.4,5.8"/>
+    <!-- 역방향 시계: 알람 시계의 바늘이 노선(8호선 분홍·2호선 초록)과 역 점이다. 100 격자 도안을 안전 영역(지름 66) 안으로 줄였다 -->
+    <group android:scaleX="0.86" android:scaleY="0.86" android:translateX="11" android:translateY="8.42">
+        <path android:strokeColor="#FFFFFF" android:strokeWidth="6" android:strokeLineCap="round"
+            android:pathData="M26,33 A12,12 0 0,1 40,21 M74,33 A12,12 0 0,0 60,21"/>
+        <path android:strokeColor="#FFFFFF" android:strokeWidth="6" android:strokeLineCap="round"
+            android:pathData="M36,79 L31,85 M64,79 L69,85"/>
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M78,54 A28,28 0 1,1 22,54 A28,28 0 1,1 78,54 Z"/>
+        <path android:strokeColor="#E6186C" android:strokeWidth="5" android:strokeLineCap="round"
+            android:pathData="M50,54 V37"/>
+        <path android:strokeColor="#00A84D" android:strokeWidth="5" android:strokeLineCap="round"
+            android:pathData="M50,54 L63,62"/>
+        <path android:fillColor="#FFFFFF" android:strokeColor="#E6186C" android:strokeWidth="3"
+            android:pathData="M54.5,37 A4.5,4.5 0 1,1 45.5,37 A4.5,4.5 0 1,1 54.5,37 Z"/>
+        <path android:fillColor="#FFFFFF" android:strokeColor="#00A84D" android:strokeWidth="3"
+            android:pathData="M67.5,62 A4.5,4.5 0 1,1 58.5,62 A4.5,4.5 0 1,1 67.5,62 Z"/>
+        <path android:fillColor="#141418"
+            android:pathData="M55,54 A5,5 0 1,1 45,54 A5,5 0 1,1 55,54 Z"/>
     </group>
 </vector>
