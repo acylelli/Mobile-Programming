@@ -9,13 +9,18 @@ struct RouteAlarmApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(ColorTheme.storageKey) private var themeRaw = ColorTheme.standard.rawValue
     @AppStorage("onboardingDone") private var onboardingDone = false
+    @State private var showingSplash = true
 
     init() { AppFonts.register() }
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if onboardingDone { RootView() } else { OnboardingView { onboardingDone = true } }
+            ZStack {
+                Group {
+                    if onboardingDone { RootView() } else { OnboardingView { onboardingDone = true } }
+                }
+                // 시작 화면 "노선 그리기": 실행 화면에서 이어져 한 번만 재생하고 사라진다.
+                if showingSplash { SplashView { showingSplash = false }.zIndex(1) }
             }
             .environmentObject(store)
             .environmentObject(subscriptions)
