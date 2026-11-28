@@ -1,5 +1,7 @@
 # RouteAlarm — 목표 도착 시간 기반 스마트 출발 알람
 
+<p align="center"><img src="docs/screenshots/app-icon.png" width="120" alt="RouteAlarm 앱 아이콘 — 바늘이 노선인 알람 시계"></p>
+
 > "몇 시까지 도착하고 싶은지"만 알려주면, 대중교통 상황을 분석해 **언제 일어나야 하는지**를 계산하고 알람을 자동으로 설정 및 조정하는 Android · iOS 앱
 
 Kotlin Multiplatform(공용 모듈 shared: 계산·노선도·서버 통신) · Jetpack Compose(Android) · SwiftUI(iOS) · Clean Architecture(MVVM) · Hilt · Room · DataStore · WorkManager · AlarmManager
@@ -79,6 +81,7 @@ Kotlin Multiplatform(공용 모듈 shared: 계산·노선도·서버 통신) · 
 | 경로 지도 | 일정 상세 화면에 카카오맵으로 경로 표시(탑승 구간은 노선색, 도보는 회색, 출발·도착 점). 상위 2개 경로는 ODsay 노선 그래픽으로 실제 도로·선로 모양대로 그린다. 네이티브 앱 키는 `local.properties` 에만 두고, 키가 없거나 인증에 실패하면 지도만 숨긴다 |
 | 요일·시간대별 이동시간 학습 | 회차마다 출발 직전에 확인한 실시간 이동시간을 기록하고(같은 회차는 덮어써 마지막 값만 남김), 같은 요일·출발 시각 ±1시간 기록이 최근 8주에 3번 이상이면 다음 계산의 안정화 입력으로 쓴다. 월요일 아침만 늘 막히면 월요일 회차만 조금 더 일찍 깨운다(현재 ETA 보다 짧게 잡지는 않음). 상세 화면에 요일별 이동시간 막대와 "월요일은 평소보다 13분 더 걸려요" 안내 |
 | 기상 습관 개인화 | 기상 알람을 끈 시각과 예정 시각의 차이(다시 울림 포함)를 최근 30일 모아, 평소 5분 이상 늦게 일어나면 "준비 시간 N분 늘리기"를 제안. 적용하면 출발 시각은 그대로 두고 기상 알람만 앞당긴다 |
+| 앱 아이콘·시작 화면 | 바늘이 노선(8호선 분홍·2호선 초록)과 역 점인 알람 시계 아이콘. 앱을 켜면 바늘이 노선처럼 그려지고 역 점이 찍힌 뒤 시계가 확대되며 홈 화면으로 넘어가는 "노선 그리기" 시작 화면(약 1초, Android · iOS 같은 움직임) |
 | 홈 화면 위젯 | 다음 기상 알람 시각, 도착·출발 시각, 교통 상태(Jetpack Glance). 알람을 끄거나 다시 계산하면 바로 바뀐다. 배경은 설정 > 화면 > 위젯 배경에서 기본(오렌지)·새벽·나이트 그라데이션 3종 중 선택 |
 | 지각 위험 택시 안내 | 교통이 나빠졌거나 기상 알람을 늦게 꺼서 대중교통으로는 늦을 때 홈·상세 화면에 경고. 택시로 가면 몇 시 도착인지와 예상 요금(카카오모빌리티)을 보여 주고 카카오 T 를 출발·도착이 채워진 채로 연다 |
 | 되돌리기 | 일정 삭제·알람 변경(추천 적용, 습관 제안 적용) 직후 "되돌리기" 스낵바로 바로 이전 상태로 복구 |
@@ -107,6 +110,39 @@ Kotlin Multiplatform(공용 모듈 shared: 계산·노선도·서버 통신) · 
 | UI-G-001 | 홈 화면 위젯 | `widget/NextAlarmWidget.kt` |
 
 에뮬레이터(Pixel 10 Pro, Android 17)에서 다산역 → 한성대학교 일정으로 캡처했다. 모든 사진은 720×1606 으로 크기를 맞췄다. 알람 탭은 아이폰 시계처럼 구분선 목록에 "오전 7:29" 를 크게, 그 아래 반복·도착과 교통 정보 한 줄을 둔다. 시각 숫자는 앱 전체에서 보통 굵기(Regular)로 그린다. 계산 미리보기는 2026년 11월 27일 실제 경로(다산역 → 76번 → 화랑대역 환승 6호선 → 한성대, 이동 51분)로 다시 캡처했고, iOS 캡처와 같은 일정·같은 계산 결과(07:29 기상)다. 택시 안내 화면은 시험용 기상 기록이 필요해 이전 캡처를 그대로 두었다(화면 구성은 지금과 같다).
+
+### 앱 아이콘과 시작 화면
+
+<img src="docs/screenshots/app-icon.png" width="96" align="right" alt="앱 아이콘">
+
+앱 아이콘은 **역방향 시계**다. 알람 시계의 두 바늘을 노선색 구간(8호선 분홍·2호선 초록)과 역 점으로 바꿔, "도착 시각에서 경로를 거꾸로 따라가 기상 시각을 정한다"는 앱의 핵심을 한 그림에 담았다. 배경은 홈 화면 위젯과 같은 오렌지 그라데이션(#FF8A4C → #F0491A)이다. 여섯 가지 시안(노선 알람·역방향 시계·새벽 출발·도착 핀·R 노선도·순환선 시계) 가운데 지금 아이콘과 이어지면서 앱 성격이 가장 잘 드러나는 안을 골랐다.
+
+- Android: 적응형 아이콘(`res/drawable/ic_launcher_background.xml` 그라데이션 + `ic_launcher_foreground.xml` 시계). 시계는 런처가 어떤 모양으로 잘라도 보이도록 안전 영역(지름 66dp) 안에 두었다.
+- iOS: 같은 그림의 1024px 아이콘(`Assets.xcassets/AppIcon`).
+
+앱을 켜면 **"노선 그리기"** 시작 화면이 약 1초 동안 재생된다. 다섯 가지 움직임 시안(바늘 회전·노선 그리기·알람 울림·출발·통통 펄스) 가운데 경로 계산이라는 앱 성격이 잘 드러나고 홈 화면으로 자연스럽게 이어지는 안을 골랐다.
+
+<table>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/splash-1.png" width="150" alt="실행 화면: 바늘 없는 시계"><br><sub>① 실행 화면<br>바늘 없는 시계</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/splash-2.png" width="150" alt="분홍 바늘이 노선처럼 그려짐"><br><sub>② 분홍 바늘이<br>노선처럼 그려짐</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/splash-3.png" width="150" alt="초록 바늘과 역 점"><br><sub>③ 초록 바늘과<br>역 점이 찍힘</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/splash-4.png" width="150" alt="시계가 확대되며 사라짐"><br><sub>④ 시계가 확대되며<br>사라짐</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/splash-5.png" width="150" alt="홈 화면"><br><sub>⑤ 홈 화면</sub></td>
+  </tr>
+</table>
+
+| 시간 | 움직임 |
+|---|---|
+| 0.05 ~ 0.27초 | 분홍 바늘이 시계 가운데에서 12시 방향으로 그려진다 |
+| 0.24초 | 분홍 역 점이 톡 튀어나온다(살짝 커졌다 돌아옴) |
+| 0.27 ~ 0.49초 | 초록 바늘이 4시 방향으로 그려진다 |
+| 0.46초 | 초록 역 점이 톡 튀어나온다 |
+| 0.62 ~ 1.0초 | 시계가 6배로 커지며 화면이 투명해지고 홈 화면이 드러난다 |
+
+- Android: Android 12 이상은 시작 화면 아이콘 자체가 움직인다(`res/drawable/splash_icon_animated.xml`, AnimatedVectorDrawable 의 trimPathEnd·크기 애니메이션, `res/values-v31/themes.xml`). 바늘 그리기가 끝나면 `MainActivity` 의 퇴장 애니메이션이 시계를 확대하며 시작 화면을 걷어낸다. Android 11 이하는 애니메이션 첫 장면(바늘 없음)만 보이므로 정지 아이콘을 쓴다.
+- iOS: 실행 화면(`Info.plist` 의 `UILaunchScreen`: 오렌지 배경 + 바늘 없는 시계)에서 끊김 없이 이어지도록, 앱이 뜨면 `SplashView` 가 같은 자리·같은 크기(안드로이드 시작 화면 아이콘과 같은 237dp 비율)에서 바늘을 그린다. 기기에서 '동작 줄이기'를 켜면 확대 없이 짧게 사라진다.
+- 위 장면은 iPhone 17 Pro 시뮬레이터에서 연속 캡처했다.
 
 ### iOS 앱 (SwiftUI + Kotlin Multiplatform)
 
@@ -548,8 +584,9 @@ iosApp                SwiftUI iOS 앱 (Xcode 프로젝트, 빌드할 때 Gradle 
 │                     Theme·AppFonts·Components·Wheel(안드로이드와 같은 색·글꼴·부품·휠), AlarmStore(저장·계산·기록),
 │                     AlarmNotifier(로컬 알림), AlarmSound(알람음·볼륨), TimetableStore(Vision·EventKit), SubscriptionStore(결제·이용권),
 │                     PlaceBook(즐겨찾기·최근 검색·현재 위치), WidgetBridge(위젯에 다음 알람 전달)
+│                     SplashView(시작 화면 "노선 그리기")
 ├── RouteAlarmWidget  WidgetKit 홈 화면 위젯(다음 알람, 테마별 그라데이션)
-└── RouteAlarm-Info.plist  결제창 복귀용 URL 스킴(routealarm://)
+└── RouteAlarm-Info.plist  결제창 복귀용 URL 스킴(routealarm://), 실행 화면(오렌지 + 바늘 없는 시계)
 
 app/src/main/java/com/example/routealarm
 ├── core
