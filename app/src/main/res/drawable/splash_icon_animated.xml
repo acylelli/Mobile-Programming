@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  시작 화면 "노선 그리기": 시계 바늘이 노선처럼 그려지고(8호선 분홍 → 2호선 초록) 역 점이 차례로 찍힌다.
+  그림은 ic_launcher_foreground 와 같고, 바늘만 trimPathEnd 로, 역 점은 크기로 움직인다. 전체 0.6초.
+-->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector android:width="108dp" android:height="108dp"
+            android:viewportWidth="108" android:viewportHeight="108">
+            <group android:scaleX="0.86" android:scaleY="0.86" android:translateX="11" android:translateY="8.42">
+                <path android:strokeColor="#FFFFFF" android:strokeWidth="6" android:strokeLineCap="round"
+                    android:pathData="M26,33 A12,12 0 0,1 40,21 M74,33 A12,12 0 0,0 60,21"/>
+                <path android:strokeColor="#FFFFFF" android:strokeWidth="6" android:strokeLineCap="round"
+                    android:pathData="M36,79 L31,85 M64,79 L69,85"/>
+                <path android:fillColor="#FFFFFF"
+                    android:pathData="M78,54 A28,28 0 1,1 22,54 A28,28 0 1,1 78,54 Z"/>
+                <path android:name="line1" android:strokeColor="#E6186C" android:strokeWidth="5"
+                    android:strokeLineCap="round" android:trimPathEnd="0" android:pathData="M50,54 V37"/>
+                <path android:name="line2" android:strokeColor="#00A84D" android:strokeWidth="5"
+                    android:strokeLineCap="round" android:trimPathEnd="0" android:pathData="M50,54 L63,62"/>
+                <group android:name="dot1" android:pivotX="50" android:pivotY="37" android:scaleX="0" android:scaleY="0">
+                    <path android:fillColor="#FFFFFF" android:strokeColor="#E6186C" android:strokeWidth="3"
+                        android:pathData="M54.5,37 A4.5,4.5 0 1,1 45.5,37 A4.5,4.5 0 1,1 54.5,37 Z"/>
+                </group>
+                <group android:name="dot2" android:pivotX="63" android:pivotY="62" android:scaleX="0" android:scaleY="0">
+                    <path android:fillColor="#FFFFFF" android:strokeColor="#00A84D" android:strokeWidth="3"
+                        android:pathData="M67.5,62 A4.5,4.5 0 1,1 58.5,62 A4.5,4.5 0 1,1 67.5,62 Z"/>
+                </group>
+                <path android:fillColor="#141418"
+                    android:pathData="M55,54 A5,5 0 1,1 45,54 A5,5 0 1,1 55,54 Z"/>
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <target android:name="line1">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:propertyName="trimPathEnd" android:valueFrom="0" android:valueTo="1"
+                android:startOffset="50" android:duration="220" android:valueType="floatType"
+                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+        </aapt:attr>
+    </target>
+    <target android:name="dot1">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator android:propertyName="scaleX" android:valueFrom="0" android:valueTo="1"
+                    android:startOffset="240" android:duration="160" android:valueType="floatType"
+                    android:interpolator="@android:interpolator/overshoot"/>
+                <objectAnimator android:propertyName="scaleY" android:valueFrom="0" android:valueTo="1"
+                    android:startOffset="240" android:duration="160" android:valueType="floatType"
+                    android:interpolator="@android:interpolator/overshoot"/>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="line2">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:propertyName="trimPathEnd" android:valueFrom="0" android:valueTo="1"
+                android:startOffset="270" android:duration="220" android:valueType="floatType"
+                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+        </aapt:attr>
+    </target>
+    <target android:name="dot2">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator android:propertyName="scaleX" android:valueFrom="0" android:valueTo="1"
+                    android:startOffset="460" android:duration="160" android:valueType="floatType"
+                    android:interpolator="@android:interpolator/overshoot"/>
+                <objectAnimator android:propertyName="scaleY" android:valueFrom="0" android:valueTo="1"
+                    android:startOffset="460" android:duration="160" android:valueType="floatType"
+                    android:interpolator="@android:interpolator/overshoot"/>
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>

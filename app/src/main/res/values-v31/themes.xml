@@ -1,0 +1,10 @@
+<resources>
+    <!-- Android 12 이상: 시작 화면 아이콘이 "노선 그리기" 애니메이션으로 그려진다(0.6초).
+         Android 11 이하는 애니메이션 첫 장면(바늘 없음)만 보이므로 values/themes.xml 의 정지 아이콘을 쓴다. -->
+    <style name="Theme.RouteAlarm.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_animated</item>
+        <item name="windowSplashScreenAnimationDuration">620</item>
+        <item name="postSplashScreenTheme">@style/Theme.RouteAlarm</item>
+    </style>
+</resources>
